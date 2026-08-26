@@ -219,3 +219,10 @@ Les données structurées restent dans `localStorage`. Les photos de progression
 - Routine ciblée choisie automatiquement selon le jour.
 - Tests de mobilité et historique repliés dans Suivi mobilité.
 - Prévisualisation des exercices facultative, démarrage en un tap.
+
+
+## V8.8.1 Hotfix
+- Corrige les boutons `+ Ajouter` de l'accueil : plusieurs boutons peuvent maintenant ouvrir le même Quick Log.
+- Corrige le toggle legacy `Routines > Choisis ton focus` (`data-flex-toggle`).
+- Service Worker en network-first sur les fichiers principaux pour recevoir plus fiablement les mises à jour Vercel/PWA.
+- La version `V8.8.1` est visible dans l'écran Plus pour vérifier le déploiement.
