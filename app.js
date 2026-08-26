@@ -201,8 +201,123 @@ const TUTORIAL_QUERIES = {
 };
 
 const DEFAULT_TUTORIALS = {
-  // Ajoute ici les vidéos validées que tu veux livrer par défaut à tous les appareils.
-  // Exemple : "Dips": { videoUrl:"https://www.youtube.com/watch?v=...", imageUrl:"" }
+  "90/90 hanches": { videoUrl:"https://www.youtube.com/watch?v=Lx07WIkllbA", source:"E3 Rehab", title:"90/90 Hip Transitions" },
+  "Adductor rock-back": { videoUrl:"https://www.youtube.com/watch?v=1sSnSh-yKJU", source:"E3 Rehab", title:"Adductor Rock-Back" },
+  "Advanced tuck front lever": { videoUrl:"https://www.youtube.com/watch?v=AGhb8V8M758", source:"FitnessFAQs", title:"Front Lever for Beginners — All Progressions" },
+  "Archer pull-ups": { videoUrl:"https://www.youtube.com/watch?v=_LGLKUiQH5k", source:"Pullup & Dip", title:"Archer Pull-Up — 5 Progressions" },
+  "Archer pull-ups assistés": { videoUrl:"https://www.youtube.com/watch?v=_LGLKUiQH5k", source:"Pullup & Dip", title:"Archer Pull-Up — 5 Progressions" },
+  "Australian rows": { videoUrl:"https://www.youtube.com/watch?v=S3XfhC4P4ks", source:"FitnessFAQs", title:"How to Build a THICK Back — Bodyweight Row" },
+  "Band chest press": { videoUrl:"https://www.youtube.com/watch?v=JdWpTEVISuw", source:"FITTR", title:"Resistance Band Chest Press" },
+  "Bulgarian split squat": { videoUrl:"https://www.youtube.com/watch?v=hbw7hdyOpq0", source:"NASM", title:"Bulgarian Split Squat — Proper Form" },
+  "Bulgarian split squat lesté (sac à dos)": { videoUrl:"https://www.youtube.com/watch?v=hbw7hdyOpq0", source:"NASM", title:"Bulgarian Split Squat — Proper Form" },
+  "Cardio Zone 2": { videoUrl:"https://www.youtube.com/watch?v=AoB2AMUq8Wg", source:"Peter Attia MD", title:"How to Find Your Zone 2 Without a Lactate Meter" },
+  "Cat-cow": { videoUrl:"https://www.youtube.com/watch?v=EC4MkH0XpXY", source:"Good Life Physical Therapy", title:"12 Minute Full Body Stretch" },
+  "Chest-to-bar": { videoUrl:"https://www.youtube.com/watch?v=SmduaQzt8Jk", source:"FitnessFAQs", title:"How To Unlock Chest To Bar Pull-Ups" },
+  "Child's pose latéral": { videoUrl:"https://www.youtube.com/watch?v=EC4MkH0XpXY", source:"Good Life Physical Therapy", title:"12 Minute Full Body Stretch" },
+  "Chin-ups": { videoUrl:"https://www.youtube.com/watch?v=eGo4IYlbE5g", source:"Calisthenicmovement", title:"The Perfect Pull Up" },
+  "Chin-ups assistés": { videoUrl:"https://www.youtube.com/watch?v=6GWT7GLXE3c", source:"Calisthenicmovement", title:"Pull Ups For Beginners — 0 to 5 Pull Ups" },
+  "Couch stretch": { videoUrl:"https://vimeo.com/647945126", source:"E3 Rehab", title:"Couch Stretch Tutorial" },
+  "Curl biceps avec bande": { videoUrl:"https://www.youtube.com/watch?v=R9f4TwH-1Q8", source:"Chris Gates Fitness", title:"Resistance Band Biceps Curl Tutorial" },
+  "Dead bug": { videoUrl:"https://www.youtube.com/watch?v=bxn9FBrt4-A", source:"NASM", title:"Dead Bug" },
+  "Dead hang": { videoUrl:"https://www.youtube.com/watch?v=ShkBXOGK7A8", source:"FitnessFAQs", title:"How Hanging Transforms Your Body" },
+  "Deep squat hold": { videoUrl:"https://www.youtube.com/watch?v=jj2AAH6jbHk", source:"Tom Merrick", title:"12 Minute Hip Mobility Routine" },
+  "Dips": { videoUrl:"https://www.youtube.com/watch?v=KoS_NMmuxMM", source:"FitnessFAQs", title:"Are You Doing Dips Correctly?" },
+  "Dips assistés": { videoUrl:"https://www.youtube.com/watch?v=KoS_NMmuxMM", source:"FitnessFAQs", title:"Are You Doing Dips Correctly?" },
+  "Dips lestés": { videoUrl:"https://www.youtube.com/watch?v=KoS_NMmuxMM", source:"FitnessFAQs", title:"Are You Doing Dips Correctly?" },
+  "Dips tempo": { videoUrl:"https://www.youtube.com/watch?v=KoS_NMmuxMM", source:"FitnessFAQs", title:"Are You Doing Dips Correctly?" },
+  "Dragon flag": { videoUrl:"https://www.youtube.com/watch?v=At0mMAHqWrQ", source:"FitnessFAQs", title:"Dragon Flag — Beginner & Advanced Progressions" },
+  "Dragon flag négatives": { videoUrl:"https://www.youtube.com/watch?v=At0mMAHqWrQ", source:"FitnessFAQs", title:"Dragon Flag — Beginner & Advanced Progressions" },
+  "Extension triceps avec bande": { videoUrl:"https://www.youtube.com/watch?v=er7ysEHhWt4", source:"Fit Gent", title:"Resistance Band Triceps Exercises" },
+  "Face pulls": { videoUrl:"https://www.youtube.com/watch?v=5jgKj8ColLg", source:"BarBend demo", title:"Banded Face Pulls" },
+  "Fentes arrière": { videoUrl:"https://www.youtube.com/watch?v=lKhZvT_NkOs", source:"NASM", title:"Reverse Lunge to Balance" },
+  "Fentes arrière lestées (sac à dos)": { videoUrl:"https://www.youtube.com/watch?v=lKhZvT_NkOs", source:"NASM", title:"Reverse Lunge to Balance" },
+  "Flexion avant ischios": { videoUrl:"https://www.youtube.com/watch?v=rCjKTy9NXM0", source:"Tom Merrick", title:"50 Minute Full Body Flexibility" },
+  "Fléchisseurs de hanche": { videoUrl:"https://vimeo.com/647945126", source:"E3 Rehab", title:"Couch Stretch Tutorial" },
+  "Frog stretch": { videoUrl:"https://www.youtube.com/watch?v=jj2AAH6jbHk", source:"Tom Merrick", title:"12 Minute Hip Mobility Routine" },
+  "Front lever": { videoUrl:"https://www.youtube.com/watch?v=AGhb8V8M758", source:"FitnessFAQs", title:"Front Lever for Beginners — All Progressions" },
+  "Hamstring curl avec bande": { videoUrl:"https://www.youtube.com/watch?v=6fD3kja6APs", source:"Laura Opstedal / BarBend demo", title:"Prone Banded Hamstring Curl" },
+  "Handstand au mur": { videoUrl:"https://www.youtube.com/watch?v=ctunmnwbbSI", source:"Calisthenicmovement", title:"Handstand Tutorial" },
+  "Handstand décollages du mur": { videoUrl:"https://www.youtube.com/watch?v=ctunmnwbbSI", source:"Calisthenicmovement", title:"Handstand Tutorial" },
+  "Handstand libre": { videoUrl:"https://www.youtube.com/watch?v=ctunmnwbbSI", source:"Calisthenicmovement", title:"Handstand Tutorial" },
+  "Handstand push-up au mur": { videoUrl:"https://www.youtube.com/watch?v=h0HjqYRlXYg", source:"Calisthenicmovement", title:"Master the Handstand Push Up" },
+  "Handstand push-up libre": { videoUrl:"https://www.youtube.com/watch?v=h0HjqYRlXYg", source:"Calisthenicmovement", title:"Master the Handstand Push Up" },
+  "Hanging knee raises": { videoUrl:"https://www.youtube.com/watch?v=QyVq5oUBpss", source:"FitnessFAQs", title:"Leg Raises — Mistakes & Technique" },
+  "Hanging leg raises": { videoUrl:"https://www.youtube.com/watch?v=QyVq5oUBpss", source:"FitnessFAQs", title:"Leg Raises — Mistakes & Technique" },
+  "Hollow hold": { videoUrl:"https://www.youtube.com/watch?v=4KdhjXUYvmM", source:"SaturnoMovement", title:"The Perfect Hollow Body" },
+  "Hollow rocks": { videoUrl:"https://www.youtube.com/watch?v=4KdhjXUYvmM", source:"SaturnoMovement", title:"The Perfect Hollow Body" },
+  "HSPU négatives au mur": { videoUrl:"https://www.youtube.com/watch?v=h0HjqYRlXYg", source:"Calisthenicmovement", title:"Master the Handstand Push Up" },
+  "Human flag": { videoUrl:"https://www.youtube.com/watch?v=Cl_jIUGYh2w", source:"Calisthenics tutorial", title:"Complete Human Flag Tutorial" },
+  "Human flag support vertical": { videoUrl:"https://www.youtube.com/watch?v=Cl_jIUGYh2w", source:"Calisthenics tutorial", title:"Complete Human Flag Tutorial" },
+  "Ischios": { videoUrl:"https://www.youtube.com/watch?v=rCjKTy9NXM0", source:"Tom Merrick", title:"50 Minute Full Body Flexibility" },
+  "Jump squats": { videoUrl:"https://www.youtube.com/watch?v=tZSYZdtbONc", source:"NASM", title:"Squat Jump" },
+  "Knee-to-wall chevilles": { videoUrl:"https://www.youtube.com/watch?v=uippmmTdoWw", source:"Union Physical Therapy", title:"Ankle Mobility — Knee to Wall" },
+  "L-sit": { videoUrl:"https://www.youtube.com/watch?v=cu0fHp8HCDo", source:"FitnessFAQs", title:"Best Exercises To Increase L-SIT HOLD" },
+  "Mobilité complète": { videoUrl:"https://www.youtube.com/watch?v=R3WDe7byUXo", source:"Tom Merrick", title:"15 Minute Full Body Mobility Routine" },
+  "Mobilité dos / avant-bras / épaules": { videoUrl:"https://www.youtube.com/watch?v=rdYq0hZa-Aw", source:"FitnessFAQs", title:"Do This BEFORE Every Calisthenics Workout" },
+  "Mobilité jambes": { videoUrl:"https://www.youtube.com/watch?v=jj2AAH6jbHk", source:"Tom Merrick", title:"12 Minute Hip Mobility Routine" },
+  "Mobilité épaules / pectoraux / poignets": { videoUrl:"https://www.youtube.com/watch?v=rdYq0hZa-Aw", source:"FitnessFAQs", title:"Do This BEFORE Every Calisthenics Workout" },
+  "Mollets": { videoUrl:"https://www.youtube.com/watch?v=qPd73snQfUs", source:"Hospital for Special Surgery", title:"Single-Leg Calf Raise" },
+  "Mollets une jambe": { videoUrl:"https://www.youtube.com/watch?v=qPd73snQfUs", source:"Hospital for Special Surgery", title:"Single-Leg Calf Raise" },
+  "Muscle-up assisté": { videoUrl:"https://www.youtube.com/watch?v=N4u_sP0bbWI", source:"FitnessFAQs", title:"How To Muscle-Up For Beginners" },
+  "Muscle-up strict": { videoUrl:"https://www.youtube.com/watch?v=N4u_sP0bbWI", source:"FitnessFAQs", title:"How To Muscle-Up For Beginners" },
+  "Nordic curl": { videoUrl:"https://www.youtube.com/watch?v=_e9vFU9-tkc", source:"E3 Rehab", title:"Nordic Hamstring Curls — Progressions & Regressions" },
+  "Nordic curl assisté": { videoUrl:"https://www.youtube.com/watch?v=_e9vFU9-tkc", source:"E3 Rehab", title:"Nordic Hamstring Curls — Progressions & Regressions" },
+  "Nordic curl négatif": { videoUrl:"https://www.youtube.com/watch?v=_e9vFU9-tkc", source:"E3 Rehab", title:"Nordic Hamstring Curls — Progressions & Regressions" },
+  "One-arm assisted hang": { videoUrl:"https://www.youtube.com/watch?v=ShkBXOGK7A8", source:"FitnessFAQs", title:"How Hanging Transforms Your Body" },
+  "One-leg front lever": { videoUrl:"https://www.youtube.com/watch?v=AGhb8V8M758", source:"FitnessFAQs", title:"Front Lever for Beginners — All Progressions" },
+  "One-leg human flag": { videoUrl:"https://www.youtube.com/watch?v=Cl_jIUGYh2w", source:"Calisthenics tutorial", title:"Complete Human Flag Tutorial" },
+  "One-leg L-sit": { videoUrl:"https://www.youtube.com/watch?v=cu0fHp8HCDo", source:"FitnessFAQs", title:"Best Exercises To Increase L-SIT HOLD" },
+  "Pallof press avec bande": { videoUrl:"https://vimeo.com/730127530", source:"E3 Rehab", title:"Pallof Press Tutorial" },
+  "Pass-through avec bande": { videoUrl:"https://www.youtube.com/watch?v=osRimvxXlKQ", source:"Physical Therapy 101", title:"Band Pull Apart Series" },
+  "Pike hold": { videoUrl:"https://www.youtube.com/watch?v=9WM4O96Jf7I", source:"Pullup & Dip", title:"First Pike Push-up — Beginner Tutorial" },
+  "Pike push-ups": { videoUrl:"https://www.youtube.com/watch?v=9WM4O96Jf7I", source:"Pullup & Dip", title:"First Pike Push-up — Beginner Tutorial" },
+  "Pike push-ups pieds surélevés": { videoUrl:"https://www.youtube.com/watch?v=9WM4O96Jf7I", source:"Pullup & Dip", title:"First Pike Push-up — Beginner Tutorial" },
+  "Pistol squat": { videoUrl:"https://www.youtube.com/watch?v=R1mxpLzYgxM", source:"FitnessFAQs", title:"Complete Pistol Squat Checklist" },
+  "Pistol squat assisté": { videoUrl:"https://www.youtube.com/watch?v=R1mxpLzYgxM", source:"FitnessFAQs", title:"Complete Pistol Squat Checklist" },
+  "Poignets flexion / extension": { videoUrl:"https://www.youtube.com/watch?v=0VEOm0v5V6Y", source:"Tom Merrick", title:"Never Skip Your Wrist Warm Up!" },
+  "Pompes": { videoUrl:"https://www.youtube.com/watch?v=GxW9MAMQSv0", source:"FitnessFAQs", title:"The PERFECT Push-Up Workout (ALL LEVELS)" },
+  "Pompes archer": { videoUrl:"https://www.youtube.com/watch?v=GxW9MAMQSv0", source:"FitnessFAQs", title:"The PERFECT Push-Up Workout (ALL LEVELS)" },
+  "Pompes inclinées": { videoUrl:"https://www.youtube.com/watch?v=GxW9MAMQSv0", source:"FitnessFAQs", title:"The PERFECT Push-Up Workout (ALL LEVELS)" },
+  "Pompes lestées (sac à dos)": { videoUrl:"https://www.youtube.com/watch?v=GxW9MAMQSv0", source:"FitnessFAQs", title:"The PERFECT Push-Up Workout (ALL LEVELS)" },
+  "Pompes pieds surélevés": { videoUrl:"https://www.youtube.com/watch?v=GxW9MAMQSv0", source:"FitnessFAQs", title:"The PERFECT Push-Up Workout (ALL LEVELS)" },
+  "Pompes serrées": { videoUrl:"https://www.youtube.com/watch?v=GxW9MAMQSv0", source:"FitnessFAQs", title:"The PERFECT Push-Up Workout (ALL LEVELS)" },
+  "Pseudo-planche push-ups": { videoUrl:"https://www.youtube.com/watch?v=GxW9MAMQSv0", source:"FitnessFAQs", title:"The PERFECT Push-Up Workout (ALL LEVELS)" },
+  "Respiration diaphragmatique": { videoUrl:"https://www.youtube.com/watch?v=EC4MkH0XpXY", source:"Good Life Physical Therapy", title:"12 Minute Full Body Stretch" },
+  "Retour au calme": { videoUrl:"https://www.youtube.com/watch?v=R3WDe7byUXo", source:"Tom Merrick", title:"15 Minute Full Body Mobility Routine" },
+  "Reverse crunch": { videoUrl:"https://www.youtube.com/watch?v=wtKWBzDwfIM", source:"NASM", title:"Reverse Crunch to Knee-Up" },
+  "Romanian deadlift avec bande": { videoUrl:"https://www.youtube.com/watch?v=2DswHFace6c", source:"BarBend demo", title:"Resistance Band Romanian Deadlift" },
+  "Rotation externe avec bande": { videoUrl:"https://vimeo.com/963429012", source:"E3 Rehab", title:"Standing External Rotation with Band" },
+  "Rotation thoracique": { videoUrl:"https://www.youtube.com/watch?v=ADeGAWCDjhQ", source:"E3 Rehab", title:"Quadruped Thoracic Rotation" },
+  "Row avec bande": { videoUrl:"https://www.youtube.com/watch?v=kRNFMY4P_ek", source:"FITTR", title:"Resistance Band Rows" },
+  "Scapular pull-ups": { videoUrl:"https://www.youtube.com/watch?v=eGo4IYlbE5g", source:"Calisthenicmovement", title:"The Perfect Pull Up" },
+  "Scapular push-ups": { videoUrl:"https://www.youtube.com/watch?v=rdYq0hZa-Aw", source:"FitnessFAQs", title:"Do This BEFORE Every Calisthenics Workout" },
+  "Shrimp squat": { videoUrl:"https://www.youtube.com/watch?v=UAhhSlnZcOY", source:"VAHVA Fitness", title:"Shrimp Squat Progressions" },
+  "Shrimp squat assisté": { videoUrl:"https://www.youtube.com/watch?v=UAhhSlnZcOY", source:"VAHVA Fitness", title:"Shrimp Squat Progressions" },
+  "Side plank": { videoUrl:"https://www.youtube.com/watch?v=44ND4bOB-T0", source:"NASM", title:"Side Plank — Proper Form & Technique" },
+  "Single-leg RDL": { videoUrl:"https://www.youtube.com/watch?v=6pEL3KxnlEo", source:"NASM", title:"Single-Leg Romanian Deadlift" },
+  "Squat lesté (sac à dos)": { videoUrl:"https://www.youtube.com/watch?v=-W19J4VR7D0", source:"FitnessFAQs", title:"How to Squat Correctly" },
+  "Squat tempo": { videoUrl:"https://www.youtube.com/watch?v=-W19J4VR7D0", source:"FitnessFAQs", title:"How to Squat Correctly" },
+  "Squats poids du corps": { videoUrl:"https://www.youtube.com/watch?v=-W19J4VR7D0", source:"FitnessFAQs", title:"How to Squat Correctly" },
+  "Straddle front lever": { videoUrl:"https://www.youtube.com/watch?v=AGhb8V8M758", source:"FitnessFAQs", title:"Front Lever for Beginners — All Progressions" },
+  "Straddle human flag": { videoUrl:"https://www.youtube.com/watch?v=Cl_jIUGYh2w", source:"Calisthenics tutorial", title:"Complete Human Flag Tutorial" },
+  "Toes-to-bar": { videoUrl:"https://www.youtube.com/watch?v=v6dgseykbLI", source:"THENX", title:"How To Toes To Bar" },
+  "Towel hang": { videoUrl:"https://www.youtube.com/watch?v=UejNxYlNkqo", source:"LiveWild Radio", title:"Towel Hangs" },
+  "Tractions assistées": { videoUrl:"https://www.youtube.com/watch?v=6GWT7GLXE3c", source:"Calisthenicmovement", title:"Pull Ups For Beginners — 0 to 5 Pull Ups" },
+  "Tractions explosives": { videoUrl:"https://www.youtube.com/watch?v=SmduaQzt8Jk", source:"FitnessFAQs", title:"How To Unlock Chest To Bar Pull-Ups" },
+  "Tractions strictes": { videoUrl:"https://www.youtube.com/watch?v=eGo4IYlbE5g", source:"Calisthenicmovement", title:"The Perfect Pull Up" },
+  "Tuck front lever": { videoUrl:"https://www.youtube.com/watch?v=AGhb8V8M758", source:"FitnessFAQs", title:"Front Lever for Beginners — All Progressions" },
+  "Tuck human flag": { videoUrl:"https://www.youtube.com/watch?v=Cl_jIUGYh2w", source:"Calisthenics tutorial", title:"Complete Human Flag Tutorial" },
+  "Tuck L-sit": { videoUrl:"https://www.youtube.com/watch?v=cu0fHp8HCDo", source:"FitnessFAQs", title:"Best Exercises To Increase L-SIT HOLD" },
+  "V-sit compression": { videoUrl:"https://www.youtube.com/watch?v=cu0fHp8HCDo", source:"FitnessFAQs", title:"Best Exercises To Increase L-SIT HOLD" },
+  "Échauffement général": { videoUrl:"https://www.youtube.com/watch?v=rdYq0hZa-Aw", source:"FitnessFAQs", title:"Do This BEFORE Every Calisthenics Workout" },
+  "Échauffement jambes": { videoUrl:"https://www.youtube.com/watch?v=jj2AAH6jbHk", source:"Tom Merrick", title:"12 Minute Hip Mobility Routine" },
+  "Échauffement tirage": { videoUrl:"https://www.youtube.com/watch?v=rdYq0hZa-Aw", source:"FitnessFAQs", title:"Do This BEFORE Every Calisthenics Workout" },
+  "Échauffement épaules & poignets": { videoUrl:"https://www.youtube.com/watch?v=rdYq0hZa-Aw", source:"FitnessFAQs", title:"Do This BEFORE Every Calisthenics Workout" },
+  "Épaules / grand dorsal / pectoraux": { videoUrl:"https://www.youtube.com/watch?v=rdYq0hZa-Aw", source:"FitnessFAQs", title:"Do This BEFORE Every Calisthenics Workout" },
+  "Étirement grand dorsal": { videoUrl:"https://www.youtube.com/watch?v=EC4MkH0XpXY", source:"Good Life Physical Therapy", title:"12 Minute Full Body Stretch" },
+  "Étirement ischios": { videoUrl:"https://www.youtube.com/watch?v=rCjKTy9NXM0", source:"Tom Merrick", title:"50 Minute Full Body Flexibility" },
+  "Étirement mollets": { videoUrl:"https://www.youtube.com/watch?v=yZCfQ6YbAvA", source:"E3 Rehab", title:"Standing Calf Stretch" },
+  "Étirement pectoral encadrement": { videoUrl:"https://www.youtube.com/watch?v=EC4MkH0XpXY", source:"Good Life Physical Therapy", title:"12 Minute Full Body Stretch" },
 };
 
 function youtubeVideoId(url="") {
@@ -214,6 +329,9 @@ function tutorialFor(name) {
   const builtin=DEFAULT_TUTORIALS[name]||{};
   const videoUrl=(saved.videoUrl||builtin.videoUrl||"").trim();
   const explicitImage=(saved.imageUrl||builtin.imageUrl||"").trim();
+  const hasOverride=Boolean((saved.videoUrl||"").trim() || (saved.imageUrl||"").trim());
+  const source=hasOverride ? "Tutoriel personnalisé" : (builtin.source||"").trim();
+  const title=hasOverride ? "" : (builtin.title||"").trim();
   const query=TUTORIAL_QUERIES[name]||exerciseInfo(name)?.query||`${name} exercice tutoriel`;
   const fallback=`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
   const ytId=youtubeVideoId(videoUrl);
@@ -223,6 +341,7 @@ function tutorialFor(name) {
     imageUrl: explicitImage || (ytId ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg` : ""),
     exact: Boolean(videoUrl || explicitImage),
     mediaType: videoUrl ? "video" : (explicitImage ? "image" : "search"),
+    source, title,
     label: videoUrl ? "Voir la vidéo" : (explicitImage ? "Voir l'image" : "Trouver une vidéo")
   };
 }
@@ -231,7 +350,7 @@ function tutorialLink(name, compact=false) {
   if(compact) return `<a class="tutorial-link tutorial-link-compact ${t.exact?'exact':''}" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer" aria-label="Tutoriel vidéo pour ${esc(name)}"><span aria-hidden="true">▶</span>${t.label}</a>`;
   return `<a class="tutorial-link tutorial-link-full ${t.exact?'exact':''}" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer" aria-label="Tutoriel vidéo pour ${esc(name)}">
     ${t.imageUrl?`<img class="tutorial-thumb" src="${esc(t.imageUrl)}" alt="" loading="lazy">`:''}
-    <span class="tutorial-copy"><strong><span aria-hidden="true">▶</span> ${t.label}</strong><small>${t.mediaType==='video'?'Vidéo sélectionnée pour cet exercice':t.mediaType==='image'?'Image de référence sélectionnée':'Recherche de secours · tu peux choisir une vidéo précise dans Profil'}</small></span>
+    <span class="tutorial-copy"><strong><span aria-hidden="true">▶</span> ${t.label}</strong><small>${t.mediaType==='video'?(t.source?`${t.source}${t.title?` · ${t.title}`:''}`:'Vidéo sélectionnée pour cet exercice'):t.mediaType==='image'?'Image de référence sélectionnée':'Recherche de secours · tu peux choisir une vidéo précise dans Profil'}</small></span>
   </a>`;
 }
 
@@ -1073,7 +1192,7 @@ function shell(content, activeTab=state.view) {
 }
 
 function renderMore(){
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V8.8.3</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V8.9</div></div></header>
     <section class="more-grid">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1188,7 +1307,7 @@ function saveMobilityTest(id){const def=MOBILITY_TESTS.find(x=>x.id===id),el=doc
 
 function allExerciseNames(){const names=new Set(EXERCISE_LIBRARY.map(e=>e.name));Object.values(workouts).forEach(w=>w.exercises.forEach(e=>names.add(e.name)));FLEX_ROUTINES.forEach(r=>r.exercises.forEach(e=>names.add(e.name)));return [...names].sort((a,b)=>a.localeCompare(b,'fr'));}
 function tutorialStats(){const names=allExerciseNames(), exact=names.filter(n=>tutorialFor(n).exact).length;return {total:names.length,exact};}
-function renderTutorialManager(){const names=allExerciseNames(),saved=getTutorialOverrides(),stats=tutorialStats();return `<main class="shell"><section class="card editor-card tutorial-manager"><button class="back-btn" id="closeTutorialManager">← Retour au profil</button><div class="kicker">Bibliothèque tutoriels</div><h1>${stats.exact}/${stats.total} tutoriels fixés</h1><p class="muted">Chaque exercice garde sa recherche YouTube de secours. Quand tu trouves un tutoriel que tu veux conserver, colle son URL ici : l'application utilisera ensuite cette vidéo partout. Une miniature YouTube est générée automatiquement.</p><div class="tutorial-progress"><div style="width:${stats.total?Math.round(stats.exact/stats.total*100):0}%"></div></div>${names.map((name,i)=>{const data=saved[name]||{},t=tutorialFor(name);return `<details class="tutorial-editor-row"><summary><span>${name}</span><span class="microbadge ${t.exact?'good':''}">${t.exact?'fixé':'recherche'}</span></summary><div class="tutorial-editor-body"><label class="field-label">URL vidéo</label><input class="url-input" id="tutorialVideo_${i}" type="url" value="${esc(data.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=..."><label class="field-label">URL image facultative</label><input class="url-input" id="tutorialImage_${i}" type="url" value="${esc(data.imageUrl||'')}" placeholder="Laisse vide pour utiliser la miniature YouTube"><div class="tutorial-editor-actions"><a class="btn btn-outline compact" href="${esc(`https://www.youtube.com/results?search_query=${encodeURIComponent(TUTORIAL_QUERIES[name]||name+' tutorial')}`)}" target="_blank" rel="noopener noreferrer">Rechercher</a><button class="btn btn-secondary compact save-tutorial" data-index="${i}" data-name="${encodeURIComponent(name)}">Enregistrer</button>${data.videoUrl||data.imageUrl?`<button class="btn btn-outline compact clear-tutorial" data-name="${encodeURIComponent(name)}">Réinitialiser</button>`:''}</div></div></details>`;}).join('')}</section></main>`;}
+function renderTutorialManager(){const names=allExerciseNames(),saved=getTutorialOverrides(),stats=tutorialStats();return `<main class="shell"><section class="card editor-card tutorial-manager"><button class="back-btn" id="closeTutorialManager">← Retour au profil</button><div class="kicker">Bibliothèque tutoriels · V8.9</div><h1>${stats.exact}/${stats.total} vidéos directes</h1><p class="muted">Les mouvements ont maintenant une vidéo de référence intégrée. Les variantes d'une même progression peuvent partager un tutoriel complet. Tu peux toujours remplacer n'importe quelle référence par ta propre vidéo : ton choix personnel reste prioritaire.</p><div class="tutorial-progress"><div style="width:${stats.total?Math.round(stats.exact/stats.total*100):0}%"></div></div>${names.map((name,i)=>{const data=saved[name]||{},t=tutorialFor(name);return `<details class="tutorial-editor-row"><summary><span>${name}</span><span class="microbadge ${t.exact?'good':''}">${data.videoUrl||data.imageUrl?'perso':'référence'}</span></summary><div class="tutorial-editor-body">${t.source?`<p class="small muted tutorial-reference"><strong>Référence actuelle :</strong> ${esc(t.source)}${t.title?` · ${esc(t.title)}`:''}</p>`:''}<a class="btn btn-outline" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">▶ Voir la vidéo actuelle</a><label class="field-label">Remplacer par une autre URL vidéo</label><input class="url-input" id="tutorialVideo_${i}" type="url" value="${esc(data.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=..."><label class="field-label">URL image facultative</label><input class="url-input" id="tutorialImage_${i}" type="url" value="${esc(data.imageUrl||'')}" placeholder="Laisse vide pour utiliser la miniature YouTube"><div class="tutorial-editor-actions"><a class="btn btn-outline compact" href="${esc(`https://www.youtube.com/results?search_query=${encodeURIComponent(TUTORIAL_QUERIES[name]||name+' tutorial')}`)}" target="_blank" rel="noopener noreferrer">Chercher une alternative</a><button class="btn btn-secondary compact save-tutorial" data-index="${i}" data-name="${encodeURIComponent(name)}">Enregistrer</button>${data.videoUrl||data.imageUrl?`<button class="btn btn-outline compact clear-tutorial" data-name="${encodeURIComponent(name)}">Revenir à la référence</button>`:''}</div></div></details>`;}).join('')}</section></main>`;}
 function saveTutorialOverride(name,index){const video=(document.getElementById(`tutorialVideo_${index}`)?.value||'').trim(),image=(document.getElementById(`tutorialImage_${index}`)?.value||'').trim();const data=getTutorialOverrides();if(video||image)data[name]={videoUrl:video,imageUrl:image};else delete data[name];setTutorialOverrides(data);render();}
 function clearTutorialOverride(name){const data=getTutorialOverrides();delete data[name];setTutorialOverrides(data);render();}
 
@@ -1482,7 +1601,7 @@ function renderProfile(){const logs=getBodyLogs(),p=getPrefs();const latest=logs
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + bandes + tapis + sac à dos</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Pas de parallettes ni de gilet lesté. Les exercices lestés utilisent le sac à dos et enregistrent sa charge en kg.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V8.8.3</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V8.9</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`, "profile");}
 
 function renderBodyChart(logs,key,unit){const pts=logs.filter(x=>Number(x[key])>0).slice(0,12).reverse();if(pts.length<2)return'';const vals=pts.map(x=>Number(x[key])),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.5,max-min);const coords=vals.map((v,i)=>{const x=(i/(vals.length-1))*100,y=88-((v-min)/range)*70;return `${x},${y}`}).join(' ');return `<div class="mini-chart"><div class="chart-head"><strong>${key==='weight'?'Poids':'Tour de taille'}</strong><span>${vals[0]} → ${vals[vals.length-1]} ${unit}</span></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Évolution ${key}"><polyline points="${coords}" fill="none" vector-effect="non-scaling-stroke"/></svg></div>`;}

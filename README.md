@@ -244,3 +244,11 @@ Les données structurées restent dans `localStorage`. Les photos de progression
 - Quick Log : séparation propre du nom et de l’unité.
 - Cibles tactiles agrandies (retour, fermeture, tutoriels, menus de mesure).
 - Cases à cocher rendues plus visibles.
+
+
+## V8.9 — Tutoriels de référence
+- 117/117 mouvements de l’application ont maintenant un lien vidéo direct par défaut.
+- Les variantes d’une même progression partagent volontairement une vidéo de référence complète lorsque celle-ci couvre toute la progression (front lever, human flag, L-sit, dips, pull-ups, etc.).
+- Sources privilégiées : FitnessFAQs, Calisthenicmovement, E3 Rehab, NASM, Tom Merrick, Hospital for Special Surgery et quelques démonstrations spécialisées.
+- Les tutoriels personnalisés enregistrés dans Profil restent prioritaires sur les références intégrées.
+- Les vidéos ne sont pas hébergées par l’application : elles s’ouvrent chez YouTube/Vimeo.

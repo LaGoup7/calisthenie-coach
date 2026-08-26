@@ -653,3 +653,7 @@ summary>*,.section-head>*,.history-top>*,.metric-title>*,.choice-row>*,.rank-hea
   .week-summary .meta{display:grid;grid-template-columns:1fr 1fr}
   .week-summary .pill{white-space:normal;text-align:center}
 }
+
+/* V8.9 · Tutoriels de référence */
+.tutorial-reference{line-height:1.45;margin:0 0 12px;overflow-wrap:anywhere}
+.tutorial-editor-body>.btn-outline{margin-bottom:8px}
