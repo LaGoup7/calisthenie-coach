@@ -212,3 +212,10 @@ Les données structurées restent dans `localStorage`. Les photos de progression
 - Sac à dos ajouté comme charge en kg pour les variantes lestées.
 - Matériel maison documenté : Power Tower, bandes, tapis, sac à dos.
 - Alertes discrètes lorsque le volume de micro-séries devient élevé.
+
+
+## V8.8 · Flex simplifié
+- Page Flex réduite à trois choix : Rapide, Ciblée et Complète.
+- Routine ciblée choisie automatiquement selon le jour.
+- Tests de mobilité et historique repliés dans Suivi mobilité.
+- Prévisualisation des exercices facultative, démarrage en un tap.

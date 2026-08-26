@@ -1143,15 +1143,46 @@ function startFlexRoutine(id){
 }
 function latestMobilityValue(id){const arr=getMobilityTests().filter(x=>x.testId===id).sort((a,b)=>new Date(b.date)-new Date(a.date));return arr[0]?Number(arr[0].value):null;}
 function bestMobilityValue(id){const vals=getMobilityTests().filter(x=>x.testId===id).map(x=>Number(x.value)).filter(Number.isFinite);return vals.length?Math.max(...vals):null;}
-function renderFlexExercise(e,i){return `<div class="week-exercise-row"><div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)}${e.rest?` · repos ${fmtTime(e.rest)}`:''}</div><div class="week-exercise-tip">${e.tip}</div><div class="exercise-tools">${tutorialLink(e.name,true)}</div></div></div>`;}
+function renderFlexExercise(e,i){return `<div class="week-exercise-row"><div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)}${e.rest?` · repos ${fmtTime(e.rest)}`:''}</div><div class="exercise-tools">${tutorialLink(e.name,true)}</div></div></div>`;}
+function targetedFlexRoutine(day=todayDay()){
+  if([2,3,5].includes(day)) return flexRoutineById("upper-15");
+  if([4].includes(day)) return flexRoutineById("lower-18");
+  if(day===6) return flexRoutineById("reset-10");
+  if(day===0) return flexRoutineById("full-25");
+  return flexRoutineById("reset-10");
+}
+function recommendedFlexRoutine(day=todayDay()){
+  if(day===0) return flexRoutineById("full-25");
+  if(day===4) return flexRoutineById("lower-18");
+  if([2,3].includes(day)) return flexRoutineById("upper-15");
+  return flexRoutineById("reset-10");
+}
+function flexChoiceCard(label, icon, routine, description){
+  return `<article class="flex-choice-card">
+    <div class="flex-choice-icon" aria-hidden="true">${icon}</div>
+    <div class="flex-choice-main"><div class="flex-choice-top"><div><span>${label}</span><strong>${routine.name}</strong></div><b>≈ ${routine.duration} min</b></div><p>${description}</p>
+    <div class="flex-choice-actions"><button class="btn btn-primary start-flex" data-flex="${routine.id}">Commencer</button><details class="flex-preview"><summary>Voir les exercices</summary><div class="week-exercise-list">${routine.exercises.map(renderFlexExercise).join('')}</div></details></div></div>
+  </article>`;
+}
 function renderFlexibility(){
   const logs=getFlexLogs(), weekAgo=Date.now()-7*86400000, recent=logs.filter(x=>new Date(x.date).getTime()>=weekAgo);
-  return shell(`<header class="topbar"><div><div class="brand">Flexibilité</div><div class="daylabel">Amplitude, mobilité et récupération guidée</div></div></header>
-    <section class="card flex-hero"><div class="kicker">Construire un corps puissant et mobile</div><h1>Souplesse progressive</h1><p class="muted">Choisis une routine selon ton état du jour. Cherche une tension nette mais contrôlée, jamais une douleur vive.</p><div class="meta"><span class="pill">${FLEX_ROUTINES.length} routines</span><span class="pill">${recent.length} cette semaine</span><span class="pill">chronos guidés</span></div></section>
-    <section class="card"><div class="section-head"><div><div class="kicker">Routines</div><h2>Choisis ton focus</h2></div></div><div class="flex-routine-list">${FLEX_ROUTINES.map(r=>{const open=state.expandedFlexRoutine===r.id;return `<article class="flex-routine ${open?'open':''}"><button class="flex-routine-summary" data-flex-toggle="${r.id}" aria-expanded="${open}"><div><strong>${r.name}</strong><span>${r.subtitle}</span><div class="meta"><span class="pill">≈ ${r.duration} min</span><span class="pill">${r.focus}</span><span class="pill">${r.intensity}</span></div></div><b>⌄</b></button>${open?`<div class="flex-routine-detail"><div class="week-exercise-list">${r.exercises.map(renderFlexExercise).join('')}</div><button class="btn btn-primary start-flex" data-flex="${r.id}">Lancer ${r.name}</button></div>`:''}</article>`;}).join('')}</div></section>
-    <section class="card"><div class="section-head"><div><div class="kicker">Mesures</div><h2>Tests de mobilité</h2></div></div><p class="muted small">Refais-les environ toutes les 4 semaines dans les mêmes conditions. Le but est surtout de suivre ta tendance et les asymétries.</p><div class="mobility-grid">${MOBILITY_TESTS.map(t=>{const latest=latestMobilityValue(t.id),best=bestMobilityValue(t.id);return `<div class="mobility-test"><strong>${t.name}</strong><small>${t.note}</small><div class="mobility-values"><span>Dernier <b>${latest==null?'—':latest+' '+t.unit}</b></span><span>Meilleur <b>${best==null?'—':best+' '+t.unit}</b></span></div><div class="mobility-entry"><input id="mob_${t.id}" type="number" inputmode="decimal" min="${t.min}" step="${t.step}" placeholder="${t.unit}"><button class="btn btn-secondary save-mobility" data-test="${t.id}">Enregistrer</button></div></div>`;}).join('')}</div></section>
-    <section class="card"><h2>Dernières routines</h2>${logs.length?logs.slice(0,6).map(l=>`<div class="history-item"><div class="history-top"><div><div class="history-title">${l.name}</div><div class="small muted">${formatDate(l.date)} · ${l.durationMinutes} min</div></div><span class="pill">confort ${l.comfort||'—'}/5</span></div></div>`).join(''):'<div class="empty">Aucune routine de flexibilité enregistrée.</div>'}</section>
-    <section class="card flex-safety"><h2>Règle simple</h2><p>Sur un étirement passif, vise environ <strong>3 à 6/10 de tension</strong>. Une sensation de tiraillement est normale ; douleur vive, pincement articulaire, engourdissement ou sensation électrique = tu réduis immédiatement l’amplitude.</p></section>`,"flexibility");
+  const recommended=recommendedFlexRoutine(), targeted=targetedFlexRoutine();
+  const last=logs[0];
+  return shell(`<header class="topbar"><div><div class="brand">Flex</div><div class="daylabel">Choisis, lance, respire.</div></div></header>
+    <section class="card flex-simple-hero"><div class="flex-hero-copy"><div class="kicker">Conseillé aujourd’hui</div><h1>${recommended.name}</h1><p>${recommended.subtitle}</p><div class="meta"><span class="pill">≈ ${recommended.duration} min</span><span class="pill">${recommended.focus}</span></div></div><button class="btn btn-primary start-flex flex-hero-start" data-flex="${recommended.id}">Commencer</button></section>
+
+    <section class="flex-simple-section"><div class="section-head"><div><div class="kicker">Choix rapide</div><h2>De combien de temps disposes-tu ?</h2></div></div><div class="flex-choice-list">
+      ${flexChoiceCard('Rapide','⚡',flexRoutineById('reset-10'),'Récupération douce et mobilité générale. Idéale presque tous les jours.')}
+      ${flexChoiceCard('Ciblée','◎',targeted, targeted.id==='lower-18'?'Accent sur chevilles, hanches, adducteurs et ischios.':'Accent sur poignets, épaules, pectoraux, dorsaux et thorax.')}
+      ${flexChoiceCard('Complète','◇',flexRoutineById('full-25'),'Travail global quand tu veux consacrer une vraie séance à la souplesse.')}
+    </div></section>
+
+    <details class="card flex-tracking"><summary><div><div class="kicker">Optionnel</div><strong>Suivi mobilité</strong><small>${recent.length} routine${recent.length>1?'s':''} cette semaine${last?` · dernière : ${formatDate(last.date)}`:''}</small></div><span>⌄</span></summary><div class="flex-tracking-body">
+      <h3>Tests</h3><p class="muted small">À refaire environ toutes les 4 semaines, pas à chaque séance.</p><div class="mobility-grid">${MOBILITY_TESTS.map(t=>{const latest=latestMobilityValue(t.id),best=bestMobilityValue(t.id);return `<div class="mobility-test"><strong>${t.name}</strong><div class="mobility-values"><span>Dernier <b>${latest==null?'—':latest+' '+t.unit}</b></span><span>Meilleur <b>${best==null?'—':best+' '+t.unit}</b></span></div><details><summary class="mobility-measure-toggle">Mesurer</summary><small>${t.note}</small><div class="mobility-entry"><input id="mob_${t.id}" type="number" inputmode="decimal" min="${t.min}" step="${t.step}" placeholder="${t.unit}"><button class="btn btn-secondary save-mobility" data-test="${t.id}">OK</button></div></details></div>`;}).join('')}</div>
+      <div class="divider"></div><h3>Historique récent</h3>${logs.length?logs.slice(0,4).map(l=>`<div class="history-item"><div class="history-top"><div><div class="history-title">${l.name}</div><div class="small muted">${formatDate(l.date)} · ${l.durationMinutes} min</div></div><span class="pill">${l.comfort||'—'}/5</span></div></div>`).join(''):'<div class="empty">Ta première routine apparaîtra ici.</div>'}
+    </div></details>
+
+    <div class="flex-safety-line"><span>✓</span><p><strong>Règle simple :</strong> tension confortable 3–6/10. Pas de douleur vive, pincement, engourdissement ou sensation électrique.</p></div>`,"flexibility");
 }
 function saveMobilityTest(id){const def=MOBILITY_TESTS.find(x=>x.id===id),el=document.getElementById(`mob_${id}`);if(!def||!el||el.value==='')return;const value=Number(el.value);if(!Number.isFinite(value))return;const arr=getMobilityTests();arr.unshift({id:Date.now(),date:new Date().toISOString(),testId:id,value});setMobilityTests(arr.slice(0,400));render();}
 
