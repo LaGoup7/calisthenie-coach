@@ -365,3 +365,291 @@ h3{font-weight:800}
 /* V8.8 · Flex simplifié */
 .flex-simple-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:18px;background:linear-gradient(135deg,#0f172a,#24324a);color:#fff;border-color:transparent;box-shadow:var(--shadow-strong);padding:22px}.flex-simple-hero .kicker,.flex-simple-hero p{color:rgba(255,255,255,.72)}.flex-simple-hero h1{font-size:clamp(1.8rem,8vw,2.5rem);margin:5px 0 8px}.flex-simple-hero .meta{margin:12px 0 0}.flex-simple-hero .pill{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.12);color:#fff}.flex-hero-start{width:auto;min-width:132px;background:#fff;color:#111827;box-shadow:none}.flex-simple-section{margin-bottom:14px}.flex-choice-list{display:grid;gap:10px}.flex-choice-card{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:14px;box-shadow:0 8px 22px rgba(15,23,42,.05)}.flex-choice-icon{width:46px;height:46px;border-radius:14px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:1.2rem;font-weight:900}.flex-choice-main{min-width:0}.flex-choice-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.flex-choice-top>div{display:grid;gap:2px}.flex-choice-top span{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:850}.flex-choice-top strong{font-size:1rem}.flex-choice-top b{font-size:.76rem;color:var(--muted);white-space:nowrap;background:var(--surface-2);padding:6px 8px;border-radius:999px}.flex-choice-card p{font-size:.82rem;line-height:1.4;color:var(--muted);margin:6px 0 11px}.flex-choice-actions{display:grid;grid-template-columns:130px minmax(0,1fr);gap:8px;align-items:start}.flex-choice-actions>.btn{padding:11px 12px;border-radius:13px}.flex-preview{border:1px solid var(--line);border-radius:13px;background:var(--surface-2);overflow:hidden}.flex-preview>summary{cursor:pointer;list-style:none;min-height:42px;padding:11px 12px;font-size:.76rem;font-weight:800;display:flex;align-items:center;justify-content:space-between}.flex-preview>summary::-webkit-details-marker{display:none}.flex-preview>summary:after{content:'⌄';color:var(--muted)}.flex-preview[open]>summary:after{transform:rotate(180deg)}.flex-preview .week-exercise-list{background:#fff;border-top:1px solid var(--line);padding:0 11px}.flex-preview .week-exercise-tip{display:none}.flex-tracking{padding:0;overflow:hidden}.flex-tracking>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px}.flex-tracking>summary::-webkit-details-marker{display:none}.flex-tracking>summary>div{display:grid;gap:2px}.flex-tracking>summary strong{font-size:1rem}.flex-tracking>summary small{color:var(--muted);font-size:.74rem}.flex-tracking>summary>span{width:32px;height:32px;border-radius:11px;background:var(--surface-2);display:grid;place-items:center;transition:transform .2s}.flex-tracking[open]>summary>span{transform:rotate(180deg)}.flex-tracking-body{border-top:1px solid var(--line);padding:16px 18px}.mobility-test{box-shadow:none}.mobility-test>small{margin-bottom:8px}.mobility-measure-toggle{cursor:pointer;font-size:.74rem;font-weight:800;color:var(--accent);padding:7px 0}.mobility-entry{margin-top:7px}.flex-safety-line{display:flex;gap:10px;align-items:flex-start;padding:10px 4px 2px;color:var(--muted)}.flex-safety-line>span{width:25px;height:25px;border-radius:50%;background:var(--success-bg);color:var(--success);display:grid;place-items:center;font-weight:900;flex:0 0 25px}.flex-safety-line p{font-size:.78rem;line-height:1.45;margin:2px 0 0}.flex-safety-line strong{color:var(--text)}
 @media(max-width:520px){.flex-simple-hero{grid-template-columns:1fr}.flex-hero-start{width:100%}.flex-choice-card{grid-template-columns:40px minmax(0,1fr);padding:13px}.flex-choice-icon{width:40px;height:40px;border-radius:12px}.flex-choice-actions{grid-template-columns:1fr}.flex-choice-actions>.btn{width:100%}.flex-preview>summary{justify-content:center}.flex-choice-top{gap:6px}.flex-choice-top b{font-size:.7rem}.flex-tracking>summary{padding:15px 16px}.flex-tracking-body{padding:15px 16px}}
+
+/* V8.8.2 · iPhone UI audit & responsive fixes */
+:root{
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-right:env(safe-area-inset-right,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px);
+}
+html,body,#app{width:100%;max-width:100%;min-height:100dvh;overflow-x:hidden}
+body{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+button,a,summary{touch-action:manipulation}
+img,video,canvas{max-width:100%;height:auto}
+.shell{
+  width:100%;
+  min-width:0;
+  min-height:100dvh;
+  padding-top:calc(14px + var(--safe-top));
+  padding-right:max(12px,var(--safe-right));
+  padding-left:max(12px,var(--safe-left));
+  padding-bottom:calc(116px + var(--safe-bottom));
+}
+.topbar{top:var(--safe-top)}
+.coach-shell{padding-bottom:calc(22px + var(--safe-bottom))}
+.card,details,summary,.grow,.week-main,.flex-choice-main,.library-item,.tutorial-editor-row{min-width:0;max-width:100%}
+details>summary{list-style:none}
+details>summary::-webkit-details-marker{display:none}
+summary>*,.section-head>*,.history-top>*,.metric-title>*,.choice-row>*,.rank-head>*{min-width:0}
+.exercise-name,.exercise-detail,.history-title,.week-exercise-tip,.flex-choice-card p,.flex-tracking small,.tutorial-copy strong,.tutorial-copy small,.library-item summary strong,.library-item summary span,.skill-node strong,.skill-node small,.choice-row span{overflow-wrap:anywhere;word-break:normal}
+.pill{max-width:100%}
+.exercise-row .grow,.week-exercise-row .grow{min-width:0}
+.week-details,.week-exercise-list,.today-details>.exercise-list,.details-stack,.flex-preview,.flex-preview .week-exercise-list,.flex-tracking-body,.library-body,.tutorial-editor-body{width:100%;min-width:0;max-width:100%}
+.week-exercise-row,.exercise-row{align-items:flex-start}
+.week-exercise-row .num,.exercise-row .num{margin-top:1px}
+
+/* Correct a later V8.3 rule that broke the Week grid on phones. */
+@media(max-width:520px){
+  .week-card{grid-template-columns:minmax(0,1fr) auto!important;gap:0 8px!important}
+  .week-summary{grid-column:1!important;padding:15px 0 14px 14px!important}
+  .week-card-actions{grid-column:2!important;padding:14px 14px 0 0!important;align-self:start}
+  .week-details{grid-column:1/-1!important;padding:14px!important}
+  .week-card-actions .compact{min-width:72px;padding:10px 11px}
+  .week-details-head{display:grid;grid-template-columns:1fr;gap:3px}
+}
+
+/* Flex cards: dropdown content uses the full card width instead of being indented by the icon column. */
+@media(max-width:520px){
+  .flex-choice-card{grid-template-columns:40px minmax(0,1fr);column-gap:11px;row-gap:8px;padding:13px}
+  .flex-choice-main{display:contents}
+  .flex-choice-top{grid-column:2;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:7px}
+  .flex-choice-card>p,.flex-choice-actions{grid-column:1/-1}
+  .flex-choice-card>p{margin:2px 0 4px;padding:0 1px}
+  .flex-choice-actions{width:100%;grid-template-columns:1fr;gap:8px}
+  .flex-preview{width:100%}
+  .flex-preview>summary{width:100%;justify-content:space-between!important;min-height:46px;padding:11px 13px}
+  .flex-preview .week-exercise-list{padding:0 12px}
+  .flex-tracking>summary{align-items:flex-start}
+  .flex-tracking>summary>div{min-width:0}
+  .flex-tracking>summary small{white-space:normal;line-height:1.35}
+  .flex-tracking-body{padding:14px}
+  .mobility-entry{grid-template-columns:minmax(0,1fr) 56px}
+  .mobility-entry .btn{width:56px;min-width:56px;padding:10px 6px}
+}
+
+/* iOS form fields: 16px prevents Safari zoom and keeps sheets aligned. */
+@media(max-width:600px){
+  input,select,textarea{font-size:16px!important;max-width:100%}
+  .select,.big-input,.textarea,.library-search,.url-input,.mobility-entry input,.quick-exact-input,.load-input{width:100%;min-width:0}
+  .field-label{line-height:1.3}
+}
+
+/* Quick Log bottom sheet: stable full-width layout on iPhone and dynamic viewport. */
+.quick-overlay{padding-left:var(--safe-left);padding-right:var(--safe-right)}
+.quick-sheet{
+  width:100%;
+  max-width:760px;
+  max-height:calc(100dvh - var(--safe-top) - 8px);
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.quick-sheet-head>div{min-width:0}
+.quick-sheet-head h2{overflow-wrap:anywhere}
+.quick-custom{min-width:0}
+.quick-custom[open]{padding-bottom:4px}
+@media(max-width:430px){
+  .quick-sheet{padding:16px 12px calc(18px + var(--safe-bottom));border-radius:24px 24px 0 0}
+  .quick-preset-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:8px}
+  .quick-preset-actions{gap:5px}
+  .quick-add{min-width:46px;height:44px;padding:0 8px}
+  .quick-exact{grid-template-columns:minmax(0,1fr) 92px;gap:7px}
+  .quick-exact-input{height:46px}
+  .quick-exact-add{height:46px;padding:0 8px}
+  .quick-band-taps{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .quick-band-taps .band-choice{min-height:56px;padding:7px 6px}
+  .quick-band-taps .band-choice span strong{font-size:.7rem}
+  .quick-band-taps .band-choice span small{font-size:.58rem}
+  .quick-recent-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:350px){
+  .quick-band-taps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .quick-recent-grid{grid-template-columns:1fr}
+}
+
+/* Bottom sheets / history details remain above the iPhone home indicator. */
+.detail-card{
+  width:min(760px,calc(100% - var(--safe-left) - var(--safe-right)));
+  max-height:calc(100dvh - var(--safe-top) - 10px);
+  padding-bottom:calc(18px + var(--safe-bottom));
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* Bottom navigation and quick button: safe-area aware without covering content. */
+.bottom-nav{
+  width:min(720px,calc(100% - 14px - var(--safe-left) - var(--safe-right)));
+  bottom:max(8px,var(--safe-bottom));
+  padding-bottom:8px;
+}
+.quick-fab{bottom:calc(78px + max(8px,var(--safe-bottom)))}
+
+/* Small-screen structural fixes across Progress, Skills, Profile and dropdowns. */
+@media(max-width:430px){
+  .section-head{align-items:flex-start;flex-wrap:wrap}
+  .history-top,.metric-title,.detail-row,.choice-row{align-items:flex-start}
+  .history-top>div,.metric-title>div,.choice-row>span{min-width:0}
+  .history-top>.pill,.metric-title>span,.detail-row>strong{flex:0 0 auto}
+  .rank-head{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px 12px}
+  .rank-head>.rank-xp{grid-column:1/-1;text-align:left;display:flex;align-items:baseline;gap:6px}
+  .rank-roadmap{gap:3px}
+  .rank-roadmap-node span{width:26px;height:26px}
+  .rank-roadmap-node small{font-size:.48rem}
+  .xp-breakdown{grid-template-columns:1fr}
+  .skill-node{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px 11px;align-items:center}
+  .skill-node .skill-dot{grid-column:1;grid-row:1/3}
+  .skill-node .grow{grid-column:2}
+  .skill-node .skill-toggle{grid-column:2;justify-self:start;min-height:40px}
+  .skill-node:not(:last-child):after{left:16px}
+  .tutorial-editor-row summary,.library-item summary{align-items:flex-start}
+  .tutorial-editor-row summary>span:first-child,.library-item summary>div{min-width:0}
+  .tutorial-editor-actions{display:grid;grid-template-columns:1fr 1fr}
+  .tutorial-editor-actions .btn{width:100%;min-width:0}
+  .readiness-result>div:first-child{align-items:flex-start;gap:8px}
+  .joint-choice{grid-template-columns:1fr}
+  .joint-choice button{min-height:46px}
+  .rpe-row{grid-template-columns:repeat(3,1fr)}
+  .comfort-row{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .body-summary,.stat-grid,.test-grid,.records-grid,.daily-volume-hero{grid-template-columns:1fr 1fr}
+  .more-grid{grid-template-columns:1fr 1fr}
+  .more-tile{min-height:88px;padding:13px 11px;gap:9px}
+  .more-tile .more-icon{width:34px;height:34px;flex-basis:34px}
+  .today-details>summary{padding:15px}
+  .today-details>.exercise-list,.details-stack{padding-left:15px;padding-right:15px}
+  .mini-chart svg{overflow:hidden}
+}
+@media(max-width:370px){
+  .more-grid,.today-cockpit{grid-template-columns:1fr}
+  .today-cockpit .cockpit-card:first-child{grid-column:auto;display:grid}
+  .tutorial-editor-actions{grid-template-columns:1fr}
+}
+
+/* Touch-only devices should not keep desktop hover offsets after a tap. */
+@media(hover:none){
+  .exercise-row:hover{background:transparent;padding-left:0;padding-right:0;margin-left:0;margin-right:0}
+  .week-card:hover{transform:none;box-shadow:var(--shadow)}
+}
+
+/* V8.8.3 · Advanced iPhone UI audit */
+/* Flex: keep the text and actions inside the wide content column. The previous
+   display:contents rule could auto-place paragraphs in the 40px icon column. */
+@media(max-width:520px){
+  .flex-choice-card{
+    grid-template-columns:40px minmax(0,1fr)!important;
+    align-items:start;
+    column-gap:11px;
+  }
+  .flex-choice-main{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:0;
+    min-width:0;
+  }
+  .flex-choice-top{
+    grid-column:auto!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:7px;
+  }
+  .flex-choice-main>p{
+    grid-column:auto!important;
+    width:100%;
+    margin:7px 0 11px!important;
+    padding:0!important;
+    overflow-wrap:normal;
+    word-break:normal;
+  }
+  .flex-choice-main>.flex-choice-actions{
+    grid-column:auto!important;
+    width:100%;
+    grid-template-columns:1fr!important;
+  }
+}
+
+/* Week: give the summary the full phone width. This prevents subtitle/meta
+   pills from being squeezed by the Launch button into a narrow column. */
+@media(max-width:520px){
+  .week-card{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:0!important;
+  }
+  .week-summary{
+    grid-column:1!important;
+    padding:15px 14px 9px!important;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .week-card-actions{
+    grid-column:1!important;
+    padding:0 14px 14px!important;
+    justify-content:flex-start;
+  }
+  .week-card-actions .compact{
+    width:100%;
+    min-height:44px;
+  }
+  .week-card-actions .rest-chip{margin-left:0}
+  .week-details{grid-column:1!important}
+  .week-summary .meta{margin-top:10px;gap:6px}
+  .week-summary .pill{font-size:.75rem;padding:6px 8px}
+  .week-chevron{width:40px;height:40px;flex-basis:40px}
+}
+
+/* Quick Log heading: label and unit were rendered inline with no visual gap. */
+.quick-preset-head>div:first-child{
+  min-width:0;
+  display:grid;
+  gap:2px;
+}
+.quick-preset-head>div:first-child>strong,
+.quick-preset-head>div:first-child>small{display:block;min-width:0}
+.quick-preset-head>div:first-child>strong{line-height:1.2}
+.quick-preset-head>div:first-child>small{line-height:1.25}
+
+/* 44px touch targets for iPhone. */
+.icon-btn{
+  min-width:44px;
+  min-height:44px;
+  display:inline-grid;
+  place-items:center;
+  padding:0;
+  border-radius:12px;
+}
+.back-btn{
+  min-height:44px;
+  display:inline-flex;
+  align-items:center;
+  padding:0 2px;
+  margin-bottom:14px;
+}
+.tutorial-link-compact{
+  min-height:40px;
+  padding:8px 11px;
+}
+.quick-custom>summary,
+.mobility-measure-toggle{
+  min-height:44px;
+  display:flex;
+  align-items:center;
+}
+.flex-tracking>summary,
+.flex-preview>summary,
+.today-details>summary,
+.tutorial-editor-row>summary,
+.library-item>summary{min-height:44px}
+
+/* Larger visible checkbox controls; their labels remain the primary tap area. */
+.checkline input[type="checkbox"],
+.switchline input[type="checkbox"]{
+  width:20px;
+  height:20px;
+  flex:0 0 20px;
+}
+
+/* Tiny-screen refinements. */
+@media(max-width:350px){
+  .flex-choice-top{grid-template-columns:1fr!important}
+  .flex-choice-top b{justify-self:start}
+  .week-summary .meta{display:grid;grid-template-columns:1fr 1fr}
+  .week-summary .pill{white-space:normal;text-align:center}
+}

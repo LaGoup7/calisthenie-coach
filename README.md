@@ -226,3 +226,21 @@ Les données structurées restent dans `localStorage`. Les photos de progression
 - Corrige le toggle legacy `Routines > Choisis ton focus` (`data-flex-toggle`).
 - Service Worker en network-first sur les fichiers principaux pour recevoir plus fiablement les mises à jour Vercel/PWA.
 - La version `V8.8.1` est visible dans l'écran Plus pour vérifier le déploiement.
+
+
+## V8.8.2 — iPhone UI audit
+- Correction du conflit de grille des cartes Semaine sur mobile.
+- Menus Flex dépliés sur toute la largeur de la carte.
+- Safe areas iPhone (encoche / Home Indicator) appliquées à la coque, navigation et bottom sheets.
+- Quick Log réorganisé pour 390/430 px, bandes sur 3 colonnes et champs à 16 px pour éviter le zoom Safari.
+- Menus déroulants, Skills, Progression, Profil et bibliothèque renforcés contre les débordements horizontaux.
+- Le moteur d'entraînement et les données restent inchangés.
+
+
+## V8.8.3 — Advanced iPhone UI audit
+- Audit automatisé aux largeurs 320 / 375 / 393 / 430 px + paysage.
+- Correction majeure des cartes Flex dont la description pouvait tomber dans la colonne de l’icône.
+- Cartes Semaine réorganisées sur une seule colonne mobile pour donner toute la largeur au résumé.
+- Quick Log : séparation propre du nom et de l’unité.
+- Cibles tactiles agrandies (retour, fermeture, tutoriels, menus de mesure).
+- Cases à cocher rendues plus visibles.
