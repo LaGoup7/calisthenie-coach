@@ -202,3 +202,13 @@ Les données structurées restent dans `localStorage`. Les photos de progression
 - Les photos IndexedDB sont incluses dans la sauvegarde en data URL.
 - Ajout de `vercel.json` pour un déploiement statique PWA avec service worker correctement revalidé.
 - Recommandation : exporter avant le premier passage de localhost vers Vercel.
+
+
+## V8.7 Simplify
+- Navigation principale ramenée à 4 onglets : Aujourd’hui, Semaine, Progrès, Plus.
+- Écran Aujourd’hui simplifié en cockpit.
+- Quick Log : répétition en 1 tap des derniers logs, saisie exacte, bandes par couleur en un tap.
+- Pause de séance complète et annulation de la dernière série guidée.
+- Sac à dos ajouté comme charge en kg pour les variantes lestées.
+- Matériel maison documenté : Power Tower, bandes, tapis, sac à dos.
+- Alertes discrètes lorsque le volume de micro-séries devient élevé.
