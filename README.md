@@ -1,4 +1,4 @@
-# Calisthénie Coach · V9.2 — Parametric Training + Flex
+# Calisthénie Coach · V9.2.2 — Quick Log visuel
 
 ## Volume musculaire paramétrique
 - Charge réelle = séances complètes, Express, personnelles + Quick Logs.
@@ -24,3 +24,17 @@
 - Timer iPhone renforcé.
 - Strava dans Plus.
 - Données existantes compatibles : nouveaux paramètres utilisent de nouvelles clés localStorage.
+
+
+## V9.2.2
+- Le bloc « Détails · Cycle, rang & coach adaptatif » a été retiré de la page Aujourd’hui.
+- Le même bloc est désormais disponible dans Plus.
+- Aucune donnée ou logique d’entraînement n’a été modifiée.
+
+
+### Quick Log visuel
+- sélecteur par catégories
+- recherche instantanée
+- miniatures issues des vidéos de référence
+- ordre logique par famille de mouvements
+- exercice sélectionné clairement affiché avant validation
