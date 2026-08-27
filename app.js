@@ -690,7 +690,7 @@ function parse(key, fallback) {
 function save(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 function getHistory() { return parse(STORAGE.history, []); }
 function setHistory(v) { save(STORAGE.history, v); }
-function getPrefs() { return parse(STORAGE.prefs, { sound:true, vibration:true, smartProgression:true }); }
+function getPrefs() { return parse(STORAGE.prefs, { sound:true, vibration:true, smartProgression:true, keepAwake:true }); }
 function setPrefs(v) { save(STORAGE.prefs, v); }
 function getTests() { return parse(STORAGE.tests, []); }
 function setTests(v) { save(STORAGE.tests, v); }
@@ -1192,7 +1192,7 @@ function shell(content, activeTab=state.view) {
 }
 
 function renderMore(){
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V8.9</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V8.9.2</div></div></header>
     <section class="more-grid">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1307,7 +1307,7 @@ function saveMobilityTest(id){const def=MOBILITY_TESTS.find(x=>x.id===id),el=doc
 
 function allExerciseNames(){const names=new Set(EXERCISE_LIBRARY.map(e=>e.name));Object.values(workouts).forEach(w=>w.exercises.forEach(e=>names.add(e.name)));FLEX_ROUTINES.forEach(r=>r.exercises.forEach(e=>names.add(e.name)));return [...names].sort((a,b)=>a.localeCompare(b,'fr'));}
 function tutorialStats(){const names=allExerciseNames(), exact=names.filter(n=>tutorialFor(n).exact).length;return {total:names.length,exact};}
-function renderTutorialManager(){const names=allExerciseNames(),saved=getTutorialOverrides(),stats=tutorialStats();return `<main class="shell"><section class="card editor-card tutorial-manager"><button class="back-btn" id="closeTutorialManager">← Retour au profil</button><div class="kicker">Bibliothèque tutoriels · V8.9</div><h1>${stats.exact}/${stats.total} vidéos directes</h1><p class="muted">Les mouvements ont maintenant une vidéo de référence intégrée. Les variantes d'une même progression peuvent partager un tutoriel complet. Tu peux toujours remplacer n'importe quelle référence par ta propre vidéo : ton choix personnel reste prioritaire.</p><div class="tutorial-progress"><div style="width:${stats.total?Math.round(stats.exact/stats.total*100):0}%"></div></div>${names.map((name,i)=>{const data=saved[name]||{},t=tutorialFor(name);return `<details class="tutorial-editor-row"><summary><span>${name}</span><span class="microbadge ${t.exact?'good':''}">${data.videoUrl||data.imageUrl?'perso':'référence'}</span></summary><div class="tutorial-editor-body">${t.source?`<p class="small muted tutorial-reference"><strong>Référence actuelle :</strong> ${esc(t.source)}${t.title?` · ${esc(t.title)}`:''}</p>`:''}<a class="btn btn-outline" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">▶ Voir la vidéo actuelle</a><label class="field-label">Remplacer par une autre URL vidéo</label><input class="url-input" id="tutorialVideo_${i}" type="url" value="${esc(data.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=..."><label class="field-label">URL image facultative</label><input class="url-input" id="tutorialImage_${i}" type="url" value="${esc(data.imageUrl||'')}" placeholder="Laisse vide pour utiliser la miniature YouTube"><div class="tutorial-editor-actions"><a class="btn btn-outline compact" href="${esc(`https://www.youtube.com/results?search_query=${encodeURIComponent(TUTORIAL_QUERIES[name]||name+' tutorial')}`)}" target="_blank" rel="noopener noreferrer">Chercher une alternative</a><button class="btn btn-secondary compact save-tutorial" data-index="${i}" data-name="${encodeURIComponent(name)}">Enregistrer</button>${data.videoUrl||data.imageUrl?`<button class="btn btn-outline compact clear-tutorial" data-name="${encodeURIComponent(name)}">Revenir à la référence</button>`:''}</div></div></details>`;}).join('')}</section></main>`;}
+function renderTutorialManager(){const names=allExerciseNames(),saved=getTutorialOverrides(),stats=tutorialStats();return `<main class="shell"><section class="card editor-card tutorial-manager"><button class="back-btn" id="closeTutorialManager">← Retour au profil</button><div class="kicker">Bibliothèque tutoriels · V8.9.2</div><h1>${stats.exact}/${stats.total} vidéos directes</h1><p class="muted">Les mouvements ont maintenant une vidéo de référence intégrée. Les variantes d'une même progression peuvent partager un tutoriel complet. Tu peux toujours remplacer n'importe quelle référence par ta propre vidéo : ton choix personnel reste prioritaire.</p><div class="tutorial-progress"><div style="width:${stats.total?Math.round(stats.exact/stats.total*100):0}%"></div></div>${names.map((name,i)=>{const data=saved[name]||{},t=tutorialFor(name);return `<details class="tutorial-editor-row"><summary><span>${name}</span><span class="microbadge ${t.exact?'good':''}">${data.videoUrl||data.imageUrl?'perso':'référence'}</span></summary><div class="tutorial-editor-body">${t.source?`<p class="small muted tutorial-reference"><strong>Référence actuelle :</strong> ${esc(t.source)}${t.title?` · ${esc(t.title)}`:''}</p>`:''}<a class="btn btn-outline" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">▶ Voir la vidéo actuelle</a><label class="field-label">Remplacer par une autre URL vidéo</label><input class="url-input" id="tutorialVideo_${i}" type="url" value="${esc(data.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=..."><label class="field-label">URL image facultative</label><input class="url-input" id="tutorialImage_${i}" type="url" value="${esc(data.imageUrl||'')}" placeholder="Laisse vide pour utiliser la miniature YouTube"><div class="tutorial-editor-actions"><a class="btn btn-outline compact" href="${esc(`https://www.youtube.com/results?search_query=${encodeURIComponent(TUTORIAL_QUERIES[name]||name+' tutorial')}`)}" target="_blank" rel="noopener noreferrer">Chercher une alternative</a><button class="btn btn-secondary compact save-tutorial" data-index="${i}" data-name="${encodeURIComponent(name)}">Enregistrer</button>${data.videoUrl||data.imageUrl?`<button class="btn btn-outline compact clear-tutorial" data-name="${encodeURIComponent(name)}">Revenir à la référence</button>`:''}</div></div></details>`;}).join('')}</section></main>`;}
 function saveTutorialOverride(name,index){const video=(document.getElementById(`tutorialVideo_${index}`)?.value||'').trim(),image=(document.getElementById(`tutorialImage_${index}`)?.value||'').trim();const data=getTutorialOverrides();if(video||image)data[name]={videoUrl:video,imageUrl:image};else delete data[name];setTutorialOverrides(data);render();}
 function clearTutorialOverride(name){const data=getTutorialOverrides();delete data[name];setTutorialOverrides(data);render();}
 
@@ -1348,12 +1348,15 @@ function renderCoach() {
   const e=a.workout.exercises[a.exerciseIndex], step=a.exerciseIndex+1, total=a.workout.exercises.length;
   const progress=((a.exerciseIndex+(a.setIndex/Math.max(1,e.sets)))/total)*100;
 
-  if (a.phase === "rest") {
+  if (a.phase === "rest" || a.phase === "transition") {
+    const isTransition=a.phase === "transition";
+    const next=isTransition?a.workout.exercises[a.exerciseIndex+1]:null;
     return `<main class="shell coach-shell"><div class="progress-wrap"><div class="progress-label"><span>${a.workout.name}</span><span>${step}/${total}</span></div><div class="progress-track"><div class="progress-bar" style="width:${progress}%"></div></div></div>
-      <section class="card coach-card"><div><div class="kicker">Repos</div><h2>${e.name}</h2>
-      <div class="timer"><div class="timer-time">${fmtTime(a.timerRemaining)}</div><div class="timer-sub">Prochaine série : ${a.setIndex+1}/${e.sets}</div></div>
+      <section class="card coach-card"><div><div class="kicker">${isTransition?'Exercice terminé':'Repos'}</div><h2>${e.name}</h2>
+      <div class="timer"><div class="timer-time">${fmtTime(a.timerRemaining)}</div><div class="timer-sub">${isTransition?`Prochain : ${next?.name||'Fin de séance'}`:`Prochaine série : ${a.setIndex+1}/${e.sets}`}</div></div>
+      ${isTransition&&next?`<div class="next-exercise-preview"><span class="small muted">À venir</span><strong>${next.name}</strong><small>${describe(next)}</small></div>`:''}
       <div class="timer-controls"><button class="btn btn-secondary" id="minus15">−15 s</button><button class="btn btn-secondary" id="toggleTimer">${a.timerRunning?'Pause':'Reprendre'}</button><button class="btn btn-secondary" id="plus30">+30 s</button></div></div>
-      <div class="stack"><button class="btn btn-primary" id="skipRest">Passer le repos</button>${state.undoSetSnapshot?'<button class="btn btn-secondary" id="undoGuidedSet">↶ Annuler la dernière série</button>':''}<button class="btn btn-outline" id="pauseWorkout">Pause séance</button><button class="btn btn-outline" id="quitWorkout">Quitter</button></div></section></main>`;
+      <div class="stack"><button class="btn btn-primary" id="skipRest">${isTransition?'Passer au prochain exercice':'Passer le repos'}</button>${state.undoSetSnapshot?'<button class="btn btn-secondary" id="undoGuidedSet">↶ Annuler la dernière série</button>':''}<button class="btn btn-outline" id="pauseWorkout">Pause séance</button><button class="btn btn-outline" id="quitWorkout">Quitter</button></div></section></main>`;
   }
 
   const timed=e.type==="timer"||e.type.startsWith("hold");
@@ -1372,6 +1375,18 @@ function renderCoach() {
     <section class="card coach-card"><div><div class="kicker">${setLabel}</div><div class="exercise-title">${e.name}</div><div class="target">${describe(e)}</div>
       ${e.prescriptionNote?`<div class="coach-note ${e.prescriptionStatus}">${e.prescriptionNote}</div>`:''}<p class="tip">${e.tip}</p>${tutorialLink(e.name)}${a.kind==='workout'&&substitutionOptions(e).length?'<button class="btn btn-outline substitute-btn" id="openSubstitute">Changer cet exercice</button>':''}${input}</div>
       <div class="stack"><button class="btn btn-primary" id="completeSet">${a.setIndex===e.sets-1?'Terminer cette étape':'Série terminée'}</button>${state.undoSetSnapshot?'<button class="btn btn-secondary" id="undoGuidedSet">↶ Annuler la dernière série</button>':''}<button class="btn btn-outline" id="pauseWorkout">Pause séance</button><button class="btn btn-outline" id="quitWorkout">Quitter</button></div></section></main>`;
+}
+
+function transitionRestSeconds(current,next){
+  if(!current||!next)return 0;
+  // For strength/skill work, reuse the recovery prescribed after a set.
+  if(Number(current.rest)>0)return Number(current.rest);
+  // Single-step warm-ups/cardio/mobility previously had rest=0 because they have
+  // no intra-exercise sets. Give them a short transition before the next block.
+  if(/^Échauffement/i.test(current.name))return 60;
+  if(/Cardio Zone 2/i.test(current.name))return 60;
+  if(current.type==='timer'||current.type?.startsWith('hold'))return 45;
+  return 45;
 }
 
 function completeSet() {
@@ -1394,11 +1409,36 @@ function completeSet() {
     if(a.phase==="rest"){a.timerRunning=true;startTimer();} render(); return;
   }
   if (a.exerciseIndex<a.workout.exercises.length-1) {
-    a.exerciseIndex++; a.setIndex=0; a.phase="work"; const next=a.workout.exercises[a.exerciseIndex]; a.currentValue=next.target;
-    a.currentBand=next.type==="reps_band"?(lastBandForExercise(next.name)||defaultBandForExercise(next.name)):"Aucune";a.currentLoadKg=0;
-    a.timerRemaining=next.type==="timer"||next.type.startsWith("hold")?next.target:null; render(); return;
+    // Keep the completed exercise active during the transition rest. This avoids
+    // showing the next movement before the athlete has recovered.
+    const next=a.workout.exercises[a.exerciseIndex+1];
+    const transitionRest=transitionRestSeconds(e,next);
+    a.phase=transitionRest>0?"transition":"work";
+    if(a.phase==="transition"){
+      a.timerRemaining=transitionRest;
+      a.timerRunning=true;
+      startTimer();
+      render();
+      return;
+    }
+    advanceToNextExercise(a);
+    render(); return;
   }
   a.phase="review"; a.finishedAt=Date.now(); render();
+}
+
+function advanceToNextExercise(a=state.active){
+  if(!a || a.exerciseIndex>=a.workout.exercises.length-1)return false;
+  a.exerciseIndex++;
+  a.setIndex=0;
+  a.phase="work";
+  const next=a.workout.exercises[a.exerciseIndex];
+  a.currentValue=next.target;
+  a.currentBand=next.type==="reps_band"?(lastBandForExercise(next.name)||defaultBandForExercise(next.name)):"Aucune";
+  a.currentLoadKg=0;
+  a.timerRemaining=next.type==="timer"||next.type.startsWith("hold")?next.target:null;
+  a.timerRunning=false;
+  return true;
 }
 
 function renderWorkoutReview() {
@@ -1437,23 +1477,82 @@ function saveWorkoutReview() {
   state.active=null; state.undoSetSnapshot=null; state.view="progress"; render();
 }
 
-function startTimer() {
-  stopTimer();
-  state.timer=setInterval(()=>{
-    if(!state.active||!state.active.timerRunning)return;
-    state.active.timerRemaining=Math.max(0,(state.active.timerRemaining??0)-1);
-    const el=document.querySelector('.timer-time'); if(el) el.textContent=fmtTime(state.active.timerRemaining);
-    if(state.active.timerRemaining<=0){
-      state.active.timerRunning=false; stopTimer(); signalTimer();
-      if(state.active.phase==="rest"){
-        state.active.phase="work"; const e=state.active.workout.exercises[state.active.exerciseIndex];
-        state.active.timerRemaining=e.type==="timer"||e.type.startsWith("hold")?e.target:null; render();
-      } else render();
-    }
-  },1000);
+let wakeLockHandle=null;
+let timerAudioContext=null;
+
+async function unlockTimerAudio(){
+  const p=getPrefs();
+  if(!p.sound)return;
+  try{
+    if(!timerAudioContext)timerAudioContext=new(window.AudioContext||window.webkitAudioContext)();
+    if(timerAudioContext.state==='suspended')await timerAudioContext.resume();
+    // Very short inaudible pulse during a user gesture keeps the audio context primed on iOS.
+    const o=timerAudioContext.createOscillator(),g=timerAudioContext.createGain();
+    g.gain.value=0.00001;o.connect(g);g.connect(timerAudioContext.destination);o.start();o.stop(timerAudioContext.currentTime+0.01);
+  }catch{}
 }
-function stopTimer(){if(state.timer){clearInterval(state.timer);state.timer=null;}}
-function signalTimer(){const p=getPrefs();if(p.vibration&&navigator.vibrate)navigator.vibrate([120,80,120]);if(p.sound){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.value=.08;o.start();o.stop(ctx.currentTime+.18);}catch{}}}
+
+async function requestTimerWakeLock(){
+  const p=getPrefs();
+  if(!p.keepAwake||!('wakeLock' in navigator)||document.visibilityState!=='visible')return;
+  try{
+    if(wakeLockHandle&&!wakeLockHandle.released)return;
+    wakeLockHandle=await navigator.wakeLock.request('screen');
+    wakeLockHandle.addEventListener('release',()=>{wakeLockHandle=null;});
+  }catch{}
+}
+function releaseTimerWakeLock(){
+  try{if(wakeLockHandle&&!wakeLockHandle.released)wakeLockHandle.release();}catch{}
+  wakeLockHandle=null;
+}
+
+function finishRunningTimer(){
+  const a=state.active;if(!a)return;
+  a.timerRunning=false;stopTimer();signalTimer();
+  if(a.phase==='rest'){
+    a.phase='work';const e=a.workout.exercises[a.exerciseIndex];
+    a.timerRemaining=e.type==='timer'||e.type.startsWith('hold')?e.target:null;render();
+  }else if(a.phase==='transition'){
+    advanceToNextExercise(a);render();
+  }else render();
+}
+function timerTick(){
+  const a=state.active;if(!a||!a.timerRunning)return;
+  const end=Number(a.timerEndAt||0);
+  if(!end){a.timerEndAt=Date.now()+Math.max(0,Number(a.timerRemaining||0))*1000;return;}
+  const remaining=Math.max(0,Math.ceil((end-Date.now())/1000));
+  a.timerRemaining=remaining;
+  const el=document.querySelector('.timer-time');if(el)el.textContent=fmtTime(remaining);
+  if(remaining<=0)finishRunningTimer();
+}
+function startTimer(){
+  stopTimer();
+  const a=state.active;if(!a||!a.timerRunning)return;
+  a.timerEndAt=Date.now()+Math.max(0,Number(a.timerRemaining||0))*1000;
+  unlockTimerAudio();requestTimerWakeLock();
+  timerTick();
+  state.timer=setInterval(timerTick,250);
+}
+function stopTimer(){
+  if(state.timer){clearInterval(state.timer);state.timer=null;}
+  if(state.active)state.active.timerEndAt=null;
+  if(!state.active?.timerRunning)releaseTimerWakeLock();
+}
+function signalTimer(){
+  const p=getPrefs();
+  if(p.vibration&&navigator.vibrate)navigator.vibrate([180,90,180,90,260]);
+  if(!p.sound)return;
+  try{
+    const ctx=timerAudioContext||(timerAudioContext=new(window.AudioContext||window.webkitAudioContext)());
+    if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+    const now=ctx.currentTime;
+    [0,0.24,0.48].forEach((delay,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=i===2?1046:880;g.gain.setValueAtTime(.0001,now+delay);g.gain.exponentialRampToValueAtTime(.16,now+delay+.015);g.gain.exponentialRampToValueAtTime(.0001,now+delay+.18);
+      o.start(now+delay);o.stop(now+delay+.20);
+    });
+  }catch{}
+}
 
 function bestMetric(history,name){let best=0;history.forEach(h=>(h.entries||[]).forEach(e=>{if(e.exercise===name)best=Math.max(best,Number(e.value||0));}));return best;}
 function latestTestValue(id){const t=getTests().filter(x=>x.testId===id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];return t?Number(t.value):0;}
@@ -1597,11 +1696,11 @@ function renderProfile(){const logs=getBodyLogs(),p=getPrefs();const latest=logs
     ${logs.length?`<div class="body-summary"><div><span>Poids</span><strong>${latest.weight?latest.weight+' kg':'—'}</strong></div><div><span>Tour de taille</span><strong>${latest.waist?latest.waist+' cm':'—'}</strong></div><div><span>Masse grasse estimée</span><strong>${latestBf?latestBf.toFixed(1)+' %':'—'}</strong></div><div><span>Cou</span><strong>${latest.neck?latest.neck+' cm':'—'}</strong></div></div>${latest.photoId?`<div class="photo-card"><img id="latestBodyPhoto" alt="Photo de progression"><small>Photo enregistrée uniquement sur cet appareil.</small></div>`:''}${renderBodyChart(logs,'weight','kg')}${renderBodyChart(logs,'waist','cm')}<div class="body-history">${logs.slice(0,10).map(l=>{const bf=estimateBodyFat(l.height,l.waist,l.neck);return `<div class="detail-row"><span>${formatDate(l.date)}</span><strong>${l.weight?l.weight+' kg':''}${l.weight&&l.waist?' · ':''}${l.waist?l.waist+' cm':''}${bf?' · '+bf.toFixed(1)+' %':''}${l.photoId?' · 📷':''}</strong></div>`}).join('')}</div>`:'<div class="empty">Ajoute une mesure pour suivre ton évolution.</div>'}
   </section>
   <section class="card"><h2>Coach adaptatif</h2><div class="switchline"><div><strong>Progression intelligente</strong><div class="small muted">Ajuste légèrement les objectifs selon tes dernières séances, ton effort et les gênes articulaires.</div></div><input id="smartPref" type="checkbox" ${p.smartProgression!==false?'checked':''}></div></section>
-  <section class="card"><h2>Alertes</h2><div class="switchline"><div><strong>Son du timer</strong><div class="small muted">Bip à la fin d'un chrono</div></div><input id="soundPref" type="checkbox" ${p.sound?'checked':''}></div><div class="switchline"><div><strong>Vibration</strong><div class="small muted">Si le téléphone le permet</div></div><input id="vibrationPref" type="checkbox" ${p.vibration?'checked':''}></div></section>
+  <section class="card"><h2>Alertes & écran</h2><div class="switchline"><div><strong>Son du timer</strong><div class="small muted">Triple bip à la fin d'un chrono</div></div><input id="soundPref" type="checkbox" ${p.sound?'checked':''}></div><div class="switchline"><div><strong>Garder l'écran actif</strong><div class="small muted">Recommandé sur iPhone : empêche la mise en veille pendant un chrono</div></div><input id="keepAwakePref" type="checkbox" ${p.keepAwake!==false?'checked':''}></div><div class="switchline"><div><strong>Vibration</strong><div class="small muted">Utilisée uniquement si le navigateur la prend en charge</div></div><input id="vibrationPref" type="checkbox" ${p.vibration?'checked':''}></div><p class="install-note">Si tu verrouilles volontairement l’iPhone, iOS peut suspendre une PWA. Pour une alarme garantie sur écran verrouillé, il faudra ajouter des notifications push côté serveur.</p></section>
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + bandes + tapis + sac à dos</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Pas de parallettes ni de gilet lesté. Les exercices lestés utilisent le sac à dos et enregistrent sa charge en kg.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V8.9</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V8.9.2</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`, "profile");}
 
 function renderBodyChart(logs,key,unit){const pts=logs.filter(x=>Number(x[key])>0).slice(0,12).reverse();if(pts.length<2)return'';const vals=pts.map(x=>Number(x[key])),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.5,max-min);const coords=vals.map((v,i)=>{const x=(i/(vals.length-1))*100,y=88-((v-min)/range)*70;return `${x},${y}`}).join(' ');return `<div class="mini-chart"><div class="chart-head"><strong>${key==='weight'?'Poids':'Tour de taille'}</strong><span>${vals[0]} → ${vals[vals.length-1]} ${unit}</span></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Évolution ${key}"><polyline points="${coords}" fill="none" vector-effect="non-scaling-stroke"/></svg></div>`;}
@@ -1659,7 +1758,7 @@ function bindEvents(){
   const undoGuided=document.getElementById('undoGuidedSet');if(undoGuided)undoGuided.onclick=undoLastGuidedSet;
   const toggleWork=document.getElementById('toggleWorkTimer');if(toggleWork)toggleWork.onclick=()=>{state.active.timerRunning=!state.active.timerRunning;if(state.active.timerRunning)startTimer();else stopTimer();render();};
   const toggle=document.getElementById('toggleTimer');if(toggle)toggle.onclick=()=>{state.active.timerRunning=!state.active.timerRunning;if(state.active.timerRunning)startTimer();else stopTimer();render();};
-  const skip=document.getElementById('skipRest');if(skip)skip.onclick=()=>{stopTimer();state.active.phase='work';state.active.timerRunning=false;const e=state.active.workout.exercises[state.active.exerciseIndex];state.active.timerRemaining=e.type==='timer'||e.type.startsWith('hold')?e.target:null;render();};
+  const skip=document.getElementById('skipRest');if(skip)skip.onclick=()=>{stopTimer();const a=state.active;if(a.phase==='transition'){advanceToNextExercise(a);}else{a.phase='work';a.timerRunning=false;const e=a.workout.exercises[a.exerciseIndex];a.timerRemaining=e.type==='timer'||e.type.startsWith('hold')?e.target:null;}render();};
   const p30=document.getElementById('plus30');if(p30)p30.onclick=()=>{state.active.timerRemaining+=30;render();if(state.active.timerRunning)startTimer();};
   const m15=document.getElementById('minus15');if(m15)m15.onclick=()=>{state.active.timerRemaining=Math.max(0,state.active.timerRemaining-15);render();if(state.active.timerRunning)startTimer();};
   document.querySelectorAll('[data-rpe]').forEach(b=>b.onclick=()=>{state.active.reviewRpe=Number(b.dataset.rpe);render();});
@@ -1681,6 +1780,7 @@ function bindEvents(){
   document.querySelectorAll('.clear-tutorial').forEach(b=>b.onclick=()=>clearTutorialOverride(decodeURIComponent(b.dataset.name)));
   const sound=document.getElementById('soundPref');if(sound)sound.onchange=()=>{const p=getPrefs();p.sound=sound.checked;setPrefs(p);};
   const vib=document.getElementById('vibrationPref');if(vib)vib.onchange=()=>{const p=getPrefs();p.vibration=vib.checked;setPrefs(p);};
+  const keepAwake=document.getElementById('keepAwakePref');if(keepAwake)keepAwake.onchange=()=>{const p=getPrefs();p.keepAwake=keepAwake.checked;setPrefs(p);if(!p.keepAwake)releaseTimerWakeLock();else if(state.active?.timerRunning)requestTimerWakeLock();};
   const smart=document.getElementById('smartPref');if(smart)smart.onchange=()=>{const p=getPrefs();p.smartProgression=smart.checked;setPrefs(p);};
   const install=document.getElementById('installApp');if(install&&state.deferredInstall)install.onclick=async()=>{state.deferredInstall.prompt();await state.deferredInstall.userChoice;state.deferredInstall=null;render();};
   const exportBtn=document.getElementById('exportData');if(exportBtn)exportBtn.onclick=exportBackup;
@@ -1692,5 +1792,14 @@ function adjustValue(delta){const input=document.getElementById('valueInput');if
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
 window.addEventListener('appinstalled',()=>{state.deferredInstall=null;});
+// Prime Web Audio from a genuine user gesture. This matters on iOS.
+document.addEventListener('pointerdown',()=>unlockTimerAudio(),{passive:true});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&state.active?.timerRunning){
+    const end=Number(state.active.timerEndAt||0);
+    if(end&&Date.now()>=end)finishRunningTimer();
+    else requestTimerWakeLock();
+  }
+});
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 render();

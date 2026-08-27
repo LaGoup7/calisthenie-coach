@@ -657,3 +657,9 @@ summary>*,.section-head>*,.history-top>*,.metric-title>*,.choice-row>*,.rank-hea
 /* V8.9 · Tutoriels de référence */
 .tutorial-reference{line-height:1.45;margin:0 0 12px;overflow-wrap:anywhere}
 .tutorial-editor-body>.btn-outline{margin-bottom:8px}
+
+
+/* V8.9.1 · repos entre exercices */
+.next-exercise-preview{display:grid;gap:4px;margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface-2)}
+.next-exercise-preview strong{font-size:1.05rem}
+.next-exercise-preview small{color:var(--muted);line-height:1.35}

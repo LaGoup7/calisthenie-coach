@@ -252,3 +252,18 @@ Les données structurées restent dans `localStorage`. Les photos de progression
 - Sources privilégiées : FitnessFAQs, Calisthenicmovement, E3 Rehab, NASM, Tom Merrick, Hospital for Special Surgery et quelques démonstrations spécialisées.
 - Les tutoriels personnalisés enregistrés dans Profil restent prioritaires sur les références intégrées.
 - Les vidéos ne sont pas hébergées par l’application : elles s’ouvrent chez YouTube/Vimeo.
+
+
+## V8.9.1 — Repos entre exercices
+- Le temps de repos de l'exercice s'applique désormais aussi après sa dernière série avant de passer au mouvement suivant.
+- Écran de transition dédié avec aperçu du prochain exercice.
+- Le repos peut être ajusté (-15 s / +30 s), mis en pause ou passé.
+
+
+## V8.9.2 — Timer Reliability iPhone
+- Screen Wake Lock pendant les chronos (activé par défaut).
+- AudioContext pré-déverrouillé au premier tap pour fiabiliser le bip iOS.
+- Triple bip de fin de chrono.
+- Chrono basé sur une deadline absolue, donc pas de dérive si l'event loop ralentit.
+- Recalage au retour au premier plan.
+- Important : un verrouillage manuel de l'iPhone peut toujours suspendre la PWA ; une garantie écran verrouillé nécessite Web Push / backend ou une app native.
