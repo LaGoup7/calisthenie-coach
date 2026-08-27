@@ -12,96 +12,110 @@ const STORAGE = {
   quickLogs: "cc_quick_logs",
   stravaActivities: "cc_strava_activities",
   stravaMeta: "cc_strava_meta",
+  customWorkouts: "cc_custom_workouts",
 };
 
-function ex(name, type, sets, target, rest, tip) {
-  return { name, type, sets, target, rest, tip, baseTarget: target };
+function ex(name, type, sets, target, rest, tip, opts={}) {
+  return {
+    name, type, sets, target, rest, tip, baseTarget: target,
+    phase: opts.phase || "main",
+    express: !!opts.express,
+    shortSets: opts.shortSets ?? null,
+    shortTarget: opts.shortTarget ?? null,
+    guide: opts.guide || null,
+  };
 }
 
+// V9.1 · programme intermédiaire 6 j/7.
+// Chaque journée conserve échauffement + travail principal + cardio + retour au calme,
+// y compris en mode Express. Lundi reste le jour de récupération complète.
 const workouts = {
-  1: { name: "Repos", subtitle: "Récupération complète", duration: 0, intensity: "Repos", exercises: [] },
+  1: { name: "Repos", subtitle: "Récupération complète", duration: 0, shortDuration: 0, intensity: "Repos", exercises: [] },
   2: {
-    name: "Push + Handstand", subtitle: "Reprise intermédiaire · poussée, épaules, contrôle", duration: 65, intensity: "Intermédiaire · modérée",
+    name: "Push + Handstand", subtitle: "Poussée complète · épaules, pectoraux, triceps et contrôle", duration: 72, shortDuration: 32, intensity: "Intermédiaire · modérée",
     exercises: [
-      ex("Échauffement épaules & poignets", "timer", 1, 480, 0, "Rotations, band pull-aparts, scapular push-ups et quelques pompes faciles."),
-      ex("Handstand au mur", "hold", 3, 25, 60, "Reste propre et loin de l’échec. Stoppe si les poignets fatiguent trop."),
-      ex("Dips", "reps", 3, 6, 120, "Garde 2 à 3 répétitions en réserve."),
-      ex("Pompes", "reps", 3, 10, 90, "Corps gainé, amplitude confortable."),
-      ex("Pike push-ups", "reps", 2, 7, 90, "Mouvement lent et contrôlé."),
-      ex("Hollow hold", "hold", 2, 20, 60, "Bas du dos collé au tapis."),
-      ex("Cardio Zone 2", "timer", 1, 900, 0, "15 min très faciles : marche rapide ou footing doux. Garde une respiration confortable."),
-      ex("Mobilité épaules / pectoraux / poignets", "timer", 1, 600, 0, "Étirements doux, sans chercher la douleur.")
+      ex("Échauffement épaules & poignets", "timer", 1, 420, 0, "Prépare les poignets avant les appuis et monte progressivement en température.", {phase:"warmup",express:true,shortTarget:240,guide:["60 s de mobilisation douce des poignets + appuis progressifs","12 pass-through avec bande légère","10 scapular push-ups sur poignées ou au sol","10 rotations externes par côté avec bande légère","2 × 5 pompes faciles, sans fatigue"]}),
+      ex("Handstand au mur", "hold", 3, 25, 60, "Qualité de ligne avant durée. Arrête la série avant de perdre le contrôle.", {express:true,shortSets:2}),
+      ex("Dips", "reps", 4, 6, 120, "Barres parallèles stables. Garde environ 2 répétitions en réserve.", {express:true,shortSets:3}),
+      ex("Pompes", "reps", 3, 10, 90, "Utilise les poignées si elles rendent les poignets plus confortables. Corps gainé.", {express:true,shortSets:2}),
+      ex("Pike push-ups", "reps", 3, 7, 90, "Tête entre les mains, descente contrôlée, épaules actives.", {express:true,shortSets:2}),
+      ex("Hollow hold", "hold", 3, 25, 60, "Bas du dos au tapis ; raccourcis le levier si nécessaire.", {express:true,shortSets:2}),
+      ex("Cardio Zone 2", "timer", 1, 1200, 0, "20 min faciles : course, marche rapide ou vélo. Tu dois pouvoir parler en phrases complètes.", {phase:"cardio",express:true,shortTarget:480}),
+      ex("Mobilité épaules / pectoraux / poignets", "timer", 1, 480, 0, "Retour au calme progressif, sans douleur vive.", {phase:"cooldown",express:true,shortTarget:240,guide:["Étirement pectoral 45 s par côté","Grand dorsal 45 s par côté","Poignets flexion/extension 30 s dans chaque position","Respiration lente 60–90 s"]})
     ]
   },
   3: {
-    name: "Pull + Grip", subtitle: "Reprise intermédiaire · force + volume de tirage", duration: 65, intensity: "Intermédiaire · modérée",
+    name: "Pull + Grip + Core", subtitle: "Dos complet · tractions, tirage horizontal, bras, grip et abdos", duration: 72, shortDuration: 32, intensity: "Intermédiaire · modérée",
     exercises: [
-      ex("Échauffement tirage", "timer", 1, 420, 0, "Dead hang léger, scapular pull-ups et face pulls."),
-      ex("Tractions strictes", "reps", 3, 4, 120, "Top sets propres : vise environ 2 répétitions en réserve. Si la forme baisse, utilise une bande."),
-      ex("Tractions assistées", "reps_band", 2, 6, 105, "Back-off technique : assistance suffisante pour garder 2 à 3 répétitions en réserve."),
-      ex("Row avec bande", "reps_band", 3, 12, 75, "Pince les omoplates en fin de mouvement."),
-      ex("Face pulls", "reps_band", 2, 15, 60, "Coudes hauts, mouvement contrôlé."),
-      ex("Curl biceps avec bande", "reps_band", 2, 12, 60, "Pas d’élan."),
-      ex("Dead hang", "hold", 2, 30, 90, "Le grip est déjà très sollicité par les tractions : reste loin de l’échec."),
-      ex("Hanging knee raises", "reps", 2, 8, 75, "Pas de balancement."),
-      ex("Mobilité dos / avant-bras / épaules", "timer", 1, 600, 0, "Récupération active et douce.")
+      ex("Échauffement tirage", "timer", 1, 420, 0, "Active les omoplates avant les tractions.", {phase:"warmup",express:true,shortTarget:240,guide:["30–45 s dead hang très léger","2 × 6 scapular pull-ups","15 face pulls avec bande légère","8 rows bande très faciles","1–2 séries de tractions assistées faciles"]}),
+      ex("Tractions strictes", "reps", 4, 4, 120, "Répétitions strictes. Garde 1–2 reps en réserve plutôt que d'aller à l'échec.", {express:true,shortSets:3}),
+      ex("Tractions assistées", "reps_band", 2, 6, 105, "Back-off technique : amplitude complète et assistance suffisante.", {express:false}),
+      ex("Row avec bande", "reps_band", 3, 12, 75, "Tire les coudes vers l'arrière et marque une courte pause.", {express:true,shortSets:2}),
+      ex("Face pulls", "reps_band", 2, 15, 60, "Bande légère à moyenne, épaules basses.", {express:false}),
+      ex("Curl biceps avec bande", "reps_band", 2, 12, 60, "Pas d'élan ; contrôle le retour.", {express:false}),
+      ex("Dead hang", "hold", 2, 35, 90, "Travail de grip sans chercher un record après les tractions.", {express:true,shortSets:2,shortTarget:25}),
+      ex("Hanging knee raises", "reps", 3, 8, 75, "Monte le bassin légèrement et évite le balancement.", {express:true,shortSets:2}),
+      ex("Cardio Zone 2", "timer", 1, 1200, 0, "20 min faciles. Si tu cours, enregistre l'activité avec Strava.", {phase:"cardio",express:true,shortTarget:480}),
+      ex("Mobilité dos / avant-bras / épaules", "timer", 1, 420, 0, "Décompresse le haut du corps et les avant-bras.", {phase:"cooldown",express:true,shortTarget:180,guide:["Child's pose latéral 45 s par côté","Étirement avant-bras 30 s dans chaque sens","Rotation thoracique 6 reps par côté","Respiration lente 60 s"]})
     ]
   },
   4: {
-    name: "Jambes + Cardio", subtitle: "Reprise intermédiaire · jambes complètes et endurance", duration: 70, intensity: "Intermédiaire · modérée",
+    name: "Jambes + Cardio", subtitle: "Quadriceps, ischios, fessiers, mollets, stabilité et endurance", duration: 78, shortDuration: 35, intensity: "Intermédiaire · modérée",
     exercises: [
-      ex("Échauffement jambes", "timer", 1, 420, 0, "Squats faciles, chevilles, hanches et fentes dynamiques."),
-      ex("Squat tempo", "reps", 3, 10, 90, "3 secondes de descente, contrôle en bas, remontée dynamique. Garde 2 à 3 reps en réserve."),
-      ex("Fentes arrière", "reps_side", 3, 8, 75, "8 répétitions par jambe."),
-      ex("Romanian deadlift avec bande", "reps_band", 3, 12, 75, "Hanches vers l’arrière, dos neutre."),
-      ex("Hamstring curl avec bande", "reps_band", 2, 12, 60, "Complète le hip hinge par une flexion de genou : contrôle surtout le retour."),
-      ex("Mollets", "reps", 3, 18, 60, "Pause en haut et descente contrôlée."),
-      ex("Cardio Zone 2", "timer", 1, 1800, 0, "Marche rapide ou footing très léger. Tu dois pouvoir parler."),
-      ex("Mobilité jambes", "timer", 1, 720, 0, "Chevilles, ischios, quadriceps et hanches.")
+      ex("Échauffement jambes", "timer", 1, 420, 0, "Prépare chevilles, genoux et hanches avant la charge.", {phase:"warmup",express:true,shortTarget:240,guide:["10 knee-to-wall par cheville","8 ouvertures 90/90 dynamiques par côté","15 squats poids du corps","8 fentes arrière alternées par côté","10 hip hinges sans charge"]}),
+      ex("Squat lesté (sac à dos)", "reps", 3, 10, 90, "Charge modérée dans le sac ; tronc solide et genoux dans l'axe.", {express:true,shortSets:2}),
+      ex("Bulgarian split squat lesté (sac à dos)", "reps_side", 3, 8, 105, "8 par jambe. Utilise la Power Tower uniquement comme support d'équilibre si nécessaire.", {express:true,shortSets:2}),
+      ex("Romanian deadlift avec bande", "reps_band", 3, 12, 75, "Hanches vers l'arrière, tension dans les ischios, dos neutre.", {express:true,shortSets:2}),
+      ex("Hamstring curl avec bande", "reps_band", 3, 12, 60, "Contrôle surtout la phase de retour.", {express:true,shortSets:2}),
+      ex("Mollets une jambe", "reps_side", 3, 15, 60, "Amplitude complète avec pause en haut.", {express:true,shortSets:2}),
+      ex("Pallof press avec bande", "reps_side", 2, 10, 45, "Résiste à la rotation, cage thoracique et bassin face devant.", {express:false}),
+      ex("Cardio Zone 2", "timer", 1, 1500, 0, "25 min faciles. Course lente si les jambes récupèrent bien, sinon marche rapide.", {phase:"cardio",express:true,shortTarget:600}),
+      ex("Mobilité jambes", "timer", 1, 480, 0, "Relâche surtout chevilles, quadriceps, hanches et ischios.", {phase:"cooldown",express:true,shortTarget:240,guide:["Couch stretch 45 s par côté","Ischios 45 s par côté","Mollets 45 s par côté","90/90 hanches 45 s par côté"]})
     ]
   },
   5: {
-    name: "Skills + Mobilité", subtitle: "Technique, core latéral, mobilité et cardio facile", duration: 65, intensity: "Légère",
+    name: "Skills + Mobilité", subtitle: "Technique, stabilité scapulaire, core et récupération active", duration: 60, shortDuration: 27, intensity: "Intermédiaire · légère",
     exercises: [
-      ex("Échauffement général", "timer", 1, 360, 0, "Bouge tranquillement toutes les articulations."),
-      ex("Handstand au mur", "hold", 3, 25, 60, "Privilégie la ligne et le contrôle. Cette séance reste technique, jamais maximale."),
-      ex("Tuck L-sit", "hold", 3, 10, 60, "Pousse fort sur les bras et monte les genoux."),
-      ex("Scapular pull-ups", "reps", 2, 8, 60, "Petit mouvement, bras tendus."),
-      ex("Scapular push-ups", "reps", 2, 10, 60, "Garde les coudes verrouillés."),
-      ex("Pallof press avec bande", "reps_side", 2, 10, 45, "Résiste à la rotation : bassin et cage thoracique restent face devant."),
-      ex("Rotation externe avec bande", "reps_band", 2, 15, 45, "Bande légère."),
-      ex("Side plank", "hold_side", 2, 30, 45, "Travail latéral du tronc utile pour la stabilité générale et les futures progressions human flag."),
-      ex("Cardio Zone 2", "timer", 1, 1200, 0, "20 min faciles. Tu dois pouvoir parler en phrases complètes."),
-      ex("Mobilité complète", "timer", 1, 900, 0, "15 min : épaules, thorax, hanches et chevilles.")
+      ex("Échauffement général", "timer", 1, 360, 0, "Journée technique : chauffe-toi sans créer de fatigue.", {phase:"warmup",express:true,shortTarget:240,guide:["60 s de marche active ou jumping jacks faciles","Cercles épaules + poignets","8 scapular pull-ups faciles","8 scapular push-ups","2 montées handstand très courtes"]}),
+      ex("Handstand au mur", "hold", 3, 25, 60, "Cherche une meilleure ligne, pas un record.", {express:true,shortSets:2}),
+      ex("Tuck L-sit", "hold", 3, 12, 60, "Barres parallèles ou poignées ; pousse fort le support et garde les épaules basses.", {express:true,shortSets:2,shortTarget:10}),
+      ex("Scapular pull-ups", "reps", 2, 8, 60, "Bras tendus, mouvement uniquement des omoplates.", {express:true,shortSets:2}),
+      ex("Scapular push-ups", "reps", 2, 10, 45, "Poignées possibles ; coudes verrouillés.", {express:true,shortSets:2}),
+      ex("Rotation externe avec bande", "reps_band", 2, 15, 45, "Bande légère, coude proche du corps.", {express:true,shortSets:2}),
+      ex("Side plank", "hold_side", 2, 30, 45, "Bassin haut et corps aligné.", {express:true,shortSets:1,shortTarget:25}),
+      ex("Cardio Zone 2", "timer", 1, 1200, 0, "20 min très confortables pour favoriser la récupération active.", {phase:"cardio",express:true,shortTarget:480}),
+      ex("Mobilité complète", "timer", 1, 600, 0, "Mobilité globale contrôlée.", {phase:"cooldown",express:true,shortTarget:240,guide:["Rotation thoracique 6 par côté","90/90 hanches 45 s par côté","Étirement pectoral 45 s par côté","Deep squat hold 45–60 s","Respiration diaphragmatique 60 s"]})
     ]
   },
   6: {
-    name: "Full Body", subtitle: "Reprise intermédiaire · rappel de force générale", duration: 65, intensity: "Intermédiaire · modérée",
+    name: "Full Body", subtitle: "Force générale · rappel push/pull/jambes/core avec charge", duration: 75, shortDuration: 35, intensity: "Intermédiaire · modérée",
     exercises: [
-      ex("Échauffement général", "timer", 1, 420, 0, "Mobilité, mouvements faciles et montée progressive en température."),
-      ex("Tractions assistées", "reps_band", 3, 6, 120, "Choisis une assistance adaptée. Laisse 2 répétitions en réserve."),
-      ex("Dips", "reps", 3, 6, 120, "Amplitude propre, épaules stables."),
-      ex("Pompes", "reps", 2, 10, 90, "Ne cherche pas le maximum."),
-      ex("Bulgarian split squat", "reps_side", 3, 8, 90, "8 par jambe."),
-      ex("Romanian deadlift avec bande", "reps_band", 3, 12, 75, "Contrôle les ischios."),
-      ex("Hanging knee raises", "reps", 2, 8, 75, "Reste gainé."),
-      ex("Dead hang", "hold", 2, 30, 90, "Prise ferme, épaules confortables. Ne cherche pas le record après les tractions."),
-      ex("Mollets", "reps", 2, 15, 60, "Deuxième rappel léger de la semaine, amplitude complète."),
-      ex("Retour au calme", "timer", 1, 480, 0, "Respiration et mobilité légère.")
+      ex("Échauffement général", "timer", 1, 420, 0, "Monte progressivement en température avant la séance mixte.", {phase:"warmup",express:true,shortTarget:240,guide:["Poignets + épaules 60 s","10 squats + 6 fentes par côté","8 scapular pull-ups","8 scapular push-ups","1 série très facile de traction, dip et squat"]}),
+      ex("Tractions strictes", "reps", 3, 5, 120, "Reste strict ; passe en assisté si la qualité se dégrade.", {express:true,shortSets:2,shortTarget:4}),
+      ex("Dips", "reps", 3, 6, 120, "Barres parallèles stables, épaules contrôlées.", {express:true,shortSets:2}),
+      ex("Pompes", "reps", 2, 10, 90, "Poignées recommandées si confortables.", {express:false}),
+      ex("Fentes arrière lestées (sac à dos)", "reps_side", 3, 8, 90, "8 par jambe. Charge modérée et pas contrôlé.", {express:true,shortSets:2}),
+      ex("Romanian deadlift avec bande", "reps_band", 2, 12, 75, "Rappel ischios/fessiers, sans chercher l'échec.", {express:true,shortSets:2}),
+      ex("Row avec bande", "reps_band", 2, 12, 75, "Rappel de tirage horizontal.", {express:false}),
+      ex("Hanging knee raises", "reps", 2, 10, 75, "Gainage strict, pas d'élan.", {express:true,shortSets:2,shortTarget:8}),
+      ex("Mollets", "reps", 2, 15, 60, "Amplitude complète et contrôle.", {express:false}),
+      ex("Cardio Zone 2", "timer", 1, 900, 0, "15 min faciles. Ne transforme pas la fin de séance en interval training.", {phase:"cardio",express:true,shortTarget:480}),
+      ex("Retour au calme", "timer", 1, 420, 0, "Respire et relâche les groupes sollicités.", {phase:"cooldown",express:true,shortTarget:180,guide:["Pectoraux 30–45 s par côté","Grand dorsal 30–45 s par côté","Fléchisseurs de hanche 45 s par côté","Ischios 45 s par côté","Respiration lente 60 s"]})
     ]
   },
   0: {
-    name: "Cardio + Mobilité", subtitle: "Endurance fondamentale et souplesse", duration: 85, intensity: "Légère",
+    name: "Endurance + Mobilité", subtitle: "Zone 2 longue, souplesse et récupération active", duration: 82, shortDuration: 30, intensity: "Légère",
     exercises: [
-      ex("Cardio Zone 2", "timer", 1, 3600, 0, "60 min faciles. Marche rapide, randonnée tranquille ou footing très confortable."),
-      ex("Deep squat hold", "hold", 2, 45, 30, "Respire et garde les talons au sol si possible."),
-      ex("90/90 hanches", "hold_side", 2, 45, 30, "45 secondes de chaque côté."),
-      ex("Frog stretch", "hold", 2, 45, 30, "Progressif, aucune douleur vive."),
-      ex("Étirement ischios", "hold_side", 2, 45, 30, "Respiration lente."),
-      ex("Fléchisseurs de hanche", "hold_side", 2, 45, 30, "Bassin légèrement rétroversé."),
-      ex("Étirement mollets", "hold_side", 2, 45, 30, "Garde le talon au sol."),
-      ex("Rotation thoracique", "reps_side", 2, 8, 30, "Amplitude confortable."),
-      ex("Épaules / grand dorsal / pectoraux", "timer", 1, 480, 0, "Finis tranquillement.")
+      ex("Échauffement général", "timer", 1, 300, 0, "Prépare doucement chevilles et hanches avant le cardio.", {phase:"warmup",express:true,shortTarget:180,guide:["2 min de marche facile","10 mobilisations de cheville par côté","8 ouvertures de hanche par côté","30 s de respiration calme"]}),
+      ex("Cardio Zone 2", "timer", 1, 3600, 0, "60 min faciles. Course, marche active, randonnée ou vélo en restant conversationnel.", {phase:"cardio",express:true,shortTarget:1200}),
+      ex("Deep squat hold", "hold", 2, 45, 30, "Respire et garde les talons au sol si possible.", {phase:"cooldown",express:true,shortSets:1}),
+      ex("90/90 hanches", "hold_side", 2, 45, 30, "45 secondes de chaque côté.", {phase:"cooldown",express:true,shortSets:1}),
+      ex("Frog stretch", "hold", 2, 45, 30, "Progressif, aucune douleur vive.", {phase:"cooldown",express:false}),
+      ex("Étirement ischios", "hold_side", 2, 45, 30, "Respiration lente.", {phase:"cooldown",express:true,shortSets:1}),
+      ex("Fléchisseurs de hanche", "hold_side", 2, 45, 30, "Bassin légèrement rétroversé.", {phase:"cooldown",express:true,shortSets:1}),
+      ex("Étirement mollets", "hold_side", 2, 45, 30, "Garde le talon au sol.", {phase:"cooldown",express:true,shortSets:1}),
+      ex("Rotation thoracique", "reps_side", 2, 8, 30, "Amplitude confortable.", {phase:"cooldown",express:true,shortSets:1,shortTarget:6}),
+      ex("Épaules / grand dorsal / pectoraux", "timer", 1, 360, 0, "Finis tranquillement par le haut du corps.", {phase:"cooldown",express:true,shortTarget:180,guide:["Grand dorsal 45 s par côté","Pectoraux 45 s par côté","Respiration diaphragmatique 60 s"]})
     ]
   }
 };
@@ -133,10 +147,17 @@ function renderBandPicker(current,name='',compact=false){
   return `<div class="band-picker ${compact?'compact-band-picker':''}">${BAND_INVENTORY.map(b=>`<button type="button" class="band-choice ${b.label===selected?'active':''}" data-band-label="${esc(b.label)}" title="${esc(b.lbs==='—'?b.label:`${b.short} · ${b.kg} (${b.lbs})`)}"><i class="band-swatch" style="--band-color:${b.color}"></i><span><strong>${b.short}</strong>${b.kg!=='—'?`<small>${b.kg}</small>`:''}</span></button>`).join('')}</div>`;
 }
 
-const HOME_EQUIPMENT = ["Power Tower", "Bandes", "Tapis", "Sac à dos"];
+const HOME_EQUIPMENT = ["Power Tower", "Barres parallèles", "Poignées de pompes", "Bandes", "Tapis", "Sac à dos"];
 function usesBackpack(name){
   const info=exerciseInfo(name);
   return /sac à dos|sac a dos/i.test(name)||/sac à dos|sac a dos/i.test(info?.equipment||'');
+}
+function equipmentUseNote(name){
+  if(/^(Dips|Dips assistés|Dips tempo|Dips lestés)$/i.test(name)) return "Utilise en priorité les nouvelles barres parallèles : elles sont idéales pour les dips si elles sont bien stables et à une largeur confortable.";
+  if(/^(Tuck L-sit|One-leg L-sit|L-sit|V-sit compression)$/i.test(name)) return "Utilise les barres parallèles pour le travail de L-sit. Les poignées de pompes sont aussi utiles pour les versions basses et les premiers holds.";
+  if(/Pompes|Pseudo-planche|Pike push-ups|Scapular push-ups/i.test(name)) return "Option recommandée : poignées de pompes pour garder les poignets neutres et gagner un peu d’amplitude. Reviens au sol si la variante devient trop difficile.";
+  if(/Handstand/i.test(name)) return "Les poignées pourront servir plus tard pour un appui poignets neutres, mais garde le sol comme variante principale tant que l’équilibre est en progression.";
+  return "";
 }
 function renderBackpackLoadInput(value=0,id='backpackLoadKg'){
   return `<div class="load-picker"><label class="small muted" for="${id}">Charge du sac</label><div class="load-input-wrap"><input id="${id}" class="load-input" type="number" inputmode="decimal" min="0" step="0.5" value="${Number(value||0)}"><span>kg</span></div><div class="load-presets">${[5,10,15,20].map(v=>`<button type="button" class="load-preset" data-load-target="${id}" data-load-value="${v}">${v} kg</button>`).join('')}</div></div>`;
@@ -496,17 +517,17 @@ function lib(name, category, level, equipment, muscles, opts={}) {
 const EXERCISE_LIBRARY = [
   // PUSH
   lib("Pompes inclinées","Push","Débutant","Support surélevé",["Pectoraux","Triceps","Épaules"],{progression:"Pompes",substitutes:["Band chest press"],prescription:{type:"reps",target:10,rest:75},advanceAt:15,volume:{Pectoraux:1,Triceps:.6,Épaules:.35},query:"incline push up proper form beginner"}),
-  lib("Pompes","Push","Débutant","Sol",["Pectoraux","Triceps","Épaules"],{regression:"Pompes inclinées",progression:"Pompes pieds surélevés",substitutes:["Band chest press","Pompes serrées"],prescription:{type:"reps",target:10,rest:90},advanceAt:15,volume:{Pectoraux:1,Triceps:.6,Épaules:.35},query:"push up perfect form tutorial"}),
-  lib("Pompes pieds surélevés","Push","Intermédiaire","Support",["Pectoraux","Épaules","Triceps"],{regression:"Pompes",progression:"Pompes archer",substitutes:["Pseudo-planche push-ups"],prescription:{type:"reps",target:6,rest:90},advanceAt:12,volume:{Pectoraux:1,Épaules:.55,Triceps:.5},query:"decline push up proper form tutorial"}),
-  lib("Pompes archer","Push","Intermédiaire","Sol",["Pectoraux","Triceps","Core"],{regression:"Pompes pieds surélevés",progression:"Pseudo-planche push-ups",substitutes:["Pompes"],prescription:{type:"reps_side",target:5,rest:105},advanceAt:8,volume:{Pectoraux:1,Triceps:.55,Core:.25},query:"archer push up tutorial calisthenics"}),
-  lib("Pompes serrées","Push","Débutant","Sol",["Triceps","Pectoraux"],{regression:"Pompes inclinées",progression:"Dips assistés",substitutes:["Extension triceps avec bande"],prescription:{type:"reps",target:8,rest:75},advanceAt:15,volume:{Triceps:1,Pectoraux:.55},query:"diamond close grip push up proper form"}),
-  lib("Pseudo-planche push-ups","Push","Avancé","Sol",["Épaules","Pectoraux","Triceps","Core"],{regression:"Pompes pieds surélevés",progression:"Planche lean",substitutes:["Pike push-ups"],prescription:{type:"reps",target:5,rest:120},advanceAt:10,volume:{Épaules:1,Pectoraux:.7,Triceps:.45,Core:.3},query:"pseudo planche push up tutorial"}),
+  lib("Pompes","Push","Débutant","Poignées / sol",["Pectoraux","Triceps","Épaules"],{regression:"Pompes inclinées",progression:"Pompes pieds surélevés",substitutes:["Band chest press","Pompes serrées"],prescription:{type:"reps",target:10,rest:90},advanceAt:15,volume:{Pectoraux:1,Triceps:.6,Épaules:.35},query:"push up perfect form tutorial"}),
+  lib("Pompes pieds surélevés","Push","Intermédiaire","Poignées + support",["Pectoraux","Épaules","Triceps"],{regression:"Pompes",progression:"Pompes archer",substitutes:["Pseudo-planche push-ups"],prescription:{type:"reps",target:6,rest:90},advanceAt:12,volume:{Pectoraux:1,Épaules:.55,Triceps:.5},query:"decline push up proper form tutorial"}),
+  lib("Pompes archer","Push","Intermédiaire","Poignées / sol",["Pectoraux","Triceps","Core"],{regression:"Pompes pieds surélevés",progression:"Pseudo-planche push-ups",substitutes:["Pompes"],prescription:{type:"reps_side",target:5,rest:105},advanceAt:8,volume:{Pectoraux:1,Triceps:.55,Core:.25},query:"archer push up tutorial calisthenics"}),
+  lib("Pompes serrées","Push","Débutant","Poignées / sol",["Triceps","Pectoraux"],{regression:"Pompes inclinées",progression:"Dips assistés",substitutes:["Extension triceps avec bande"],prescription:{type:"reps",target:8,rest:75},advanceAt:15,volume:{Triceps:1,Pectoraux:.55},query:"diamond close grip push up proper form"}),
+  lib("Pseudo-planche push-ups","Push","Avancé","Poignées / sol",["Épaules","Pectoraux","Triceps","Core"],{regression:"Pompes pieds surélevés",progression:"Planche lean",substitutes:["Pike push-ups"],prescription:{type:"reps",target:5,rest:120},advanceAt:10,volume:{Épaules:1,Pectoraux:.7,Triceps:.45,Core:.3},query:"pseudo planche push up tutorial"}),
   lib("Band chest press","Push","Débutant","Bande",["Pectoraux","Triceps"],{progression:"Pompes",substitutes:["Pompes inclinées"],prescription:{type:"reps_band",target:12,rest:60},advanceAt:18,volume:{Pectoraux:1,Triceps:.45},query:"resistance band chest press tutorial"}),
   lib("Dips assistés","Push","Débutant","Barres + bande",["Pectoraux","Triceps","Épaules"],{progression:"Dips",substitutes:["Pompes serrées"],prescription:{type:"reps_band",target:6,rest:120},advanceAt:10,volume:{Pectoraux:.8,Triceps:1,Épaules:.45},query:"band assisted dips proper form"}),
   lib("Dips","Push","Intermédiaire","Barres parallèles",["Pectoraux","Triceps","Épaules"],{regression:"Dips assistés",progression:"Dips tempo",substitutes:["Pompes serrées","Band chest press"],prescription:{type:"reps",target:6,rest:120},advanceAt:10,volume:{Pectoraux:.8,Triceps:1,Épaules:.45},query:"parallel bar dips proper form tutorial"}),
   lib("Dips tempo","Push","Intermédiaire","Barres parallèles",["Pectoraux","Triceps","Épaules"],{regression:"Dips",progression:"Dips lestés",substitutes:["Dips"],prescription:{type:"reps",target:5,rest:135},advanceAt:8,volume:{Pectoraux:.8,Triceps:1,Épaules:.45},query:"slow tempo dips tutorial"}),
   lib("Dips lestés","Push","Avancé","Barres + charge",["Pectoraux","Triceps","Épaules"],{regression:"Dips tempo",substitutes:["Dips"],prescription:{type:"reps",target:5,rest:150},advanceAt:8,volume:{Pectoraux:.85,Triceps:1,Épaules:.45},query:"weighted dips proper form tutorial"}),
-  lib("Pike push-ups","Push","Débutant","Sol",["Épaules","Triceps"],{progression:"Pike push-ups pieds surélevés",substitutes:["Pompes"],prescription:{type:"reps",target:7,rest:90},advanceAt:10,volume:{Épaules:1,Triceps:.55},query:"pike push up tutorial handstand push up"}),
+  lib("Pike push-ups","Push","Débutant","Poignées / sol",["Épaules","Triceps"],{progression:"Pike push-ups pieds surélevés",substitutes:["Pompes"],prescription:{type:"reps",target:7,rest:90},advanceAt:10,volume:{Épaules:1,Triceps:.55},query:"pike push up tutorial handstand push up"}),
   lib("Pike push-ups pieds surélevés","Push","Intermédiaire","Support",["Épaules","Triceps"],{regression:"Pike push-ups",progression:"HSPU négatives au mur",substitutes:["Pike push-ups"],prescription:{type:"reps",target:5,rest:105},advanceAt:8,volume:{Épaules:1,Triceps:.6},query:"elevated pike push up tutorial"}),
   lib("HSPU négatives au mur","Push","Avancé","Mur",["Épaules","Triceps","Core"],{regression:"Pike push-ups pieds surélevés",progression:"Handstand push-up au mur",substitutes:["Pike push-ups"],prescription:{type:"reps",target:3,rest:150},advanceAt:6,volume:{Épaules:1,Triceps:.65,Core:.25},query:"wall handstand push up negative tutorial"}),
   lib("Handstand push-up au mur","Push","Avancé","Mur",["Épaules","Triceps","Core"],{regression:"HSPU négatives au mur",progression:"Handstand push-up libre",prescription:{type:"reps",target:3,rest:150},advanceAt:6,volume:{Épaules:1,Triceps:.7,Core:.3},query:"wall handstand push up tutorial"}),
@@ -542,10 +563,10 @@ const EXERCISE_LIBRARY = [
   lib("Toes-to-bar","Core","Avancé","Barre",["Core","Grip"],{regression:"Hanging leg raises",prescription:{type:"reps",target:5,rest:105},advanceAt:10,volume:{Core:1,Grip:.4},query:"strict toes to bar tutorial calisthenics"}),
   lib("Reverse crunch","Core","Débutant","Tapis",["Core"],{progression:"Hanging knee raises",substitutes:["Dead bug"],prescription:{type:"reps",target:10,rest:60},advanceAt:15,volume:{Core:1},query:"reverse crunch proper form tutorial"}),
   lib("Pallof press avec bande","Core","Débutant","Bande + ancrage",["Core"],{substitutes:["Side plank"],prescription:{type:"reps_side",target:10,rest:45},advanceAt:15,volume:{Core:.8},query:"resistance band pallof press anti rotation proper form tutorial"}),
-  lib("Tuck L-sit","Core","Débutant","Barres de dips / sol",["Core","Triceps","Épaules"],{progression:"One-leg L-sit",substitutes:["Hollow hold"],prescription:{type:"hold",target:10,rest:60},advanceAt:20,volume:{Core:1,Triceps:.25,Épaules:.2},query:"tuck l sit tutorial beginner calisthenics"}),
-  lib("One-leg L-sit","Core","Intermédiaire","Barres de dips / sol",["Core","Triceps","Épaules"],{regression:"Tuck L-sit",progression:"L-sit",prescription:{type:"hold_side",target:10,rest:75},advanceAt:20,volume:{Core:1,Triceps:.25,Épaules:.2},query:"one leg l sit progression tutorial"}),
-  lib("L-sit","Core","Avancé","Barres de dips / sol",["Core","Triceps","Épaules"],{regression:"One-leg L-sit",progression:"V-sit compression",prescription:{type:"hold",target:10,rest:90},advanceAt:20,volume:{Core:1,Triceps:.25,Épaules:.2},query:"l sit proper form tutorial calisthenics"}),
-  lib("V-sit compression","Core","Expert","Sol / barres de dips",["Core","Hanches"],{regression:"L-sit",prescription:{type:"reps",target:6,rest:90},advanceAt:12,volume:{Core:1},query:"v sit compression drill tutorial"}),
+  lib("Tuck L-sit","Core","Débutant","Barres parallèles / poignées",["Core","Triceps","Épaules"],{progression:"One-leg L-sit",substitutes:["Hollow hold"],prescription:{type:"hold",target:10,rest:60},advanceAt:20,volume:{Core:1,Triceps:.25,Épaules:.2},query:"tuck l sit tutorial beginner calisthenics"}),
+  lib("One-leg L-sit","Core","Intermédiaire","Barres parallèles / poignées",["Core","Triceps","Épaules"],{regression:"Tuck L-sit",progression:"L-sit",prescription:{type:"hold_side",target:10,rest:75},advanceAt:20,volume:{Core:1,Triceps:.25,Épaules:.2},query:"one leg l sit progression tutorial"}),
+  lib("L-sit","Core","Avancé","Barres parallèles / poignées",["Core","Triceps","Épaules"],{regression:"One-leg L-sit",progression:"V-sit compression",prescription:{type:"hold",target:10,rest:90},advanceAt:20,volume:{Core:1,Triceps:.25,Épaules:.2},query:"l sit proper form tutorial calisthenics"}),
+  lib("V-sit compression","Core","Expert","Barres parallèles / sol",["Core","Hanches"],{regression:"L-sit",prescription:{type:"reps",target:6,rest:90},advanceAt:12,volume:{Core:1},query:"v sit compression drill tutorial"}),
   lib("Dragon flag négatives","Core","Avancé","Support",["Core"],{regression:"Hollow rocks",progression:"Dragon flag",prescription:{type:"reps",target:3,rest:120},advanceAt:6,volume:{Core:1},query:"dragon flag negative tutorial"}),
   lib("Dragon flag","Core","Expert","Support",["Core"],{regression:"Dragon flag négatives",prescription:{type:"reps",target:3,rest:135},advanceAt:8,volume:{Core:1},query:"dragon flag tutorial proper form"}),
 
@@ -744,6 +765,9 @@ const state = {
   stravaStatus: {checked:false,loading:false,connected:false,athlete:null,scope:""},
   stravaSyncing: false,
   stravaMessage: null,
+  sessionModeEditor: null,
+  customSessionEditor: null,
+  customSessionDraft: null,
 };
 
 function parse(key, fallback) {
@@ -769,6 +793,8 @@ function getTutorialOverrides() { return parse(STORAGE.tutorials, {}); }
 function setTutorialOverrides(v) { save(STORAGE.tutorials, v); }
 function getQuickLogs() { return parse(STORAGE.quickLogs, []); }
 function setQuickLogs(v) { save(STORAGE.quickLogs, v); }
+function getCustomWorkouts() { return parse(STORAGE.customWorkouts, []); }
+function setCustomWorkouts(v) { save(STORAGE.customWorkouts, v); }
 
 const QUICK_PRESETS = [
   { name:"Tractions strictes", label:"Tractions", type:"reps", adds:[1,5] },
@@ -860,7 +886,7 @@ async function exportBackup(){
     if(!row.photoId||photos[row.photoId])continue;
     try{const blob=await getPhoto(row.photoId);if(blob)photos[row.photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',row.photoId,e);}
   }
-  const backup={app:'Calisthenie Coach',schema:1,version:'8.7',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'Calisthenie Coach',schema:1,version:'9.1',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1055,24 +1081,50 @@ function applyReadinessToExercise(e,readiness){
   }
   return {...e,sets:scaleSets(e.sets,plan.setFactor),target:scaleTarget(e.target,e.type,plan.targetFactor),readinessMode:plan.mode};
 }
-function preparedWorkout(day, readiness=null) {
-  const w = clone(workouts[day]);
-  const cycle=getCycleState();
-  w.cycle=cycle;
-  w.readiness=readiness;
-  w.exercises = w.exercises.map(e => {
+function applySessionLength(base, sessionLength="full"){
+  const w=clone(base);
+  w.sessionLength=sessionLength;
+  if(sessionLength!=="short")return w;
+  w.duration=w.shortDuration||Math.max(20,Math.round((w.duration||45)*.48));
+  w.intensity=(w.intensity||"").replace("modérée","courte") || "Express";
+  w.exercises=(w.exercises||[]).filter(e=>e.express).map(e=>{
+    const sets=e.shortSets!=null?e.shortSets:e.sets;
+    const target=e.shortTarget!=null?e.shortTarget:e.target;
+    return {...e,sets,target,baseTarget:target};
+  });
+  return w;
+}
+function prepareWorkoutObject(base, readiness=null){
+  const w=clone(base),cycle=getCycleState();
+  w.cycle=cycle;w.readiness=readiness;
+  w.exercises=(w.exercises||[]).map(e=>{
     let chosen=applyExerciseChoice(e);
-    const p = prescriptionFor(chosen,cycle.allowProgress);
-    chosen={ ...chosen, target:p.target, progressionTarget:p.target, prescriptionStatus:p.status, prescriptionNote:p.note };
+    const p=prescriptionFor(chosen,cycle.allowProgress);
+    chosen={...chosen,target:p.target,progressionTarget:p.target,prescriptionStatus:p.status,prescriptionNote:p.note};
     chosen=applyCycleToExercise(chosen,cycle);
     chosen=applyReadinessToExercise(chosen,readiness);
     return chosen;
   });
   return w;
 }
-
+function preparedWorkout(day, readiness=null, sessionLength="full") {
+  const base=applySessionLength(workouts[day],sessionLength);
+  return prepareWorkoutObject(base,readiness);
+}
+function customWorkoutById(id){return getCustomWorkouts().find(x=>String(x.id)===String(id))||null;}
+function preparedCustomWorkout(id,readiness=null){
+  const base=customWorkoutById(id);if(!base)return null;
+  return prepareWorkoutObject({...clone(base),sessionLength:"custom",duration:base.duration||estimateWorkoutMinutes(base)},readiness);
+}
+function estimateWorkoutMinutes(w){
+  let sec=0;(w?.exercises||[]).forEach(e=>{if(e.type==='timer')sec+=Number(e.target||0);else if(e.type?.startsWith('hold'))sec+=(Number(e.target||0)+Number(e.rest||0))*Number(e.sets||1);else sec+=(35+Number(e.rest||0))*Number(e.sets||1);});
+  return Math.max(10,Math.round(sec/60));
+}
+function workoutForReadiness(r){return r?.customWorkoutId?preparedCustomWorkout(r.customWorkoutId,null):preparedWorkout(Number(r?.day),null,r?.sessionLength||'full');}
 
 function warmupForWorkout(w){
+  const guided=(w?.exercises||[]).find(e=>e.phase==='warmup'&&e.guide?.length);
+  if(guided)return guided.guide;
   const name=w?.name||"";
   if(/Push|Handstand/i.test(name))return ["1–2 min poignets","Cercles d’épaules","Scapular push-ups","2 séries faciles du premier push"];
   if(/Pull/i.test(name))return ["Dead hang très léger","Scapular pull-ups","Face pulls bande légère","2 séries assistées faciles"];
@@ -1084,19 +1136,28 @@ function renderCycleMini(){
   const c=getCycleState();
   return `<section class="card cycle-mini"><div class="section-head"><div><div class="kicker">Cycle ${c.cycleNumber} · semaine ${c.week}/8</div><h2>${c.name}</h2></div><span class="pill">${c.week===8?'−35 % volume':c.week===4?'consolider':'progresser'}</span></div><div class="cycle-track">${Array.from({length:8},(_,i)=>`<span class="${i+1<c.week?'done':i+1===c.week?'current':''}">${i+1}</span>`).join('')}</div><p class="muted small">${c.note}</p></section>`;
 }
+function renderSessionModePicker(){
+  const r=state.sessionModeEditor,day=Number(r.day),full=preparedWorkout(day,null,'full'),short=preparedWorkout(day,null,'short');
+  return `<main class="shell mode-shell"><section class="card mode-card"><button class="back-btn" id="cancelSessionMode">← Retour</button><div class="kicker">${DAY_NAMES[day]} · ${full.name}</div><h1>Combien de temps as-tu ?</h1><p class="muted">Les deux formats gardent un échauffement, les mouvements essentiels, un bloc cardio et un retour au calme. La version Express coupe surtout les accessoires et le volume.</p><div class="session-mode-grid"><button class="session-mode-choice" data-session-length="full"><span class="mode-icon">◎</span><strong>Séance complète</strong><b>≈ ${full.duration} min</b><small>${full.exercises.length} étapes · volume complet · cardio ${Math.round(cardioTargetSeconds(full)/60)} min</small></button><button class="session-mode-choice express" data-session-length="short"><span class="mode-icon">⚡</span><strong>Séance Express</strong><b>≈ ${short.duration} min</b><small>${short.exercises.length} étapes · essentiels seulement · cardio ${Math.round(cardioTargetSeconds(short)/60)} min</small></button></div><p class="install-note">L’Express est une solution quand tu manques de temps, pas une obligation de compresser toutes les séances de la semaine.</p></section></main>`;
+}
 function renderReadiness(){
-  const r=state.readinessEditor,day=Number(r.day),base=preparedWorkout(day),plan=readinessPlan(r),c=getCycleState();
-  return `<main class="shell readiness-shell"><section class="card"><button class="back-btn" id="cancelReadiness">← Retour</button><div class="kicker">Avant la séance · ${DAY_NAMES[day]}</div><h1>Comment tu récupères ?</h1><p class="muted">Trois réponses suffisent pour adapter le volume du jour. Ce n’est pas un diagnostic médical : une douleur vive ou inhabituelle reste un motif pour arrêter le mouvement concerné.</p>
+  const r=state.readinessEditor,base=workoutForReadiness(r),plan=readinessPlan(r),c=getCycleState(),label=r.customWorkoutId?'Séance personnelle':DAY_NAMES[Number(r.day)];
+  if(!base)return `<main class="shell"><section class="card"><h1>Séance introuvable</h1><button class="btn btn-primary" id="cancelReadiness">Retour</button></section></main>`;
+  return `<main class="shell readiness-shell"><section class="card"><button class="back-btn" id="cancelReadiness">← Retour</button><div class="kicker">Avant la séance · ${label}</div><h1>Comment tu récupères ?</h1><p class="muted">Trois réponses suffisent pour adapter le volume du jour. Une douleur vive ou inhabituelle reste un motif pour arrêter le mouvement concerné.</p>
     <div class="readiness-group"><strong>Énergie</strong><span class="muted small">1 = à plat · 5 = très en forme</span><div class="readiness-scale">${[1,2,3,4,5].map(n=>`<button data-energy="${n}" class="${Number(r.energy)===n?'active':''}">${n}</button>`).join('')}</div></div>
     <div class="readiness-group"><strong>Courbatures</strong><span class="muted small">1 = aucune · 5 = très fortes</span><div class="readiness-scale">${[1,2,3,4,5].map(n=>`<button data-soreness="${n}" class="${Number(r.soreness)===n?'active':''}">${n}</button>`).join('')}</div></div>
     <div class="readiness-group"><strong>Articulations / tendons</strong><div class="joint-choice"><button data-joints="ok" class="${r.joints==='ok'?'active':''}">OK</button><button data-joints="sensitive" class="${r.joints==='sensitive'?'active':''}">Sensibles</button><button data-joints="pain" class="${r.joints==='pain'?'active':''}">Gênées</button></div></div>
-    <div class="readiness-result mode-${plan.mode}"><div><div class="kicker">Plan du jour</div><strong>${plan.label}</strong></div><p>${plan.note}</p><div class="meta"><span class="pill">Cycle S${c.week}</span><span class="pill">${base.name}</span><span class="pill">${Math.round(plan.setFactor*100)} % volume readiness</span></div></div>
-    <div class="warmup-box"><strong>Activation ciblée</strong>${warmupForWorkout(base).map(x=>`<span>• ${x}</span>`).join('')}</div>
+    <div class="readiness-result mode-${plan.mode}"><div><div class="kicker">Plan du jour</div><strong>${plan.label}</strong></div><p>${plan.note}</p><div class="meta"><span class="pill">Cycle S${c.week}</span><span class="pill">${base.name}</span>${r.sessionLength?`<span class="pill">${r.sessionLength==='short'?'Express':'Complète'}</span>`:''}<span class="pill">${Math.round(plan.setFactor*100)} % volume readiness</span></div></div>
+    <div class="warmup-box"><strong>Échauffement prévu</strong>${warmupForWorkout(base).map(x=>`<span>• ${x}</span>`).join('')}</div>
     <button class="btn btn-primary" id="confirmReadiness">${plan.mode==='recovery'?'Lancer très léger':'Lancer la séance'}</button></section></main>`;
 }
 function requestWorkoutStart(day=todayDay()){
-  const w=workouts[Number(day)]; if(!w?.exercises?.length)return;
-  state.readinessEditor={day:Number(day),energy:3,soreness:2,joints:'ok'}; render();
+  const w=workouts[Number(day)];if(!w?.exercises?.length)return;
+  state.sessionModeEditor={day:Number(day)};render();
+}
+function requestCustomWorkoutStart(id){
+  const w=customWorkoutById(id);if(!w)return;
+  state.readinessEditor={customWorkoutId:id,energy:3,soreness:2,joints:'ok'};render();
 }
 
 function progressionReady(baseName,currentName){
@@ -1219,13 +1280,93 @@ function renderQuickLogModal(){
 }
 function renderExerciseLibrary(){
   const cats=['Tous',...new Set(EXERCISE_LIBRARY.map(x=>x.category))];
-  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V8.1 · bibliothèque structurée</div><h1>${EXERCISE_LIBRARY.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${EXERCISE_LIBRARY.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
+  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.1 · bibliothèque structurée</div><h1>${EXERCISE_LIBRARY.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${EXERCISE_LIBRARY.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
 }
 function filterLibraryDom(){const q=(document.getElementById('librarySearch')?.value||'').trim().toLowerCase(),cat=state.libraryCategory;document.querySelectorAll('.library-item').forEach(el=>{const okCat=cat==='Tous'||el.dataset.libCategory===cat,okQ=!q||(el.dataset.libText||'').includes(q);el.style.display=okCat&&okQ?'':'none';});}
+
+function exerciseTemplateByName(name){
+  for(const w of Object.values(workouts)){const found=(w.exercises||[]).find(e=>e.name===name);if(found)return clone(found);}
+  for(const r of (typeof FLEX_ROUTINES!=='undefined'?FLEX_ROUTINES:[])){const found=(r.exercises||[]).find(e=>e.name===name);if(found)return clone(found);}
+  const info=exerciseInfo(name);if(info)return exerciseFromLibrary(name,{sets:3});
+  return ex(name,'reps',3,8,75,'Exécution contrôlée et confortable.');
+}
+function customExerciseNames(){
+  const special=['Échauffement général','Échauffement épaules & poignets','Échauffement tirage','Échauffement jambes','Cardio Zone 2','Retour au calme','Mobilité complète','Mobilité jambes','Mobilité épaules / pectoraux / poignets','Mobilité dos / avant-bras / épaules'];
+  return [...new Set([...special,...EXERCISE_LIBRARY.map(x=>x.name)])].sort((a,b)=>a.localeCompare(b,'fr'));
+}
+function defaultCustomWorkout(){
+  return {id:null,name:'Ma séance',subtitle:'Séance personnalisée',intensity:'Intermédiaire',duration:35,exercises:[
+    {...exerciseTemplateByName('Échauffement général'),phase:'warmup',target:300,baseTarget:300},
+    {...exerciseTemplateByName('Pompes'),phase:'main',sets:3,target:10,baseTarget:10},
+    {...exerciseTemplateByName('Row avec bande'),phase:'main',sets:3,target:12,baseTarget:12},
+    {...exerciseTemplateByName('Cardio Zone 2'),phase:'cardio',target:600,baseTarget:600},
+    {...exerciseTemplateByName('Retour au calme'),phase:'cooldown',target:300,baseTarget:300}
+  ]};
+}
+function openCustomSessionEditor(id=null,cloneDay=null){
+  let draft=null;
+  if(id!=null)draft=customWorkoutById(id);
+  else if(cloneDay!=null){const w=applySessionLength(workouts[Number(cloneDay)],'full');draft={...clone(w),id:null,name:`${w.name} · perso`,subtitle:'Copie personnalisable du programme',duration:w.duration};}
+  else draft=defaultCustomWorkout();
+  state.customSessionDraft=clone(draft);state.customSessionEditor=true;state.view='custom';render();
+}
+function phaseLabel(phase){return ({warmup:'Échauffement',main:'Renforcement / skill',cardio:'Cardio',cooldown:'Étirements / retour au calme'})[phase]||'Renforcement / skill';}
+function customSessionCoverage(w){
+  const groups=new Set(),equipment=new Set();
+  (w.exercises||[]).forEach(e=>{const info=exerciseInfo(e.name);(info?.muscles||[]).forEach(m=>groups.add(m));equipmentForExercise(e.name).forEach(x=>equipment.add(x));});
+  return {groups:[...groups],equipment:[...equipment]};
+}
+function customSessionQuality(w){
+  const phases=new Set((w.exercises||[]).map(e=>e.phase||'main')),cov=customSessionCoverage(w);
+  return {warmup:phases.has('warmup'),cardio:phases.has('cardio'),cooldown:phases.has('cooldown'),groups:cov.groups.length,equipment:cov.equipment.length};
+}
+function renderCustomSessions(){
+  if(state.customSessionEditor)return renderCustomSessionEditor();
+  const list=getCustomWorkouts();
+  return shell(`<header class="topbar"><div><div class="brand">Mes séances</div><div class="daylabel">Crée et modifie tes propres entraînements</div></div><button class="btn btn-primary compact" id="newCustomSession">＋ Nouvelle</button></header>
+    <section class="card"><div class="kicker">Créer plus vite</div><h2>Partir d'une séance du programme</h2><p class="muted small">La copie devient indépendante : tu peux remplacer, ajouter, supprimer ou réordonner les exercices sans toucher au programme principal.</p><div class="clone-day-grid">${[2,3,4,5,6,0].map(day=>`<button class="btn btn-outline clone-program-day" data-clone-day="${day}">${DAY_NAMES[day]} · ${workouts[day].name}</button>`).join('')}</div></section>
+    ${list.length?`<section class="custom-session-list">${list.map(w=>{const cov=customSessionCoverage(w);return `<article class="card custom-session-card"><div class="section-head"><div><div class="kicker">Séance personnelle</div><h2>${esc(w.name)}</h2><p class="muted">${esc(w.subtitle||'')}</p></div><span class="pill">≈ ${w.duration||estimateWorkoutMinutes(w)} min</span></div><div class="meta"><span class="pill">${(w.exercises||[]).length} étapes</span><span class="pill">${cov.groups.length} zones</span><span class="pill">${cov.equipment.length} équipements</span></div><div class="custom-session-actions"><button class="btn btn-primary start-custom-session" data-custom-id="${w.id}">Lancer</button><button class="btn btn-secondary edit-custom-session" data-custom-id="${w.id}">Modifier</button><button class="btn btn-outline duplicate-custom-session" data-custom-id="${w.id}">Dupliquer</button><button class="btn btn-outline danger delete-custom-session" data-custom-id="${w.id}">Supprimer</button></div></article>`}).join('')}</section>`:`<section class="card empty-custom"><h2>Aucune séance personnelle</h2><p class="muted">Crée une séance vide ou copie une journée du programme pour commencer.</p><button class="btn btn-primary" id="newCustomSession2">Créer ma première séance</button></section>`}`,'more');
+}
+function renderCustomSessionEditor(){
+  const w=state.customSessionDraft||defaultCustomWorkout(),names=customExerciseNames(),quality=customSessionQuality(w);
+  return `<main class="shell custom-editor-shell"><section class="card editor-card"><button class="back-btn" id="closeCustomEditor">← Mes séances</button><div class="kicker">Éditeur de séance</div><h1>${w.id?'Modifier':'Créer'} une séance</h1><p class="muted">Ajoute, remplace, supprime et réordonne librement les exercices. Le contrôle ci-dessous te signale si tu oublies une phase essentielle.</p><label class="field-label">Nom</label><input class="big-input custom-session-meta" data-custom-meta="name" value="${esc(w.name||'')}"><label class="field-label">Description</label><input class="url-input custom-session-meta" data-custom-meta="subtitle" value="${esc(w.subtitle||'')}"><div class="custom-quality"><span class="${quality.warmup?'ok':'warn'}">${quality.warmup?'✓':'!'} Échauffement</span><span class="${quality.cardio?'ok':'warn'}">${quality.cardio?'✓':'!'} Cardio</span><span class="${quality.cooldown?'ok':'warn'}">${quality.cooldown?'✓':'!'} Étirements</span><span>${quality.groups} zones</span><span>${quality.equipment} équipements</span></div><div class="custom-builder-head"><strong>Exercices</strong><button class="btn btn-secondary compact" id="addCustomExercise">＋ Ajouter</button></div><div class="custom-builder-list">${(w.exercises||[]).map((e,i)=>`<article class="custom-builder-row" data-custom-index="${i}"><div class="custom-builder-number">${i+1}</div><div class="custom-builder-main"><select class="select custom-exercise-name" data-custom-index="${i}">${names.map(n=>`<option value="${esc(n)}" ${n===e.name?'selected':''}>${n}</option>`).join('')}</select><div class="custom-builder-grid"><label><span>Phase</span><select class="select custom-ex-field" data-custom-index="${i}" data-key="phase">${['warmup','main','cardio','cooldown'].map(ph=>`<option value="${ph}" ${ph===(e.phase||'main')?'selected':''}>${phaseLabel(ph)}</option>`).join('')}</select></label><label><span>Séries</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="sets" type="number" min="1" max="10" value="${Number(e.sets||1)}"></label><label><span>${e.type==='timer'||e.type?.startsWith('hold')?'Secondes':'Répétitions'}</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="target" type="number" min="1" value="${Number(e.target||1)}"></label><label><span>Repos (s)</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="rest" type="number" min="0" value="${Number(e.rest||0)}"></label></div><div class="custom-row-info"><span>${esc(equipmentForExercise(e.name).join(' · ')||exerciseInfo(e.name)?.equipment||'Sans matériel')}</span><span>${esc((exerciseInfo(e.name)?.muscles||[]).join(' · '))}</span></div></div><div class="custom-row-actions"><button class="icon-btn move-custom-up" data-custom-index="${i}" aria-label="Monter">↑</button><button class="icon-btn move-custom-down" data-custom-index="${i}" aria-label="Descendre">↓</button><button class="icon-btn remove-custom-ex" data-custom-index="${i}" aria-label="Supprimer">×</button></div></article>`).join('')}</div><div class="custom-editor-summary"><span>≈ ${estimateWorkoutMinutes(w)} min</span><span>${(w.exercises||[]).length} étapes</span></div><button class="btn btn-primary" id="saveCustomSession">Enregistrer la séance</button></section></main>`;
+}
+function syncCustomDraftFromDom(){
+  const d=state.customSessionDraft;if(!d)return;
+  document.querySelectorAll('.custom-session-meta').forEach(el=>d[el.dataset.customMeta]=el.value);
+  document.querySelectorAll('.custom-ex-field').forEach(el=>{const i=Number(el.dataset.customIndex),key=el.dataset.key;if(!d.exercises[i])return;d.exercises[i][key]=['sets','target','rest'].includes(key)?Number(el.value||0):el.value;if(key==='target')d.exercises[i].baseTarget=Number(el.value||0);});
+  d.duration=estimateWorkoutMinutes(d);
+}
+function saveCustomSession(){
+  syncCustomDraftFromDom();const d=state.customSessionDraft;if(!d||!d.name?.trim()||!d.exercises?.length)return;
+  const list=getCustomWorkouts(),item={...clone(d),id:d.id||Date.now(),updatedAt:new Date().toISOString()};
+  const idx=list.findIndex(x=>String(x.id)===String(item.id));if(idx>=0)list[idx]=item;else list.unshift(item);setCustomWorkouts(list.slice(0,50));state.customSessionEditor=null;state.customSessionDraft=null;render();
+}
+function equipmentForExercise(name){
+  const info=exerciseInfo(name),eq=(info?.equipment||'').toLowerCase(),out=[];
+  if(/traction|chin-up|dead hang|hanging|scapular pull/i.test(name)||/power tower/.test(eq)||(/barre/.test(eq)&&!/barres parallèles/.test(eq)))out.push('Power Tower');
+  if(/dips|l-sit|v-sit/i.test(name)||/barres parallèles/.test(eq))out.push('Barres parallèles');
+  if(/pompes|pike push|scapular push/i.test(name)||/poignées/.test(eq))out.push('Poignées de pompes');
+  if(/bande/.test(eq)||/avec bande|face pulls|pallof|rotation externe|band chest/i.test(name))out.push('Bandes');
+  if(/tapis/.test(eq)||/hollow|side plank|dead bug|reverse crunch|stretch|mobilité|90\/90|frog|deep squat/i.test(name))out.push('Tapis');
+  if(/sac à dos|sac a dos/.test(eq)||/sac à dos|sac a dos/i.test(name))out.push('Sac à dos');
+  return [...new Set(out)];
+}
+function programAudit(){
+  const days=[2,3,4,5,6,0],muscles={},equipment=Object.fromEntries(HOME_EQUIPMENT.map(x=>[x,new Set()]));let cardio=0,expressCardio=0,warmups=0,cooldowns=0;
+  days.forEach(day=>{const w=preparedWorkout(day,null,'full'),short=preparedWorkout(day,null,'short');cardio+=cardioTargetSeconds(w);expressCardio+=cardioTargetSeconds(short);if(w.exercises.some(e=>e.phase==='warmup'))warmups++;if(w.exercises.some(e=>e.phase==='cooldown'))cooldowns++;const v=volumeForWorkout(w);Object.entries(v).forEach(([g,n])=>muscles[g]=(muscles[g]||0)+n);w.exercises.forEach(e=>equipmentForExercise(e.name).forEach(eq=>equipment[eq]?.add(day)));});
+  const covered=VOLUME_GROUPS.filter(g=>(muscles[g]||0)>=2.5).length;
+  return {days,muscles,equipment,cardioMinutes:Math.round(cardio/60),expressCardioMinutes:Math.round(expressCardio/60),warmups,cooldowns,covered};
+}
+function renderProgramAudit(){
+  const a=programAudit();
+  return `<section class="card program-audit"><div class="section-head"><div><div class="kicker">Audit automatique du programme</div><h2>Couverture hebdomadaire</h2></div><span class="pill badge-success">${a.covered}/${VOLUME_GROUPS.length} zones</span></div><div class="audit-hero"><div><strong>6/7</strong><span>jours actifs</span></div><div><strong>${a.cardioMinutes}</strong><span>min cardio · complet</span></div><div><strong>${a.warmups}/6</strong><span>échauffements</span></div><div><strong>${a.cooldowns}/6</strong><span>retours au calme</span></div></div><div class="audit-section"><strong>Muscles / fonctions</strong><div class="audit-chip-grid">${VOLUME_GROUPS.map(g=>`<span class="audit-chip ${(a.muscles[g]||0)>=2.5?'ok':'warn'}">${g} <b>${(a.muscles[g]||0).toFixed(1)}</b></span>`).join('')}</div></div><div class="audit-section"><strong>Matériel utilisé dans la semaine</strong><div class="equipment-audit">${HOME_EQUIPMENT.map(eq=>`<div><span>${eq}</span><strong>${a.equipment[eq]?.size||0} j</strong></div>`).join('')}</div></div><div class="audit-note"><strong>Mode Express</strong><span>${a.expressCardioMinutes} min de cardio si tu faisais les 6 séances en Express. Utilise ce format ponctuellement ; si plusieurs journées sont raccourcies, complète le cardio avec une course/marche enregistrée dans Strava.</span></div><p class="muted small">Les chiffres musculaires sont des séries pondérées internes : ils servent à repérer un oubli ou un déséquilibre, pas à imposer un volume maximal.</p></section>`;
+}
 
 function render() {
   const app = document.getElementById("app");
   if (state.active) app.innerHTML = renderCoach();
+  else if (state.sessionModeEditor) app.innerHTML = renderSessionModePicker();
   else if (state.readinessEditor) app.innerHTML = renderReadiness();
   else if (state.exerciseLibrary) app.innerHTML = renderExerciseLibrary();
   else if (state.testEditor) app.innerHTML = renderTestEditor();
@@ -1236,6 +1377,7 @@ function render() {
   else if (state.view === "progress") app.innerHTML = renderProgress();
   else if (state.view === "skills") app.innerHTML = renderSkills();
   else if (state.view === "profile") app.innerHTML = renderProfile();
+  else if (state.view === "custom") app.innerHTML = renderCustomSessions();
   else if (state.view === "more") app.innerHTML = renderMore();
   else app.innerHTML = renderToday();
   bindEvents();
@@ -1255,21 +1397,22 @@ function shell(content, activeTab=state.view) {
 }
 
 function renderMore(){
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.0.2</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.1</div></div></header>
     <section class="more-grid">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
       <button class="card more-tile" id="openExerciseLibrary"><span class="more-icon">▤</span><div><strong>Exercices</strong><small>${EXERCISE_LIBRARY.length} mouvements & progressions</small></div></button>
+      <button class="card more-tile" data-view="custom"><span class="more-icon">＋</span><div><strong>Mes séances</strong><small>Créer, copier et modifier tes entraînements</small></div></button>
       <button class="card more-tile" data-view="profile"><span class="more-icon">○</span><div><strong>Profil</strong><small>Mesures, sauvegarde & réglages</small></div></button>
     </section>
-    <section class="card home-equipment"><div class="kicker">Matériel maison</div><h2>Ton setup</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les variantes lestées utilisent le sac à dos en kg. Les bandes restent suivies par couleur et plage d’assistance.</p></section>`, 'more');
+    <section class="card home-equipment"><div class="kicker">Matériel maison</div><h2>Ton setup</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les dips et L-sit utilisent en priorité les barres parallèles. Les pompes peuvent se faire sur poignées pour garder les poignets neutres et gagner de l’amplitude. Les variantes lestées utilisent toujours le sac à dos.</p></section>`, 'more');
 }
 function renderToday() {
   const day=todayDay(),w=preparedWorkout(day),history=getHistory(),seven=Date.now()-7*86400000;
   const recent=history.filter(h=>new Date(h.date).getTime()>=seven),weeklyMinutes=recent.reduce((a,h)=>a+(h.durationMinutes||0),0);
-  const rank=getRankState(),warning=dailyQuickLoadWarning();
-  const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>Repos</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">≈ ${w.duration} min</span><span class="pill">${w.intensity}</span></div><button class="btn btn-primary" id="startWorkout" data-day="${day}">Commencer la séance</button></section>`;
-  const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)}</div></div></div>`).join('')}</div></details>`:'';
+  const rank=getRankState(),warning=dailyQuickLoadWarning(),todayEquipment=[...new Set((w.exercises||[]).flatMap(e=>equipmentForExercise(e.name)))];
+  const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>Repos</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${workouts[day].shortDuration} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment"><strong>Matériel prévu</strong><div>${todayEquipment.map(x=>`<span class="pill">${x}</span>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
+  const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
     <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>＋</span><strong>Quick Log</strong><small>Ajouter une micro-série</small></button><div class="cockpit-card"><span>↗</span><strong>${rank.current.name}</strong><small>${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><div class="cockpit-card"><span>◷</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
     ${renderStravaHomeStatus()}${renderStravaToday(w)}${renderDailyVolumeCard()}${program}
@@ -1289,7 +1432,7 @@ function renderWeekExercise(e, i) {
       <div class="exercise-name">${e.name}</div>
       <div class="exercise-detail">${describe(e)}${rest}</div>
       ${e.tip ? `<div class="week-exercise-tip">${e.tip}</div>` : ''}
-      <div class="exercise-tools">${status}${tutorialLink(e.name,true)}</div>
+      <div class="exercise-tools"><span class="microbadge phase-${e.phase||'main'}">${phaseLabel(e.phase)}</span>${status}${tutorialLink(e.name,true)}</div>
     </div>
   </div>`;
 }
@@ -1297,7 +1440,8 @@ function renderWeekExercise(e, i) {
 function renderWeek() {
   const order = [1,2,3,4,5,6,0];
   const dayNow = todayDay();
-  return shell(`<header class="topbar"><div><div class="brand">Semaine</div><div class="daylabel">Clique sur une séance pour voir son contenu complet</div></div></header>
+  const audit=programAudit();
+  return shell(`<header class="topbar"><div><div class="brand">Semaine</div><div class="daylabel">6 jours actifs · ${audit.cardioMinutes} min cardio · formats Complet / Express</div></div></header>
     <section class="week-list">${order.map(day=>{
       const w=preparedWorkout(day), isToday=day===dayNow, expanded=state.expandedWeekDay===day;
       const details = w.exercises.length
@@ -1309,10 +1453,10 @@ function renderWeek() {
         : `<div class="week-details ${expanded?'open':''}" ${expanded?'':'hidden'}><p class="muted week-rest-copy">Repos complet. Marche tranquille ou mobilité douce uniquement si tu en as envie.</p></div>`;
       return `<article class="card week-card ${isToday?'today-card':''} ${expanded?'expanded':''}" data-week-day="${day}">
         <button class="week-summary week-toggle" data-day="${day}" aria-expanded="${expanded}">
-          <div class="week-main"><div class="kicker">${DAY_NAMES[day]} ${isToday?'· aujourd’hui':''}</div><h2>${w.name}</h2><p class="muted">${w.subtitle}</p><div class="meta">${w.exercises.length?`<span class="pill">${w.duration} min</span><span class="pill">${w.intensity}</span><span class="pill">${w.exercises.length} étapes</span>`:`<span class="pill">Repos complet</span>`}</div></div>
+          <div class="week-main"><div class="kicker">${DAY_NAMES[day]} ${isToday?'· aujourd’hui':''}</div><h2>${w.name}</h2><p class="muted">${w.subtitle}</p><div class="meta">${w.exercises.length?`<span class="pill">Complet ${w.duration} min</span><span class="pill">Express ${workouts[day].shortDuration} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span>`:`<span class="pill">Repos complet</span>`}</div></div>
           <span class="week-chevron" aria-hidden="true">⌄</span>
         </button>
-        ${w.exercises.length?`<div class="week-card-actions"><button class="btn btn-secondary compact start-day" data-day="${day}">Lancer</button></div>`:''}
+        ${w.exercises.length?`<div class="week-card-actions"><button class="btn btn-secondary compact start-day" data-day="${day}">Choisir</button></div>`:''}
         ${details}
       </article>`;
     }).join('')}</section>`, "week");
@@ -1371,7 +1515,7 @@ function saveMobilityTest(id){const def=MOBILITY_TESTS.find(x=>x.id===id),el=doc
 
 function allExerciseNames(){const names=new Set(EXERCISE_LIBRARY.map(e=>e.name));Object.values(workouts).forEach(w=>w.exercises.forEach(e=>names.add(e.name)));FLEX_ROUTINES.forEach(r=>r.exercises.forEach(e=>names.add(e.name)));return [...names].sort((a,b)=>a.localeCompare(b,'fr'));}
 function tutorialStats(){const names=allExerciseNames(), exact=names.filter(n=>tutorialFor(n).exact).length;return {total:names.length,exact};}
-function renderTutorialManager(){const names=allExerciseNames(),saved=getTutorialOverrides(),stats=tutorialStats();return `<main class="shell"><section class="card editor-card tutorial-manager"><button class="back-btn" id="closeTutorialManager">← Retour au profil</button><div class="kicker">Bibliothèque tutoriels · V9.0</div><h1>${stats.exact}/${stats.total} vidéos directes</h1><p class="muted">Les mouvements ont maintenant une vidéo de référence intégrée. Les variantes d'une même progression peuvent partager un tutoriel complet. Tu peux toujours remplacer n'importe quelle référence par ta propre vidéo : ton choix personnel reste prioritaire.</p><div class="tutorial-progress"><div style="width:${stats.total?Math.round(stats.exact/stats.total*100):0}%"></div></div>${names.map((name,i)=>{const data=saved[name]||{},t=tutorialFor(name);return `<details class="tutorial-editor-row"><summary><span>${name}</span><span class="microbadge ${t.exact?'good':''}">${data.videoUrl||data.imageUrl?'perso':'référence'}</span></summary><div class="tutorial-editor-body">${t.source?`<p class="small muted tutorial-reference"><strong>Référence actuelle :</strong> ${esc(t.source)}${t.title?` · ${esc(t.title)}`:''}</p>`:''}<a class="btn btn-outline" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">▶ Voir la vidéo actuelle</a><label class="field-label">Remplacer par une autre URL vidéo</label><input class="url-input" id="tutorialVideo_${i}" type="url" value="${esc(data.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=..."><label class="field-label">URL image facultative</label><input class="url-input" id="tutorialImage_${i}" type="url" value="${esc(data.imageUrl||'')}" placeholder="Laisse vide pour utiliser la miniature YouTube"><div class="tutorial-editor-actions"><a class="btn btn-outline compact" href="${esc(`https://www.youtube.com/results?search_query=${encodeURIComponent(TUTORIAL_QUERIES[name]||name+' tutorial')}`)}" target="_blank" rel="noopener noreferrer">Chercher une alternative</a><button class="btn btn-secondary compact save-tutorial" data-index="${i}" data-name="${encodeURIComponent(name)}">Enregistrer</button>${data.videoUrl||data.imageUrl?`<button class="btn btn-outline compact clear-tutorial" data-name="${encodeURIComponent(name)}">Revenir à la référence</button>`:''}</div></div></details>`;}).join('')}</section></main>`;}
+function renderTutorialManager(){const names=allExerciseNames(),saved=getTutorialOverrides(),stats=tutorialStats();return `<main class="shell"><section class="card editor-card tutorial-manager"><button class="back-btn" id="closeTutorialManager">← Retour au profil</button><div class="kicker">Bibliothèque tutoriels · V9.1</div><h1>${stats.exact}/${stats.total} vidéos directes</h1><p class="muted">Les mouvements ont maintenant une vidéo de référence intégrée. Les variantes d'une même progression peuvent partager un tutoriel complet. Tu peux toujours remplacer n'importe quelle référence par ta propre vidéo : ton choix personnel reste prioritaire.</p><div class="tutorial-progress"><div style="width:${stats.total?Math.round(stats.exact/stats.total*100):0}%"></div></div>${names.map((name,i)=>{const data=saved[name]||{},t=tutorialFor(name);return `<details class="tutorial-editor-row"><summary><span>${name}</span><span class="microbadge ${t.exact?'good':''}">${data.videoUrl||data.imageUrl?'perso':'référence'}</span></summary><div class="tutorial-editor-body">${t.source?`<p class="small muted tutorial-reference"><strong>Référence actuelle :</strong> ${esc(t.source)}${t.title?` · ${esc(t.title)}`:''}</p>`:''}<a class="btn btn-outline" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">▶ Voir la vidéo actuelle</a><label class="field-label">Remplacer par une autre URL vidéo</label><input class="url-input" id="tutorialVideo_${i}" type="url" value="${esc(data.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=..."><label class="field-label">URL image facultative</label><input class="url-input" id="tutorialImage_${i}" type="url" value="${esc(data.imageUrl||'')}" placeholder="Laisse vide pour utiliser la miniature YouTube"><div class="tutorial-editor-actions"><a class="btn btn-outline compact" href="${esc(`https://www.youtube.com/results?search_query=${encodeURIComponent(TUTORIAL_QUERIES[name]||name+' tutorial')}`)}" target="_blank" rel="noopener noreferrer">Chercher une alternative</a><button class="btn btn-secondary compact save-tutorial" data-index="${i}" data-name="${encodeURIComponent(name)}">Enregistrer</button>${data.videoUrl||data.imageUrl?`<button class="btn btn-outline compact clear-tutorial" data-name="${encodeURIComponent(name)}">Revenir à la référence</button>`:''}</div></div></details>`;}).join('')}</section></main>`;}
 function saveTutorialOverride(name,index){const video=(document.getElementById(`tutorialVideo_${index}`)?.value||'').trim(),image=(document.getElementById(`tutorialImage_${index}`)?.value||'').trim();const data=getTutorialOverrides();if(video||image)data[name]={videoUrl:video,imageUrl:image};else delete data[name];setTutorialOverrides(data);render();}
 function clearTutorialOverride(name){const data=getTutorialOverrides();delete data[name];setTutorialOverrides(data);render();}
 
@@ -1393,11 +1537,12 @@ function undoLastGuidedSet(){
 }
 
 function startWorkout(day=todayDay(), readiness=null) {
-  const w = preparedWorkout(Number(day),readiness);
-  if (!w.exercises.length) return;
-  state.readinessEditor=null;
+  const isCustom=!!readiness?.customWorkoutId;
+  const w=isCustom?preparedCustomWorkout(readiness.customWorkoutId,readiness):preparedWorkout(Number(day),readiness,readiness?.sessionLength||'full');
+  if (!w?.exercises?.length) return;
+  state.readinessEditor=null;state.sessionModeEditor=null;
   state.active = {
-    kind:"workout", day:Number(day), workout:w, cycle:w.cycle, readiness:readiness||{energy:3,soreness:2,joints:'ok'}, startedAt:Date.now(), exerciseIndex:0, setIndex:0, phase:"work", entries:[],
+    kind:isCustom?"custom":"workout", day:isCustom?"custom":Number(day), customWorkoutId:isCustom?readiness.customWorkoutId:null, sessionLength:w.sessionLength||readiness?.sessionLength||'full', workout:w, cycle:w.cycle, readiness:readiness||{energy:3,soreness:2,joints:'ok'}, startedAt:Date.now(), exerciseIndex:0, setIndex:0, phase:"work", entries:[],
     currentValue:w.exercises[0].target, currentBand:w.exercises[0].type==='reps_band'?(lastBandForExercise(w.exercises[0].name)||defaultBandForExercise(w.exercises[0].name)):'Aucune', timerRemaining:null, timerRunning:false,
     reviewRpe:6, reviewDiscomfort:false, reviewNote:"", sessionPaused:false, pauseStartedAt:null, pausedTotalMs:0, resumeTimerAfterPause:false, currentLoadKg:0
   };
@@ -1436,8 +1581,8 @@ function renderCoach() {
     if (usesBackpack(e.name)) input+=renderBackpackLoadInput(a.currentLoadKg||0,'workoutLoadKg');
   }
   return `<main class="shell coach-shell"><div class="progress-wrap"><div class="progress-label"><span>${a.workout.name}</span><span>${step}/${total}</span></div><div class="progress-track"><div class="progress-bar" style="width:${progress}%"></div></div></div>
-    <section class="card coach-card"><div><div class="kicker">${setLabel}</div>${exerciseImage(e.name,'hero')}<div class="exercise-title">${e.name}</div><div class="target">${describe(e)}</div>
-      ${e.prescriptionNote?`<div class="coach-note ${e.prescriptionStatus}">${e.prescriptionNote}</div>`:''}<p class="tip">${e.tip}</p>${e.name==='Cardio Zone 2'?renderStravaToday({exercises:[e]}):''}${tutorialLink(e.name)}${a.kind==='workout'&&substitutionOptions(e).length?'<button class="btn btn-outline substitute-btn" id="openSubstitute">Changer cet exercice</button>':''}${input}</div>
+    <section class="card coach-card"><div><div class="kicker">${phaseLabel(e.phase)} · ${setLabel}</div>${exerciseImage(e.name,'hero')}<div class="exercise-title">${e.name}</div><div class="target">${describe(e)}</div>
+      ${e.prescriptionNote?`<div class="coach-note ${e.prescriptionStatus}">${e.prescriptionNote}</div>`:''}<p class="tip">${e.tip}</p>${e.guide?.length?`<div class="guided-block"><strong>Guide étape par étape</strong>${e.guide.map(x=>`<span>• ${esc(x)}</span>`).join('')}</div>`:''}${equipmentUseNote(e.name)?`<div class="coach-equipment-tip">🧰 ${equipmentUseNote(e.name)}</div>`:''}${e.name==='Cardio Zone 2'?renderStravaToday({exercises:[e]}):''}${tutorialLink(e.name)}${(a.kind==='workout'||a.kind==='custom')&&substitutionOptions(e).length?'<button class="btn btn-outline substitute-btn" id="openSubstitute">Changer cet exercice</button>':''}${input}</div>
       <div class="stack"><button class="btn btn-primary" id="completeSet">${a.setIndex===e.sets-1?'Terminer cette étape':'Série terminée'}</button>${state.undoSetSnapshot?'<button class="btn btn-secondary" id="undoGuidedSet">↶ Annuler la dernière série</button>':''}<button class="btn btn-outline" id="pauseWorkout">Pause séance</button><button class="btn btn-outline" id="quitWorkout">Quitter</button></div></section></main>`;
 }
 
@@ -1513,7 +1658,7 @@ function renderWorkoutReview() {
   if(a.kind==="flexibility") return `<main class="shell coach-shell"><section class="card review-card"><div class="kicker">Routine terminée</div><h1>Mobilité faite.</h1><div class="stat-grid"><div class="stat"><div class="stat-value">${duration}</div><div class="stat-label">minutes</div></div><div class="stat"><div class="stat-value">${a.workout.exercises.length}</div><div class="stat-label">étapes</div></div></div><div class="divider"></div><h2>Confort global</h2><p class="muted small">1 = très raide aujourd'hui · 5 = amplitude fluide et confortable.</p><div class="comfort-row">${[1,2,3,4,5].map(n=>`<button class="comfort-btn ${a.reviewComfort===n?'active':''}" data-comfort="${n}">${n}</button>`).join('')}</div><label class="checkline"><input id="jointDiscomfort" type="checkbox" ${a.reviewDiscomfort?'checked':''}><span><strong>Douleur ou pincement inhabituel</strong><small>À distinguer d'une tension musculaire normale.</small></span></label><label class="field-label">Note facultative</label><textarea class="textarea" id="reviewNote" placeholder="Ex. hanche droite plus raide, chevilles très libres…">${esc(a.reviewNote)}</textarea><button class="btn btn-primary" id="saveWorkout">Enregistrer la routine</button></section></main>`;
   return `<main class="shell coach-shell"><section class="card review-card"><div class="kicker">Séance terminée</div><h1>Bien joué.</h1>
     <div class="stat-grid"><div class="stat"><div class="stat-value">${duration}</div><div class="stat-label">minutes</div></div><div class="stat"><div class="stat-value">${score}%</div><div class="stat-label">objectifs atteints</div></div></div>
-    <div class="meta"><span class="pill">Cycle S${a.cycle?.week||'—'} · ${a.cycle?.name||'—'}</span><span class="pill">Readiness ${readinessPlan(a.readiness).label}</span></div><div class="divider"></div><h2>Effort perçu</h2><p class="muted small">Pour une reprise, vise le plus souvent 5–7/10.</p>
+    <div class="meta"><span class="pill">Cycle S${a.cycle?.week||'—'} · ${a.cycle?.name||'—'}</span><span class="pill">${a.kind==='custom'?'Personnelle':a.sessionLength==='short'?'Express':'Complète'}</span><span class="pill">Readiness ${readinessPlan(a.readiness).label}</span></div><div class="divider"></div><h2>Effort perçu</h2><p class="muted small">Pour une reprise, vise le plus souvent 5–7/10.</p>
     <div class="rpe-row">${[4,5,6,7,8,9].map(n=>`<button class="rpe-btn ${a.reviewRpe===n?'active':''}" data-rpe="${n}">${n}</button>`).join('')}</div>
     <label class="checkline"><input id="jointDiscomfort" type="checkbox" ${a.reviewDiscomfort?'checked':''}><span><strong>Gêne articulaire ou tendineuse</strong><small>Poignets, coudes, épaules, genoux…</small></span></label>
     <label class="field-label">Note facultative</label><textarea class="textarea" id="reviewNote" placeholder="Ex. grip fatigué, très facile, épaule raide…">${esc(a.reviewNote)}</textarea>
@@ -1533,7 +1678,7 @@ function saveWorkoutReview() {
   const beforeRank=getRankState().current.id;
   const history=getHistory();
   const prs=detectPRs(a.entries,history);
-  history.unshift({ id:Date.now(), date:new Date().toISOString(), day:a.day, name:a.workout.name, durationMinutes, score, rpe:a.reviewRpe, jointDiscomfort:a.reviewDiscomfort, note:a.reviewNote, readiness:{...a.readiness,mode:readinessPlan(a.readiness).mode}, cycle:a.cycle, prs, entries:a.entries });
+  history.unshift({ id:Date.now(), date:new Date().toISOString(), day:a.day, name:a.workout.name, durationMinutes, score, rpe:a.reviewRpe, jointDiscomfort:a.reviewDiscomfort, note:a.reviewNote, sessionLength:a.sessionLength||'full', customWorkoutId:a.customWorkoutId||null, readiness:{...a.readiness,mode:readinessPlan(a.readiness).mode}, cycle:a.cycle, prs, entries:a.entries });
   setHistory(history.slice(0,1000));
   if(prs.length)state.prNotice=prs;
   const afterRank=getRankState();
@@ -1724,6 +1869,7 @@ function renderProgress() {
     ${renderCycleMini()}
     ${renderRankPanel()}
     ${renderProgressionRecommendations()}
+    ${renderProgramAudit()}
     ${renderQuickVolumePanel()}
     ${renderVolumePanel()}
     ${renderRecordsPanel()}
@@ -1764,8 +1910,8 @@ function renderProfile(){const logs=getBodyLogs(),p=getPrefs();const latest=logs
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
-  <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + bandes + tapis + sac à dos</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Pas de parallettes ni de gilet lesté. Les exercices lestés utilisent le sac à dos et enregistrent sa charge en kg.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.0</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
+  <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + barres parallèles + poignées + bandes + tapis + sac à dos</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les nouvelles barres parallèles et poignées de pompes sont intégrées aux recommandations d’exercices. Les exercices lestés utilisent toujours le sac à dos et enregistrent sa charge en kg.</p></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.1</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`, "profile");}
 
 function renderBodyChart(logs,key,unit){const pts=logs.filter(x=>Number(x[key])>0).slice(0,12).reverse();if(pts.length<2)return'';const vals=pts.map(x=>Number(x[key])),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.5,max-min);const coords=vals.map((v,i)=>{const x=(i/(vals.length-1))*100,y=88-((v-min)/range)*70;return `${x},${y}`}).join(' ');return `<div class="mini-chart"><div class="chart-head"><strong>${key==='weight'?'Poids':'Tour de taille'}</strong><span>${vals[0]} → ${vals[vals.length-1]} ${unit}</span></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Évolution ${key}"><polyline points="${coords}" fill="none" vector-effect="non-scaling-stroke"/></svg></div>`;}
@@ -1793,6 +1939,8 @@ function bindEvents(){
   document.querySelectorAll('[data-energy]').forEach(b=>b.onclick=()=>{state.readinessEditor.energy=Number(b.dataset.energy);render();});
   document.querySelectorAll('[data-soreness]').forEach(b=>b.onclick=()=>{state.readinessEditor.soreness=Number(b.dataset.soreness);render();});
   document.querySelectorAll('[data-joints]').forEach(b=>b.onclick=()=>{state.readinessEditor.joints=b.dataset.joints;render();});
+  document.querySelectorAll('[data-session-length]').forEach(b=>b.onclick=()=>{const r={...state.sessionModeEditor};state.sessionModeEditor=null;state.readinessEditor={day:Number(r.day),sessionLength:b.dataset.sessionLength,energy:3,soreness:2,joints:'ok'};render();});
+  const cancelMode=document.getElementById('cancelSessionMode');if(cancelMode)cancelMode.onclick=()=>{state.sessionModeEditor=null;render();};
   const confirmReadiness=document.getElementById('confirmReadiness');if(confirmReadiness)confirmReadiness.onclick=()=>{const r={...state.readinessEditor};startWorkout(r.day,r);};
   const cancelReadiness=document.getElementById('cancelReadiness');if(cancelReadiness)cancelReadiness.onclick=()=>{state.readinessEditor=null;render();};
   const openSub=document.getElementById('openSubstitute');if(openSub)openSub.onclick=()=>{state.substituteEditor=state.active.exerciseIndex;render();};
@@ -1804,6 +1952,21 @@ function bindEvents(){
   const closeLib=document.getElementById('closeExerciseLibrary');if(closeLib)closeLib.onclick=()=>{state.exerciseLibrary=false;render();};
   document.querySelectorAll('[data-library-category]').forEach(b=>b.onclick=()=>{state.libraryCategory=b.dataset.libraryCategory;document.querySelectorAll('[data-library-category]').forEach(x=>x.classList.toggle('active',x.dataset.libraryCategory===state.libraryCategory));filterLibraryDom();});
   const libSearch=document.getElementById('librarySearch');if(libSearch)libSearch.oninput=filterLibraryDom;
+  const newCustom=document.getElementById('newCustomSession'),newCustom2=document.getElementById('newCustomSession2');if(newCustom)newCustom.onclick=()=>openCustomSessionEditor();if(newCustom2)newCustom2.onclick=()=>openCustomSessionEditor();
+  document.querySelectorAll('.clone-program-day').forEach(b=>b.onclick=()=>openCustomSessionEditor(null,Number(b.dataset.cloneDay)));
+  document.querySelectorAll('.start-custom-session').forEach(b=>b.onclick=()=>requestCustomWorkoutStart(b.dataset.customId));
+  document.querySelectorAll('.edit-custom-session').forEach(b=>b.onclick=()=>openCustomSessionEditor(b.dataset.customId));
+  document.querySelectorAll('.duplicate-custom-session').forEach(b=>b.onclick=()=>{const w=customWorkoutById(b.dataset.customId);if(!w)return;const list=getCustomWorkouts(),copy={...clone(w),id:Date.now(),name:`${w.name} · copie`,updatedAt:new Date().toISOString()};list.unshift(copy);setCustomWorkouts(list);render();});
+  document.querySelectorAll('.delete-custom-session').forEach(b=>b.onclick=()=>{if(!confirm('Supprimer cette séance personnelle ?'))return;setCustomWorkouts(getCustomWorkouts().filter(x=>String(x.id)!==String(b.dataset.customId)));render();});
+  const closeCustom=document.getElementById('closeCustomEditor');if(closeCustom)closeCustom.onclick=()=>{state.customSessionEditor=null;state.customSessionDraft=null;render();};
+  const addCustom=document.getElementById('addCustomExercise');if(addCustom)addCustom.onclick=()=>{syncCustomDraftFromDom();state.customSessionDraft.exercises.push(exerciseTemplateByName('Pompes'));render();};
+  document.querySelectorAll('.custom-exercise-name').forEach(el=>el.onchange=()=>{syncCustomDraftFromDom();const i=Number(el.dataset.customIndex),old=state.customSessionDraft.exercises[i],fresh=exerciseTemplateByName(el.value);state.customSessionDraft.exercises[i]={...fresh,phase:old?.phase||fresh.phase||'main'};render();});
+  document.querySelectorAll('.custom-ex-field').forEach(el=>el.onchange=()=>{syncCustomDraftFromDom();render();});
+  document.querySelectorAll('.custom-session-meta').forEach(el=>el.onchange=syncCustomDraftFromDom);
+  document.querySelectorAll('.move-custom-up').forEach(b=>b.onclick=()=>{syncCustomDraftFromDom();const i=Number(b.dataset.customIndex);if(i<=0)return;const arr=state.customSessionDraft.exercises;[arr[i-1],arr[i]]=[arr[i],arr[i-1]];render();});
+  document.querySelectorAll('.move-custom-down').forEach(b=>b.onclick=()=>{syncCustomDraftFromDom();const i=Number(b.dataset.customIndex),arr=state.customSessionDraft.exercises;if(i>=arr.length-1)return;[arr[i+1],arr[i]]=[arr[i],arr[i+1]];render();});
+  document.querySelectorAll('.remove-custom-ex').forEach(b=>b.onclick=()=>{syncCustomDraftFromDom();state.customSessionDraft.exercises.splice(Number(b.dataset.customIndex),1);render();});
+  const saveCustom=document.getElementById('saveCustomSession');if(saveCustom)saveCustom.onclick=saveCustomSession;
   const resetC=document.getElementById('resetCycle');if(resetC)resetC.onclick=()=>{if(confirm('Recommencer un cycle de 8 semaines à partir de cette semaine ?'))resetCycle();};
   const dismissPR=document.getElementById('dismissPR');if(dismissPR)dismissPR.onclick=()=>{state.prNotice=null;render();};
   document.querySelectorAll('[data-flex-toggle]').forEach(b=>b.onclick=()=>{const id=b.dataset.flexToggle;state.expandedFlexRoutine=state.expandedFlexRoutine===id?null:id;render();});
