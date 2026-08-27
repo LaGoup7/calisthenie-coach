@@ -1,4 +1,4 @@
-# Calisthénie Coach · V9.2.2 — Quick Log visuel
+# Calisthénie Coach · V9.2.3 — Semaine UI professionnelle
 
 ## Volume musculaire paramétrique
 - Charge réelle = séances complètes, Express, personnelles + Quick Logs.
@@ -38,3 +38,13 @@
 - miniatures issues des vidéos de référence
 - ordre logique par famille de mouvements
 - exercice sélectionné clairement affiché avant validation
+
+
+## V9.2.3
+- Refonte visuelle de la page Semaine, sans modifier le moteur d’entraînement.
+- Cartes plus plates, contraste réduit et hiérarchie typographique plus claire.
+- Suppression des trois gros pills Complet / Express / Cardio au profit d’une ligne de métadonnées discrète.
+- Aujourd’hui indiqué par un accent latéral et un petit label, sans contour sombre agressif.
+- Action Démarrer transformée en action légère.
+- Détails ouverts sur fond très légèrement teinté et exercices moins séparés visuellement.
+- Optimisation mobile iPhone et desktop.
