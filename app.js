@@ -373,6 +373,16 @@ function stravaDistanceKm(a){return Number(a.distance||0)/1000;}
 function stravaPace(a){const km=stravaDistanceKm(a),sec=Number(a.moving_time||0);if(!km||!sec)return '—';const p=sec/km,m=Math.floor(p/60),ss=Math.round(p%60);return `${m}:${String(ss).padStart(2,'0')}/km`;}
 function cardioTargetSeconds(w){return Number((w?.exercises||[]).find(e=>e.name==='Cardio Zone 2')?.target||0);}
 function renderStravaRunRows(runs=todayStravaRuns()){return runs.map(a=>`<div class="strava-activity-row"><div><strong>${esc(a.name||'Course')}</strong><small>${stravaDistanceKm(a).toFixed(2)} km · ${stravaPace(a)}</small></div><span>${stravaMinutes(a)} min</span></div>`).join('');}
+function stravaAthleteName(){const a=state.stravaStatus?.athlete;return a?`${a.firstname||''} ${a.lastname||''}`.trim():'';}
+function renderStravaHomeStatus(){
+  const st=state.stravaStatus,meta=getStravaMeta(),acts=getStravaActivities().filter(isRunActivity),latest=acts[0]||null;
+  if(!st.checked)return `<section class="card strava-status-card"><div class="strava-status-line"><span class="strava-dot checking"></span><div><strong>Strava</strong><small>Vérification de la connexion…</small></div><span class="strava-wordmark">STRAVA</span></div></section>`;
+  if(!st.connected)return `<section class="card strava-status-card"><div class="strava-status-line"><span class="strava-dot off"></span><div class="grow"><strong>Strava non connecté</strong><small>Connecte ton compte pour synchroniser automatiquement tes courses.</small></div><span class="strava-wordmark">STRAVA</span></div><a class="btn btn-primary strava-home-connect" href="/api/strava/auth">Connecter Strava</a></section>`;
+  const athlete=stravaAthleteName();
+  const syncLabel=meta.lastSync?`Dernière synchro : ${formatDate(meta.lastSync)}`:'Connexion confirmée · première synchro à faire';
+  const latestText=latest?`${esc(latest.name||'Course')} · ${stravaDistanceKm(latest).toFixed(2)} km · ${stravaMinutes(latest)} min`:'Aucune course importée pour le moment';
+  return `<section class="card strava-status-card connected"><div class="strava-status-line"><span class="strava-dot on"></span><div class="grow"><strong>Strava connecté${athlete?` · ${esc(athlete)}`:''} ✓</strong><small>${syncLabel}</small></div><span class="strava-wordmark">STRAVA</span></div><div class="strava-home-latest">${latestText}</div><div class="strava-actions"><a class="btn btn-outline" href="https://www.strava.com/" target="_blank" rel="noopener noreferrer">Ouvrir Strava</a><button class="btn btn-secondary" id="syncStrava" ${state.stravaSyncing?'disabled':''}>${state.stravaSyncing?'Synchronisation…':'Synchroniser'}</button></div></section>`;
+}
 function renderStravaToday(w){
   const target=cardioTargetSeconds(w);if(!target)return '';
   const st=state.stravaStatus,runs=todayStravaRuns(),done=runs.reduce((n,a)=>n+Number(a.moving_time||a.elapsed_time||0),0),pct=Math.min(100,Math.round(done/target*100));
@@ -1245,7 +1255,7 @@ function shell(content, activeTab=state.view) {
 }
 
 function renderMore(){
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.0</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.0.1</div></div></header>
     <section class="more-grid">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1262,7 +1272,7 @@ function renderToday() {
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
     <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>＋</span><strong>Quick Log</strong><small>Ajouter une micro-série</small></button><div class="cockpit-card"><span>↗</span><strong>${rank.current.name}</strong><small>${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><div class="cockpit-card"><span>◷</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
-    ${renderStravaToday(w)}${renderDailyVolumeCard()}${program}
+    ${renderStravaHomeStatus()}${renderStravaToday(w)}${renderDailyVolumeCard()}${program}
     <details class="today-details"><summary><div><div class="kicker">Détails</div><strong>Cycle, rang & coach adaptatif</strong></div><span>⌄</span></summary><div class="details-stack">${renderCycleMini()}${renderRankMini()}${renderProgressionRecommendations()}</div></details>`, 'today');
 }
 function renderWeekExercise(e, i) {
@@ -1859,6 +1869,6 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-const stravaParam=new URLSearchParams(location.search).get('strava');if(stravaParam){state.stravaMessage=stravaParam==='connected'?'Strava connecté ✓':'Connexion Strava non terminée';history.replaceState({},'',location.pathname);}
+const stravaParam=new URLSearchParams(location.search).get('strava');if(stravaParam){state.stravaMessage=stravaParam==='connected'?'Strava connecté ✓':stravaParam==='error'?'Erreur de connexion Strava':'Connexion Strava non terminée';sessionStorage.setItem('cc_strava_return',stravaParam);history.replaceState({},'',location.pathname);}
 render();
-setTimeout(()=>loadStravaStatus(),80);
+setTimeout(async()=>{await loadStravaStatus();const returned=sessionStorage.getItem('cc_strava_return');if(returned==='connected'&&state.stravaStatus.connected){sessionStorage.removeItem('cc_strava_return');if(!getStravaMeta().lastSync)syncStravaActivities();}},80);

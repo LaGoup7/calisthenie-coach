@@ -1,3 +1,7 @@
+# Calisthénie Coach V9.0.1 — Strava status
+
+Ajout d’un statut Strava visible sur la page Aujourd’hui : connecté/non connecté, athlète, dernière synchronisation, dernière course, bouton Ouvrir Strava et Synchroniser. Après un retour OAuth réussi, la première synchronisation est lancée automatiquement si nécessaire.
+
 
 ## V8.2 — Quick Log / volume journalier
 
