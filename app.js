@@ -10,6 +10,8 @@ const STORAGE = {
   tutorials: "cc_tutorials",
   exerciseChoices: "cc_exercise_choices",
   quickLogs: "cc_quick_logs",
+  stravaActivities: "cc_strava_activities",
+  stravaMeta: "cc_strava_meta",
 };
 
 function ex(name, type, sets, target, rest, tip) {
@@ -216,7 +218,7 @@ const DEFAULT_TUTORIALS = {
   "Child's pose latéral": { videoUrl:"https://www.youtube.com/watch?v=EC4MkH0XpXY", source:"Good Life Physical Therapy", title:"12 Minute Full Body Stretch" },
   "Chin-ups": { videoUrl:"https://www.youtube.com/watch?v=eGo4IYlbE5g", source:"Calisthenicmovement", title:"The Perfect Pull Up" },
   "Chin-ups assistés": { videoUrl:"https://www.youtube.com/watch?v=6GWT7GLXE3c", source:"Calisthenicmovement", title:"Pull Ups For Beginners — 0 to 5 Pull Ups" },
-  "Couch stretch": { videoUrl:"https://vimeo.com/647945126", source:"E3 Rehab", title:"Couch Stretch Tutorial" },
+  "Couch stretch": { videoUrl:"https://www.youtube.com/watch?v=cVqb6UdfIpM", source:"Orillia Sports Medicine & Rehabilitation", title:"Couch Stretch Tutorial" },
   "Curl biceps avec bande": { videoUrl:"https://www.youtube.com/watch?v=R9f4TwH-1Q8", source:"Chris Gates Fitness", title:"Resistance Band Biceps Curl Tutorial" },
   "Dead bug": { videoUrl:"https://www.youtube.com/watch?v=bxn9FBrt4-A", source:"NASM", title:"Dead Bug" },
   "Dead hang": { videoUrl:"https://www.youtube.com/watch?v=ShkBXOGK7A8", source:"FitnessFAQs", title:"How Hanging Transforms Your Body" },
@@ -232,7 +234,7 @@ const DEFAULT_TUTORIALS = {
   "Fentes arrière": { videoUrl:"https://www.youtube.com/watch?v=lKhZvT_NkOs", source:"NASM", title:"Reverse Lunge to Balance" },
   "Fentes arrière lestées (sac à dos)": { videoUrl:"https://www.youtube.com/watch?v=lKhZvT_NkOs", source:"NASM", title:"Reverse Lunge to Balance" },
   "Flexion avant ischios": { videoUrl:"https://www.youtube.com/watch?v=rCjKTy9NXM0", source:"Tom Merrick", title:"50 Minute Full Body Flexibility" },
-  "Fléchisseurs de hanche": { videoUrl:"https://vimeo.com/647945126", source:"E3 Rehab", title:"Couch Stretch Tutorial" },
+  "Fléchisseurs de hanche": { videoUrl:"https://www.youtube.com/watch?v=cVqb6UdfIpM", source:"Orillia Sports Medicine & Rehabilitation", title:"Couch Stretch Tutorial" },
   "Frog stretch": { videoUrl:"https://www.youtube.com/watch?v=jj2AAH6jbHk", source:"Tom Merrick", title:"12 Minute Hip Mobility Routine" },
   "Front lever": { videoUrl:"https://www.youtube.com/watch?v=AGhb8V8M758", source:"FitnessFAQs", title:"Front Lever for Beginners — All Progressions" },
   "Hamstring curl avec bande": { videoUrl:"https://www.youtube.com/watch?v=6fD3kja6APs", source:"Laura Opstedal / BarBend demo", title:"Prone Banded Hamstring Curl" },
@@ -267,7 +269,7 @@ const DEFAULT_TUTORIALS = {
   "One-leg front lever": { videoUrl:"https://www.youtube.com/watch?v=AGhb8V8M758", source:"FitnessFAQs", title:"Front Lever for Beginners — All Progressions" },
   "One-leg human flag": { videoUrl:"https://www.youtube.com/watch?v=Cl_jIUGYh2w", source:"Calisthenics tutorial", title:"Complete Human Flag Tutorial" },
   "One-leg L-sit": { videoUrl:"https://www.youtube.com/watch?v=cu0fHp8HCDo", source:"FitnessFAQs", title:"Best Exercises To Increase L-SIT HOLD" },
-  "Pallof press avec bande": { videoUrl:"https://vimeo.com/730127530", source:"E3 Rehab", title:"Pallof Press Tutorial" },
+  "Pallof press avec bande": { videoUrl:"https://www.youtube.com/watch?v=axgv7H_VQOo", source:"BarBend", title:"Pallof Press Exercise Guide" },
   "Pass-through avec bande": { videoUrl:"https://www.youtube.com/watch?v=osRimvxXlKQ", source:"Physical Therapy 101", title:"Band Pull Apart Series" },
   "Pike hold": { videoUrl:"https://www.youtube.com/watch?v=9WM4O96Jf7I", source:"Pullup & Dip", title:"First Pike Push-up — Beginner Tutorial" },
   "Pike push-ups": { videoUrl:"https://www.youtube.com/watch?v=9WM4O96Jf7I", source:"Pullup & Dip", title:"First Pike Push-up — Beginner Tutorial" },
@@ -286,7 +288,7 @@ const DEFAULT_TUTORIALS = {
   "Retour au calme": { videoUrl:"https://www.youtube.com/watch?v=R3WDe7byUXo", source:"Tom Merrick", title:"15 Minute Full Body Mobility Routine" },
   "Reverse crunch": { videoUrl:"https://www.youtube.com/watch?v=wtKWBzDwfIM", source:"NASM", title:"Reverse Crunch to Knee-Up" },
   "Romanian deadlift avec bande": { videoUrl:"https://www.youtube.com/watch?v=2DswHFace6c", source:"BarBend demo", title:"Resistance Band Romanian Deadlift" },
-  "Rotation externe avec bande": { videoUrl:"https://vimeo.com/963429012", source:"E3 Rehab", title:"Standing External Rotation with Band" },
+  "Rotation externe avec bande": { videoUrl:"https://www.youtube.com/watch?v=_UvmPNGtlPM", source:"AskDoctorJo", title:"Shoulder External Rotation with Resistive Band" },
   "Rotation thoracique": { videoUrl:"https://www.youtube.com/watch?v=ADeGAWCDjhQ", source:"E3 Rehab", title:"Quadruped Thoracic Rotation" },
   "Row avec bande": { videoUrl:"https://www.youtube.com/watch?v=kRNFMY4P_ek", source:"FITTR", title:"Resistance Band Rows" },
   "Scapular pull-ups": { videoUrl:"https://www.youtube.com/watch?v=eGo4IYlbE5g", source:"Calisthenicmovement", title:"The Perfect Pull Up" },
@@ -352,6 +354,54 @@ function tutorialLink(name, compact=false) {
     ${t.imageUrl?`<img class="tutorial-thumb" src="${esc(t.imageUrl)}" alt="" loading="lazy">`:''}
     <span class="tutorial-copy"><strong><span aria-hidden="true">▶</span> ${t.label}</strong><small>${t.mediaType==='video'?(t.source?`${t.source}${t.title?` · ${t.title}`:''}`:'Vidéo sélectionnée pour cet exercice'):t.mediaType==='image'?'Image de référence sélectionnée':'Recherche de secours · tu peux choisir une vidéo précise dans Profil'}</small></span>
   </a>`;
+}
+
+function exerciseImage(name, size="small") {
+  const t=tutorialFor(name);
+  if(!t.imageUrl)return `<div class="exercise-image-placeholder ${size}" aria-hidden="true">${esc(String(name||'?').trim().charAt(0).toUpperCase())}</div>`;
+  return `<a class="exercise-image ${size}" href="${esc(t.videoUrl||t.url)}" target="_blank" rel="noopener noreferrer" aria-label="Voir le tutoriel de ${esc(name)}"><img src="${esc(t.imageUrl)}" alt="Démonstration de ${esc(name)}" loading="lazy"></a>`;
+}
+function getStravaActivities(){return parse(STORAGE.stravaActivities,[]);}
+function setStravaActivities(v){save(STORAGE.stravaActivities,v);}
+function getStravaMeta(){return parse(STORAGE.stravaMeta,{lastSync:null});}
+function setStravaMeta(v){save(STORAGE.stravaMeta,v);}
+function isoDayLocal(){const d=new Date(),off=d.getTimezoneOffset()*60000;return new Date(d-off).toISOString().slice(0,10);}
+function isRunActivity(a){return ['Run','TrailRun','VirtualRun'].includes(a?.sport_type)||a?.type==='Run';}
+function todayStravaRuns(){const key=isoDayLocal();return getStravaActivities().filter(a=>isRunActivity(a)&&String(a.start_date_local||a.start_date||'').slice(0,10)===key);}
+function stravaMinutes(a){return Math.round(Number(a.moving_time||a.elapsed_time||0)/60);}
+function stravaDistanceKm(a){return Number(a.distance||0)/1000;}
+function stravaPace(a){const km=stravaDistanceKm(a),sec=Number(a.moving_time||0);if(!km||!sec)return '—';const p=sec/km,m=Math.floor(p/60),ss=Math.round(p%60);return `${m}:${String(ss).padStart(2,'0')}/km`;}
+function cardioTargetSeconds(w){return Number((w?.exercises||[]).find(e=>e.name==='Cardio Zone 2')?.target||0);}
+function renderStravaRunRows(runs=todayStravaRuns()){return runs.map(a=>`<div class="strava-activity-row"><div><strong>${esc(a.name||'Course')}</strong><small>${stravaDistanceKm(a).toFixed(2)} km · ${stravaPace(a)}</small></div><span>${stravaMinutes(a)} min</span></div>`).join('');}
+function renderStravaToday(w){
+  const target=cardioTargetSeconds(w);if(!target)return '';
+  const st=state.stravaStatus,runs=todayStravaRuns(),done=runs.reduce((n,a)=>n+Number(a.moving_time||a.elapsed_time||0),0),pct=Math.min(100,Math.round(done/target*100));
+  if(!st.checked)return `<section class="card strava-card"><div class="kicker">Course</div><h2>Strava</h2><p class="muted small">Vérification de la connexion…</p></section>`;
+  if(!st.connected)return `<section class="card strava-card"><div class="strava-head"><div><div class="kicker">Course prévue</div><h2>≈ ${Math.round(target/60)} min de cardio</h2></div><span class="strava-wordmark">STRAVA</span></div><p class="muted">Connecte ton compte pour récupérer automatiquement la durée, la distance et l’allure de tes courses.</p><a class="btn btn-primary" href="/api/strava/auth">Connecter avec Strava</a></section>`;
+  return `<section class="card strava-card"><div class="strava-head"><div><div class="kicker">Cardio · Compatible avec Strava</div><h2>${runs.length?(pct>=100?'Durée validée ✓':`${Math.round(done/60)} / ${Math.round(target/60)} min`):`Objectif : ${Math.round(target/60)} min`}</h2></div><span class="strava-wordmark">STRAVA</span></div>${runs.length?`<div class="strava-progress"><span style="width:${pct}%"></span></div>${renderStravaRunRows(runs)}`:'<p class="muted small">Aucune course synchronisée aujourd’hui.</p>'}<div class="strava-actions"><a class="btn btn-primary" href="https://www.strava.com/" target="_blank" rel="noopener noreferrer">Ouvrir Strava</a><button class="btn btn-secondary" id="syncStrava">Synchroniser</button></div><p class="install-note">La durée peut être validée automatiquement. La Zone 2 reste à confirmer selon ta fréquence cardiaque ou ton ressenti.</p></section>`;
+}
+function renderStravaProfile(){
+  const st=state.stravaStatus,meta=getStravaMeta(),acts=getStravaActivities().filter(isRunActivity).slice(0,5);
+  if(!st.checked)return `<section class="card strava-card"><h2>Strava</h2><p class="muted">Vérification…</p></section>`;
+  if(!st.connected)return `<section class="card strava-card"><div class="strava-head"><div><div class="kicker">Course</div><h2>Connexion Strava</h2></div><span class="strava-wordmark">STRAVA</span></div><p class="muted small">Synchronise tes courses pour valider le cardio prévu par Calisthénie Coach. Les identifiants Strava restent côté serveur Vercel.</p><a class="btn btn-primary" href="/api/strava/auth">Connecter avec Strava</a></section>`;
+  const athlete=st.athlete?`${st.athlete.firstname||''} ${st.athlete.lastname||''}`.trim():'';
+  return `<section class="card strava-card"><div class="strava-head"><div><div class="kicker">Connecté</div><h2>${athlete||'Strava'}</h2></div><span class="strava-wordmark">STRAVA</span></div>${meta.lastSync?`<p class="muted small">Dernière synchronisation : ${formatDate(meta.lastSync)}</p>`:''}${acts.length?`<div class="strava-activity-list">${renderStravaRunRows(acts)}</div>`:'<p class="muted small">Synchronise pour importer tes dernières courses.</p>'}<div class="strava-actions"><button class="btn btn-primary" id="syncStrava">Synchroniser les courses</button><button class="btn btn-outline" id="disconnectStrava">Déconnecter</button></div></section>`;
+}
+async function loadStravaStatus(){
+  state.stravaStatus.loading=true;
+  try{const r=await fetch('/api/strava/status',{credentials:'same-origin'});const data=await r.json();state.stravaStatus={checked:true,loading:false,connected:!!data.connected,athlete:data.athlete||null,scope:data.scope||''};}
+  catch{state.stravaStatus={checked:true,loading:false,connected:false,athlete:null,scope:''};}
+  if(!state.active&&!state.quickEditor)render();
+}
+async function syncStravaActivities(){
+  if(state.stravaSyncing)return;state.stravaSyncing=true;state.stravaMessage='Synchronisation…';render();
+  try{const r=await fetch('/api/strava/activities?days=21',{credentials:'same-origin'});const data=await r.json();if(!r.ok)throw new Error(data.error||'Strava');setStravaActivities(data.activities||[]);setStravaMeta({lastSync:new Date().toISOString()});state.stravaMessage=`${(data.activities||[]).filter(isRunActivity).length} course(s) synchronisée(s)`;}
+  catch(e){state.stravaMessage=e.message||'Synchronisation impossible';}
+  finally{state.stravaSyncing=false;render();}
+}
+async function disconnectStrava(){
+  try{await fetch('/api/strava/disconnect',{method:'POST',credentials:'same-origin'});}catch{}
+  setStravaActivities([]);setStravaMeta({lastSync:null});state.stravaStatus={checked:true,loading:false,connected:false,athlete:null,scope:''};state.stravaMessage='Strava déconnecté';render();
 }
 
 const FLEX_ROUTINES = [
@@ -681,6 +731,9 @@ const state = {
   quickBand: null,
   quickLoadKg: 0,
   undoSetSnapshot: null,
+  stravaStatus: {checked:false,loading:false,connected:false,athlete:null,scope:""},
+  stravaSyncing: false,
+  stravaMessage: null,
 };
 
 function parse(key, fallback) {
@@ -1156,7 +1209,7 @@ function renderQuickLogModal(){
 }
 function renderExerciseLibrary(){
   const cats=['Tous',...new Set(EXERCISE_LIBRARY.map(x=>x.category))];
-  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V8.1 · bibliothèque structurée</div><h1>${EXERCISE_LIBRARY.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${EXERCISE_LIBRARY.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary><div><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
+  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V8.1 · bibliothèque structurée</div><h1>${EXERCISE_LIBRARY.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${EXERCISE_LIBRARY.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
 }
 function filterLibraryDom(){const q=(document.getElementById('librarySearch')?.value||'').trim().toLowerCase(),cat=state.libraryCategory;document.querySelectorAll('.library-item').forEach(el=>{const okCat=cat==='Tous'||el.dataset.libCategory===cat,okQ=!q||(el.dataset.libText||'').includes(q);el.style.display=okCat&&okQ?'':'none';});}
 
@@ -1192,7 +1245,7 @@ function shell(content, activeTab=state.view) {
 }
 
 function renderMore(){
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V8.9.2</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.0</div></div></header>
     <section class="more-grid">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1206,10 +1259,10 @@ function renderToday() {
   const recent=history.filter(h=>new Date(h.date).getTime()>=seven),weeklyMinutes=recent.reduce((a,h)=>a+(h.durationMinutes||0),0);
   const rank=getRankState(),warning=dailyQuickLoadWarning();
   const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>Repos</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">≈ ${w.duration} min</span><span class="pill">${w.intensity}</span></div><button class="btn btn-primary" id="startWorkout" data-day="${day}">Commencer la séance</button></section>`;
-  const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row"><div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)}</div></div></div>`).join('')}</div></details>`:'';
+  const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
     <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>＋</span><strong>Quick Log</strong><small>Ajouter une micro-série</small></button><div class="cockpit-card"><span>↗</span><strong>${rank.current.name}</strong><small>${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><div class="cockpit-card"><span>◷</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
-    ${renderDailyVolumeCard()}${program}
+    ${renderStravaToday(w)}${renderDailyVolumeCard()}${program}
     <details class="today-details"><summary><div><div class="kicker">Détails</div><strong>Cycle, rang & coach adaptatif</strong></div><span>⌄</span></summary><div class="details-stack">${renderCycleMini()}${renderRankMini()}${renderProgressionRecommendations()}</div></details>`, 'today');
 }
 function renderWeekExercise(e, i) {
@@ -1220,6 +1273,7 @@ function renderWeekExercise(e, i) {
       ? '<span class="microbadge warn">allégé</span>'
       : '';
   return `<div class="week-exercise-row">
+    ${exerciseImage(e.name,'mini')}
     <div class="num">${i+1}</div>
     <div class="grow">
       <div class="exercise-name">${e.name}</div>
@@ -1262,7 +1316,7 @@ function startFlexRoutine(id){
 }
 function latestMobilityValue(id){const arr=getMobilityTests().filter(x=>x.testId===id).sort((a,b)=>new Date(b.date)-new Date(a.date));return arr[0]?Number(arr[0].value):null;}
 function bestMobilityValue(id){const vals=getMobilityTests().filter(x=>x.testId===id).map(x=>Number(x.value)).filter(Number.isFinite);return vals.length?Math.max(...vals):null;}
-function renderFlexExercise(e,i){return `<div class="week-exercise-row"><div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)}${e.rest?` · repos ${fmtTime(e.rest)}`:''}</div><div class="exercise-tools">${tutorialLink(e.name,true)}</div></div></div>`;}
+function renderFlexExercise(e,i){return `<div class="week-exercise-row">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)}${e.rest?` · repos ${fmtTime(e.rest)}`:''}</div><div class="exercise-tools">${tutorialLink(e.name,true)}</div></div></div>`;}
 function targetedFlexRoutine(day=todayDay()){
   if([2,3,5].includes(day)) return flexRoutineById("upper-15");
   if([4].includes(day)) return flexRoutineById("lower-18");
@@ -1307,7 +1361,7 @@ function saveMobilityTest(id){const def=MOBILITY_TESTS.find(x=>x.id===id),el=doc
 
 function allExerciseNames(){const names=new Set(EXERCISE_LIBRARY.map(e=>e.name));Object.values(workouts).forEach(w=>w.exercises.forEach(e=>names.add(e.name)));FLEX_ROUTINES.forEach(r=>r.exercises.forEach(e=>names.add(e.name)));return [...names].sort((a,b)=>a.localeCompare(b,'fr'));}
 function tutorialStats(){const names=allExerciseNames(), exact=names.filter(n=>tutorialFor(n).exact).length;return {total:names.length,exact};}
-function renderTutorialManager(){const names=allExerciseNames(),saved=getTutorialOverrides(),stats=tutorialStats();return `<main class="shell"><section class="card editor-card tutorial-manager"><button class="back-btn" id="closeTutorialManager">← Retour au profil</button><div class="kicker">Bibliothèque tutoriels · V8.9.2</div><h1>${stats.exact}/${stats.total} vidéos directes</h1><p class="muted">Les mouvements ont maintenant une vidéo de référence intégrée. Les variantes d'une même progression peuvent partager un tutoriel complet. Tu peux toujours remplacer n'importe quelle référence par ta propre vidéo : ton choix personnel reste prioritaire.</p><div class="tutorial-progress"><div style="width:${stats.total?Math.round(stats.exact/stats.total*100):0}%"></div></div>${names.map((name,i)=>{const data=saved[name]||{},t=tutorialFor(name);return `<details class="tutorial-editor-row"><summary><span>${name}</span><span class="microbadge ${t.exact?'good':''}">${data.videoUrl||data.imageUrl?'perso':'référence'}</span></summary><div class="tutorial-editor-body">${t.source?`<p class="small muted tutorial-reference"><strong>Référence actuelle :</strong> ${esc(t.source)}${t.title?` · ${esc(t.title)}`:''}</p>`:''}<a class="btn btn-outline" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">▶ Voir la vidéo actuelle</a><label class="field-label">Remplacer par une autre URL vidéo</label><input class="url-input" id="tutorialVideo_${i}" type="url" value="${esc(data.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=..."><label class="field-label">URL image facultative</label><input class="url-input" id="tutorialImage_${i}" type="url" value="${esc(data.imageUrl||'')}" placeholder="Laisse vide pour utiliser la miniature YouTube"><div class="tutorial-editor-actions"><a class="btn btn-outline compact" href="${esc(`https://www.youtube.com/results?search_query=${encodeURIComponent(TUTORIAL_QUERIES[name]||name+' tutorial')}`)}" target="_blank" rel="noopener noreferrer">Chercher une alternative</a><button class="btn btn-secondary compact save-tutorial" data-index="${i}" data-name="${encodeURIComponent(name)}">Enregistrer</button>${data.videoUrl||data.imageUrl?`<button class="btn btn-outline compact clear-tutorial" data-name="${encodeURIComponent(name)}">Revenir à la référence</button>`:''}</div></div></details>`;}).join('')}</section></main>`;}
+function renderTutorialManager(){const names=allExerciseNames(),saved=getTutorialOverrides(),stats=tutorialStats();return `<main class="shell"><section class="card editor-card tutorial-manager"><button class="back-btn" id="closeTutorialManager">← Retour au profil</button><div class="kicker">Bibliothèque tutoriels · V9.0</div><h1>${stats.exact}/${stats.total} vidéos directes</h1><p class="muted">Les mouvements ont maintenant une vidéo de référence intégrée. Les variantes d'une même progression peuvent partager un tutoriel complet. Tu peux toujours remplacer n'importe quelle référence par ta propre vidéo : ton choix personnel reste prioritaire.</p><div class="tutorial-progress"><div style="width:${stats.total?Math.round(stats.exact/stats.total*100):0}%"></div></div>${names.map((name,i)=>{const data=saved[name]||{},t=tutorialFor(name);return `<details class="tutorial-editor-row"><summary><span>${name}</span><span class="microbadge ${t.exact?'good':''}">${data.videoUrl||data.imageUrl?'perso':'référence'}</span></summary><div class="tutorial-editor-body">${t.source?`<p class="small muted tutorial-reference"><strong>Référence actuelle :</strong> ${esc(t.source)}${t.title?` · ${esc(t.title)}`:''}</p>`:''}<a class="btn btn-outline" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">▶ Voir la vidéo actuelle</a><label class="field-label">Remplacer par une autre URL vidéo</label><input class="url-input" id="tutorialVideo_${i}" type="url" value="${esc(data.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=..."><label class="field-label">URL image facultative</label><input class="url-input" id="tutorialImage_${i}" type="url" value="${esc(data.imageUrl||'')}" placeholder="Laisse vide pour utiliser la miniature YouTube"><div class="tutorial-editor-actions"><a class="btn btn-outline compact" href="${esc(`https://www.youtube.com/results?search_query=${encodeURIComponent(TUTORIAL_QUERIES[name]||name+' tutorial')}`)}" target="_blank" rel="noopener noreferrer">Chercher une alternative</a><button class="btn btn-secondary compact save-tutorial" data-index="${i}" data-name="${encodeURIComponent(name)}">Enregistrer</button>${data.videoUrl||data.imageUrl?`<button class="btn btn-outline compact clear-tutorial" data-name="${encodeURIComponent(name)}">Revenir à la référence</button>`:''}</div></div></details>`;}).join('')}</section></main>`;}
 function saveTutorialOverride(name,index){const video=(document.getElementById(`tutorialVideo_${index}`)?.value||'').trim(),image=(document.getElementById(`tutorialImage_${index}`)?.value||'').trim();const data=getTutorialOverrides();if(video||image)data[name]={videoUrl:video,imageUrl:image};else delete data[name];setTutorialOverrides(data);render();}
 function clearTutorialOverride(name){const data=getTutorialOverrides();delete data[name];setTutorialOverrides(data);render();}
 
@@ -1372,8 +1426,8 @@ function renderCoach() {
     if (usesBackpack(e.name)) input+=renderBackpackLoadInput(a.currentLoadKg||0,'workoutLoadKg');
   }
   return `<main class="shell coach-shell"><div class="progress-wrap"><div class="progress-label"><span>${a.workout.name}</span><span>${step}/${total}</span></div><div class="progress-track"><div class="progress-bar" style="width:${progress}%"></div></div></div>
-    <section class="card coach-card"><div><div class="kicker">${setLabel}</div><div class="exercise-title">${e.name}</div><div class="target">${describe(e)}</div>
-      ${e.prescriptionNote?`<div class="coach-note ${e.prescriptionStatus}">${e.prescriptionNote}</div>`:''}<p class="tip">${e.tip}</p>${tutorialLink(e.name)}${a.kind==='workout'&&substitutionOptions(e).length?'<button class="btn btn-outline substitute-btn" id="openSubstitute">Changer cet exercice</button>':''}${input}</div>
+    <section class="card coach-card"><div><div class="kicker">${setLabel}</div>${exerciseImage(e.name,'hero')}<div class="exercise-title">${e.name}</div><div class="target">${describe(e)}</div>
+      ${e.prescriptionNote?`<div class="coach-note ${e.prescriptionStatus}">${e.prescriptionNote}</div>`:''}<p class="tip">${e.tip}</p>${e.name==='Cardio Zone 2'?renderStravaToday({exercises:[e]}):''}${tutorialLink(e.name)}${a.kind==='workout'&&substitutionOptions(e).length?'<button class="btn btn-outline substitute-btn" id="openSubstitute">Changer cet exercice</button>':''}${input}</div>
       <div class="stack"><button class="btn btn-primary" id="completeSet">${a.setIndex===e.sets-1?'Terminer cette étape':'Série terminée'}</button>${state.undoSetSnapshot?'<button class="btn btn-secondary" id="undoGuidedSet">↶ Annuler la dernière série</button>':''}<button class="btn btn-outline" id="pauseWorkout">Pause séance</button><button class="btn btn-outline" id="quitWorkout">Quitter</button></div></section></main>`;
 }
 
@@ -1698,9 +1752,10 @@ function renderProfile(){const logs=getBodyLogs(),p=getPrefs();const latest=logs
   <section class="card"><h2>Coach adaptatif</h2><div class="switchline"><div><strong>Progression intelligente</strong><div class="small muted">Ajuste légèrement les objectifs selon tes dernières séances, ton effort et les gênes articulaires.</div></div><input id="smartPref" type="checkbox" ${p.smartProgression!==false?'checked':''}></div></section>
   <section class="card"><h2>Alertes & écran</h2><div class="switchline"><div><strong>Son du timer</strong><div class="small muted">Triple bip à la fin d'un chrono</div></div><input id="soundPref" type="checkbox" ${p.sound?'checked':''}></div><div class="switchline"><div><strong>Garder l'écran actif</strong><div class="small muted">Recommandé sur iPhone : empêche la mise en veille pendant un chrono</div></div><input id="keepAwakePref" type="checkbox" ${p.keepAwake!==false?'checked':''}></div><div class="switchline"><div><strong>Vibration</strong><div class="small muted">Utilisée uniquement si le navigateur la prend en charge</div></div><input id="vibrationPref" type="checkbox" ${p.vibration?'checked':''}></div><p class="install-note">Si tu verrouilles volontairement l’iPhone, iOS peut suspendre une PWA. Pour une alarme garantie sur écran verrouillé, il faudra ajouter des notifications push côté serveur.</p></section>
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
+  ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + bandes + tapis + sac à dos</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Pas de parallettes ni de gilet lesté. Les exercices lestés utilisent le sac à dos et enregistrent sa charge en kg.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V8.9.2</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.0</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`, "profile");}
 
 function renderBodyChart(logs,key,unit){const pts=logs.filter(x=>Number(x[key])>0).slice(0,12).reverse();if(pts.length<2)return'';const vals=pts.map(x=>Number(x[key])),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.5,max-min);const coords=vals.map((v,i)=>{const x=(i/(vals.length-1))*100,y=88-((v-min)/range)*70;return `${x},${y}`}).join(' ');return `<div class="mini-chart"><div class="chart-head"><strong>${key==='weight'?'Poids':'Tour de taille'}</strong><span>${vals[0]} → ${vals[vals.length-1]} ${unit}</span></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Évolution ${key}"><polyline points="${coords}" fill="none" vector-effect="non-scaling-stroke"/></svg></div>`;}
@@ -1713,6 +1768,8 @@ function bindEvents(){
   const openQuick=document.getElementById('openQuickLog');if(openQuick)openQuick.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();};
   document.querySelectorAll('[data-open-quick-log]').forEach(b=>b.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();});
   const closeQuick=document.getElementById('closeQuickLog');if(closeQuick)closeQuick.onclick=()=>{state.quickEditor=false;state.quickToast=null;render();};
+  document.querySelectorAll('#syncStrava').forEach(b=>b.onclick=syncStravaActivities);
+  const disconnectS=document.getElementById('disconnectStrava');if(disconnectS)disconnectS.onclick=()=>{if(confirm('Déconnecter Strava de Calisthénie Coach ?'))disconnectStrava();};
   const presetBand=(index,name)=>document.querySelector(`[data-quick-preset="${index}"] .band-choice.active`)?.dataset.bandLabel||lastBandForExercise(name)||defaultBandForExercise(name);
   document.querySelectorAll('.quick-add').forEach(b=>b.onclick=()=>{const name=decodeURIComponent(b.dataset.quickName),type=b.dataset.quickType,index=b.dataset.quickPresetIndex,band=type==='reps_band'?presetBand(index,name):null;addQuickLog(name,Number(b.dataset.quickValue),type,band);});
   document.querySelectorAll('.quick-exact-add').forEach(b=>b.onclick=()=>{const input=document.getElementById(`quickExact_${b.dataset.quickExactIndex}`),value=Number(input?.value||0),name=decodeURIComponent(b.dataset.quickName),type=b.dataset.quickType,index=b.dataset.quickPresetIndex,band=type==='reps_band'?presetBand(index,name):null;if(value>0)addQuickLog(name,value,type,band);});
@@ -1802,4 +1859,6 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+const stravaParam=new URLSearchParams(location.search).get('strava');if(stravaParam){state.stravaMessage=stravaParam==='connected'?'Strava connecté ✓':'Connexion Strava non terminée';history.replaceState({},'',location.pathname);}
 render();
+setTimeout(()=>loadStravaStatus(),80);

@@ -267,3 +267,47 @@ Les données structurées restent dans `localStorage`. Les photos de progression
 - Chrono basé sur une deadline absolue, donc pas de dérive si l'event loop ralentit.
 - Recalage au retour au premier plan.
 - Important : un verrouillage manuel de l'iPhone peut toujours suspendre la PWA ; une garantie écran verrouillé nécessite Web Push / backend ou une app native.
+
+## V9.0 — Images exercices + Strava
+
+### Images
+- Les 117 références tutoriels intégrées utilisent maintenant YouTube.
+- L'application dérive automatiquement l'image de chaque exercice depuis la miniature de sa vidéo de référence.
+- Les images apparaissent dans Aujourd'hui, Semaine, Flex, la bibliothèque et pendant la séance.
+- Si tu remplaces une vidéo dans Profil → Tutoriels, sa miniature remplace automatiquement l'image de référence.
+
+### Connexion Strava
+La V9.0 ajoute une intégration OAuth Strava côté Vercel. Les secrets et tokens ne sont jamais placés dans `app.js`.
+
+Fonctions serveur :
+- `/api/strava/auth` : démarre OAuth
+- `/api/strava/callback` : échange le code OAuth
+- `/api/strava/status` : statut de connexion
+- `/api/strava/activities` : récupère les dernières activités
+- `/api/strava/disconnect` : déconnexion locale
+
+Les access/refresh tokens sont conservés dans un cookie HttpOnly chiffré AES-GCM. L'access token est renouvelé côté serveur quand nécessaire.
+
+### Configuration Strava nécessaire
+1. Connecte-toi à Strava et crée une application dans les paramètres API Strava.
+2. Dans **Authorization Callback Domain**, mets :
+   `calisthenie-coach.vercel.app`
+3. Dans Vercel → Project → Settings → Environment Variables, ajoute :
+   - `STRAVA_CLIENT_ID` = Client ID Strava
+   - `STRAVA_CLIENT_SECRET` = Client Secret Strava
+   - `STRAVA_SESSION_SECRET` = une chaîne aléatoire longue (32+ caractères). Par exemple : `openssl rand -hex 32`
+4. Ajoute les variables à **Production** (et Preview si tu veux tester les previews).
+5. Redeploy le projet Vercel après ajout des variables.
+6. Ouvre Calisthénie Coach → Profil → Strava → Connecter avec Strava.
+
+La première version demande uniquement `activity:read_all`, afin de lire tes activités, y compris celles privées. Elle ne publie rien sur Strava.
+
+### Cardio
+Les jours contenant `Cardio Zone 2`, l'écran Aujourd'hui affiche un bloc Strava :
+- objectif de durée ;
+- bouton Ouvrir Strava ;
+- synchronisation ;
+- distance, durée et allure des courses du jour ;
+- validation automatique de la **durée** lorsque la somme des courses atteint l'objectif.
+
+La V9.0 ne prétend pas valider automatiquement la Zone 2 physiologique : la durée est automatique, l'intensité doit encore être confirmée via fréquence cardiaque ou ressenti.
