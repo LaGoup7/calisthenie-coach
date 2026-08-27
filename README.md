@@ -1,4 +1,23 @@
-# Calisthénie Coach · V9.2.4 — Skill Tree sync
+# Calisthénie Coach · V9.3 — Cycles d’entraînement
+
+## Nouveautés V9.3
+- **Cycle de base** conservé comme programme de référence protégé.
+- Création de plusieurs cycles hebdomadaires personnalisés par duplication.
+- Un cycle peut être **activé** : Aujourd’hui et Semaine utilisent alors automatiquement ce planning.
+- Chaque journée d’un cycle personnalisé peut être modifiée ou transformée en repos.
+- Un cycle doit conserver **au moins un jour de repos** avant activation.
+- Les cycles archivés restent disponibles pour reconstruire l’historique.
+- Calendrier de régularité type GitHub sur 16 semaines : séance terminée, repos respecté, séance manquée, repos interrompu.
+- Les jours de repos planifiés et respectés donnent **+10 XP récupération**, validés le lendemain.
+- Une séance libre ne valide pas artificiellement une journée du cycle : le calendrier vérifie le cycle réellement suivi.
+- Le terme « Cycle 8 semaines » du moteur adaptatif est renommé **Phase de progression 8 semaines** pour éviter la confusion avec les cycles hebdomadaires.
+
+## Règle de récupération
+Un repos est considéré comme respecté si le jour était planifié comme repos dans le cycle actif et qu’aucune séance guidée, micro-série de renforcement ou course Strava de 15 minutes ou plus n’a été enregistrée. La mobilité douce reste compatible avec le repos.
+
+## Compatibilité
+- Historique, Quick Logs, Skill Tree, volumes, Flex, tutoriels, Strava et paramètres existants conservés.
+- Les nouveaux cycles et leur historique d’activation utilisent de nouvelles clés localStorage et sont inclus dans les sauvegardes JSON.
 
 ## Volume musculaire paramétrique
 - Charge réelle = séances complètes, Express, personnelles + Quick Logs.
@@ -56,3 +75,12 @@
 - Les missions de rang utilisent la même logique.
 - Les Quick Logs restent exclus des promotions/Skill Tree.
 - Le Skill Tree affiche désormais la valeur courante et sa source (`séance` ou `test`).
+
+
+## V9.3 · Volume cumulé
+- Nouveau panneau Progrès → Répétitions.
+- Total historique + périodes 7/30/90 jours, 1 an, tout et dates personnalisées.
+- Séances guidées, Express, personnelles et Quick Logs inclus.
+- Détail par exercice et par source.
+- Holds séparés en secondes/minutes.
+- Les répétitions par côté sont comptées pour les deux côtés.

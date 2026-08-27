@@ -15,6 +15,8 @@ const STORAGE = {
   customWorkouts: "cc_custom_workouts",
   trainingConfig: "cc_training_config_v1",
   flexConfig: "cc_flex_config_v1",
+  trainingCycles: "cc_training_cycles_v1",
+  cycleActivationHistory: "cc_cycle_activation_history_v1",
 };
 
 function ex(name, type, sets, target, rest, tip, opts={}) {
@@ -28,7 +30,7 @@ function ex(name, type, sets, target, rest, tip, opts={}) {
   };
 }
 
-// V9.2.4 · Week UI professional refresh + Quick Log visuel.
+// V9.3 · Cycles d'entraînement sélectionnables + calendrier de régularité + récupération.
 // Chaque journée conserve échauffement + travail principal + cardio + retour au calme,
 // y compris en mode Express. Lundi reste le jour de récupération complète.
 const workouts = {
@@ -862,6 +864,10 @@ const state = {
   sessionModeEditor: null,
   customSessionEditor: null,
   customSessionDraft: null,
+  cycleDayTarget: null,
+  repVolumePeriod: "30d",
+  repVolumeFrom: "",
+  repVolumeTo: "",
 };
 
 function parse(key, fallback) {
@@ -889,6 +895,107 @@ function getQuickLogs() { return parse(STORAGE.quickLogs, []); }
 function setQuickLogs(v) { save(STORAGE.quickLogs, v); }
 function getCustomWorkouts() { return parse(STORAGE.customWorkouts, []); }
 function setCustomWorkouts(v) { save(STORAGE.customWorkouts, v); }
+
+const BASE_TRAINING_CYCLE_ID = "base";
+function baseTrainingCycle(){
+  return {id:BASE_TRAINING_CYCLE_ID,name:"Cycle de base",description:"Programme intermédiaire complet · 6 jours actifs / 1 jour de repos",base:true,days:clone(workouts)};
+}
+function getStoredTrainingCycles(){return parse(STORAGE.trainingCycles,[]);}
+function setStoredTrainingCycles(v){save(STORAGE.trainingCycles,v);}
+function allTrainingCycles(includeArchived=true){
+  const stored=getStoredTrainingCycles().filter(c=>includeArchived||!c.archived);
+  return [baseTrainingCycle(),...stored];
+}
+function trainingCycleById(id){return allTrainingCycles(true).find(c=>String(c.id)===String(id))||baseTrainingCycle();}
+function getActiveTrainingCycleId(){
+  const p=getPrefs(),id=p.activeTrainingCycleId||BASE_TRAINING_CYCLE_ID,c=trainingCycleById(id);
+  return c?.archived?BASE_TRAINING_CYCLE_ID:String(c.id);
+}
+function getActiveTrainingCycle(){return trainingCycleById(getActiveTrainingCycleId());}
+function cycleDayTemplate(cycle,day){
+  const w=cycle?.days?.[Number(day)];
+  return clone(w||{name:"Repos",subtitle:"Récupération complète",duration:0,shortDuration:0,intensity:"Repos",exercises:[]});
+}
+function workoutTemplateForDay(day){return cycleDayTemplate(getActiveTrainingCycle(),Number(day));}
+function cycleHasRest(cycle){return [0,1,2,3,4,5,6].some(day=>!(cycleDayTemplate(cycle,day).exercises||[]).length);}
+function ensureCycleActivationHistory(){
+  let rows=parse(STORAGE.cycleActivationHistory,[]);
+  if(!rows.length){
+    const h=getHistory().slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const d=h[0]?.date?new Date(h[0].date):mondayDate(new Date());
+    rows=[{date:localDateKey(d),at:d.toISOString(),cycleId:BASE_TRAINING_CYCLE_ID}];
+    save(STORAGE.cycleActivationHistory,rows);
+  }
+  return rows;
+}
+function setCycleActivationHistory(v){save(STORAGE.cycleActivationHistory,v);}
+function activateTrainingCycle(id){
+  const cycle=trainingCycleById(id);if(!cycle||cycle.archived)return;
+  if(!cycleHasRest(cycle)){alert("Ajoute au moins un jour de repos avant d’activer ce cycle.");return;}
+  const p=getPrefs();p.activeTrainingCycleId=String(cycle.id);setPrefs(p);
+  const key=localDateKey(),rows=ensureCycleActivationHistory().filter(r=>r.date!==key);
+  rows.push({date:key,at:new Date().toISOString(),cycleId:String(cycle.id)});rows.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.at).localeCompare(String(b.at)));setCycleActivationHistory(rows);
+  render();
+}
+function trainingCycleForDate(value){
+  const key=localDateKey(value),rows=ensureCycleActivationHistory().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.at).localeCompare(String(b.at)));
+  let id=BASE_TRAINING_CYCLE_ID;for(const r of rows){if(String(r.date)<=key)id=r.cycleId;else break;}return trainingCycleById(id);
+}
+function nextTrainingCycleName(){const n=getStoredTrainingCycles().filter(c=>!c.archived).length+2;return `Cycle ${n}`;}
+function createTrainingCycle(sourceId=BASE_TRAINING_CYCLE_ID){
+  const source=trainingCycleById(sourceId),list=getStoredTrainingCycles(),now=Date.now();
+  const c={id:String(now),name:nextTrainingCycleName(),description:`Basé sur ${source.name}`,base:false,days:clone(source.days),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  list.push(c);setStoredTrainingCycles(list);render();
+}
+function updateTrainingCycle(cycle){
+  if(!cycle||cycle.base)return;const list=getStoredTrainingCycles(),i=list.findIndex(c=>String(c.id)===String(cycle.id));
+  const item={...clone(cycle),updatedAt:new Date().toISOString()};if(i>=0)list[i]=item;else list.push(item);setStoredTrainingCycles(list);
+}
+function duplicateTrainingCycle(id){
+  const source=trainingCycleById(id),list=getStoredTrainingCycles(),now=Date.now();
+  list.push({...clone(source),id:String(now),name:`${source.name} · copie`,base:false,archived:false,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});setStoredTrainingCycles(list);render();
+}
+function renameTrainingCycle(id){
+  const c=trainingCycleById(id);if(!c||c.base)return;const name=prompt("Nom du cycle",c.name);if(!name?.trim())return;c.name=name.trim();updateTrainingCycle(c);render();
+}
+function archiveTrainingCycle(id){
+  const c=trainingCycleById(id);if(!c||c.base)return;if(String(getActiveTrainingCycleId())===String(id)){alert("Active un autre cycle avant d’archiver celui-ci.");return;}
+  if(!confirm(`Archiver « ${c.name} » ? Son historique restera conservé.`))return;c.archived=true;updateTrainingCycle(c);render();
+}
+function setCycleDayRest(id,day){
+  const c=trainingCycleById(id);if(!c||c.base)return;c.days=clone(c.days||{});c.days[Number(day)]={name:"Repos",subtitle:"Récupération complète",duration:0,shortDuration:0,intensity:"Repos",exercises:[]};updateTrainingCycle(c);render();
+}
+function restoreCycleDayFromBase(id,day){
+  const c=trainingCycleById(id);if(!c||c.base)return;const candidate=clone(c);candidate.days=clone(candidate.days||{});candidate.days[Number(day)]=cycleDayTemplate(baseTrainingCycle(),Number(day));if(!cycleHasRest(candidate)){alert('Un cycle doit conserver au moins un jour de repos.');return;}updateTrainingCycle(candidate);render();
+}
+function openCycleDayEditor(id,day){
+  const c=trainingCycleById(id);if(!c||c.base)return;const current=cycleDayTemplate(c,Number(day)),empty=!(current.exercises||[]).length,draft=empty?{...defaultCustomWorkout(),name:`${DAY_NAMES[Number(day)]} · séance`,subtitle:'Journée personnalisée du cycle'}:current;state.cycleDayTarget={cycleId:String(id),day:Number(day)};state.customSessionDraft=clone(draft);state.customSessionEditor=true;state.view='custom';render();
+}
+function isStrengthQuickLog(q){const cat=exerciseInfo(q.exercise)?.category||'';return !/Mobilité|Cardio/i.test(cat)&&!/^Échauffement|Mobilité|Retour au calme/i.test(q.exercise||'');}
+function activityDateKey(a){return String(a?.start_date_local||a?.start_date||'').slice(0,10);}
+function dailyCycleStatus(value){
+  const d=value instanceof Date?value:new Date(value),key=localDateKey(d),today=localDateKey(),rows=ensureCycleActivationHistory(),trackedFrom=rows[0]?.date||today,cycle=trainingCycleForDate(d),w=cycleDayTemplate(cycle,d.getDay()),isRest=!(w.exercises||[]).length;
+  if(key<trackedFrom)return {key,status:'untracked',cycle,w};
+  if(key>today)return {key,status:'future',cycle,w};
+  const sessions=getHistory().filter(h=>localDateKey(h.date)===key),quick=getQuickLogs().filter(q=>localDateKey(q.date)===key&&isStrengthQuickLog(q)),runs=getStravaActivities().filter(a=>activityDateKey(a)===key&&isRunActivity(a)&&Number(a.moving_time||a.elapsed_time||0)>=900);
+  if(isRest){
+    if(key===today)return {key,status:(sessions.length||quick.length||runs.length)?'rest-broken':'rest-planned',cycle,w};
+    return {key,status:(sessions.length||quick.length||runs.length)?'rest-broken':'rest-ok',cycle,w};
+  }
+  const plannedSessions=sessions.filter(h=>h.trainingCycleId?String(h.trainingCycleId)===String(cycle.id)&&Number(h.day)===d.getDay():!h.customWorkoutId&&Number(h.day)===d.getDay());
+  if(plannedSessions.length)return {key,status:'done',cycle,w,session:plannedSessions[0]};
+  return {key,status:key===today?'planned':'missed',cycle,w};
+}
+function respectedRestDays(){
+  const p=getPrefs();if(!p.recoveryXPStart){p.recoveryXPStart=localDateKey();setPrefs(p);}const start=new Date(p.recoveryXPStart+'T12:00:00'),end=new Date();end.setHours(0,0,0,0);let n=0;
+  for(let d=new Date(start);d<end;d.setDate(d.getDate()+1)){if(dailyCycleStatus(d).status==='rest-ok')n++;if(n>5000)break;}return n;
+}
+function renderCycleHeatmap(weeks=16){
+  const today=new Date(),end=mondayDate(today);end.setDate(end.getDate()+6);const start=new Date(end);start.setDate(start.getDate()-(weeks*7-1));
+  const cells=[];const counts={done:0,'rest-ok':0,missed:0,'rest-broken':0};
+  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){const st=dailyCycleStatus(new Date(d));if(counts[st.status]!=null)counts[st.status]++;const title=`${st.key} · ${st.cycle.name} · ${st.status==='done'?'séance terminée':st.status==='rest-ok'?'repos respecté':st.status==='rest-planned'?'repos prévu':st.status==='rest-broken'?'repos interrompu':st.status==='missed'?'séance manquée':st.status==='planned'?'séance prévue':st.status==='untracked'?'avant suivi':'à venir'}`;cells.push(`<i class="cycle-heat-cell ${st.status}" title="${esc(title)}" aria-label="${esc(title)}"></i>`);}
+  return `<section class="card cycle-heat-card"><div class="section-head"><div><div class="kicker">Régularité · ${weeks} semaines</div><h2>Historique du cycle</h2></div><span class="pill">+10 XP / repos respecté</span></div><div class="cycle-heat-summary"><span><strong>${counts.done}</strong> séances terminées</span><span><strong>${counts['rest-ok']}</strong> repos respectés</span><span><strong>${counts.missed}</strong> jours manqués</span></div><div class="cycle-heat-wrap"><div class="cycle-heat-days"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="cycle-heat-grid">${cells.join('')}</div></div><div class="cycle-heat-legend"><span><i class="done"></i>Séance terminée</span><span><i class="rest-ok"></i>Repos respecté</span><span><i class="missed"></i>Manqué</span><span><i class="rest-broken"></i>Repos interrompu</span></div><p class="muted small">Un repos est validé le lendemain s'il appartenait au cycle actif et qu'aucune séance, micro-série de renforcement ou course Strava de 15 min+ n'a été enregistrée. Mobilité douce et marche non enregistrée restent compatibles.</p></section>`;
+}
 
 const QUICK_PRESETS = [
   { name:"Tractions strictes", label:"Tractions", type:"reps", adds:[1,5] },
@@ -957,6 +1064,66 @@ function quickSummary(days=7){
   return {logs,rows:[...by.values()].sort((a,b)=>b.value-a.value),reps,seconds,sets:logs.length};
 }
 
+
+function entryResolvedType(entry){
+  return entry?.type || exerciseInfo(entry?.exercise||'')?.prescription?.type || 'reps';
+}
+function repValueForEntry(entry){
+  const type=entryResolvedType(entry),value=Number(entry?.value||0);
+  if(!(value>0) || type==='timer' || type?.startsWith('hold'))return 0;
+  return type==='reps_side'?value*2:value;
+}
+function holdSecondsForEntry(entry){
+  const type=entryResolvedType(entry),value=Number(entry?.value||0);
+  if(!(value>0) || !type?.startsWith('hold'))return 0;
+  return type==='hold_side'?value*2:value;
+}
+function repPeriodBounds(period=state.repVolumePeriod){
+  const end=new Date();end.setHours(23,59,59,999);
+  if(period==='all')return {start:null,end,label:'Depuis le début'};
+  if(period==='custom'){
+    const from=state.repVolumeFrom?new Date(`${state.repVolumeFrom}T00:00:00`):null;
+    const to=state.repVolumeTo?new Date(`${state.repVolumeTo}T23:59:59.999`):end;
+    return {start:from&&!Number.isNaN(from.getTime())?from:null,end:to&&!Number.isNaN(to.getTime())?to:end,label:'Période personnalisée'};
+  }
+  const days=period==='7d'?7:period==='90d'?90:period==='365d'?365:30;
+  const start=new Date();start.setHours(0,0,0,0);start.setDate(start.getDate()-(days-1));
+  return {start,end,label:days===365?'1 an':`${days} jours`};
+}
+function inRepPeriod(date,bounds){
+  const t=new Date(date).getTime();if(Number.isNaN(t))return false;
+  return (!bounds.start||t>=bounds.start.getTime())&&(!bounds.end||t<=bounds.end.getTime());
+}
+function repetitionVolume(period=state.repVolumePeriod){
+  const bounds=repPeriodBounds(period),by=new Map();let reps=0,holdSeconds=0,sets=0,guidedReps=0,quickReps=0,guidedSets=0,quickSets=0;
+  const ensure=(name)=>{if(!by.has(name))by.set(name,{name,reps:0,holdSeconds:0,sets:0,guidedReps:0,quickReps:0,guidedSets:0,quickSets:0});return by.get(name);};
+  getHistory().forEach(session=>{if(!inRepPeriod(session.date,bounds))return;(session.entries||[]).forEach(entry=>{const type=entryResolvedType(entry);if(type==='timer')return;const r=repValueForEntry(entry),h=holdSecondsForEntry(entry);if(!(r>0||h>0))return;const row=ensure(entry.exercise||'Exercice');row.reps+=r;row.holdSeconds+=h;row.sets++;row.guidedReps+=r;row.guidedSets++;reps+=r;holdSeconds+=h;sets++;guidedReps+=r;guidedSets++;});});
+  getQuickLogs().forEach(log=>{if(!inRepPeriod(log.date,bounds))return;const r=repValueForEntry(log),h=holdSecondsForEntry(log);if(!(r>0||h>0))return;const row=ensure(log.exercise||'Exercice');row.reps+=r;row.holdSeconds+=h;row.sets++;row.quickReps+=r;row.quickSets++;reps+=r;holdSeconds+=h;sets++;quickReps+=r;quickSets++;});
+  const rows=[...by.values()].sort((a,b)=>(b.reps-a.reps)||(b.holdSeconds-a.holdSeconds)||a.name.localeCompare(b.name,'fr'));
+  return {bounds,rows,reps,holdSeconds,sets,guidedReps,quickReps,guidedSets,quickSets,exerciseCount:rows.length};
+}
+function formatRepPeriodLabel(bounds){
+  if(!bounds.start)return 'Depuis le début';
+  const f=d=>d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:d.getFullYear()!==new Date().getFullYear()?'numeric':undefined});
+  return `${f(bounds.start)} → ${f(bounds.end)}`;
+}
+function renderRepetitionVolumePanel(){
+  const data=repetitionVolume(),all=repetitionVolume('all'),top=data.rows.filter(r=>r.reps>0).slice(0,10),holds=data.rows.filter(r=>r.holdSeconds>0).slice(0,6),max=Math.max(1,...top.map(r=>r.reps));
+  const periodButtons=[['7d','7 j'],['30d','30 j'],['90d','90 j'],['365d','1 an'],['all','Tout'],['custom','Dates']];
+  return `<section class="card rep-volume-card"><div class="section-head"><div><div class="kicker">Volume cumulé</div><h2>Répétitions</h2></div><span class="pill">${all.reps.toLocaleString('fr-FR')} reps total</span></div>
+    <p class="muted small">Toutes les répétitions enregistrées dans les séances guidées, Express, personnelles et Quick Logs. Les holds sont suivis séparément en secondes.</p>
+    <div class="rep-period-tabs">${periodButtons.map(([id,label])=>`<button class="rep-period ${state.repVolumePeriod===id?'active':''}" data-rep-period="${id}">${label}</button>`).join('')}</div>
+    ${state.repVolumePeriod==='custom'?`<div class="rep-custom-range"><label><span>Du</span><input id="repVolumeFrom" type="date" value="${esc(state.repVolumeFrom||'')}"></label><label><span>Au</span><input id="repVolumeTo" type="date" value="${esc(state.repVolumeTo||'')}"></label></div>`:''}
+    <div class="rep-period-label">${formatRepPeriodLabel(data.bounds)}</div>
+    <div class="rep-volume-hero"><div><strong>${data.reps.toLocaleString('fr-FR')}</strong><span>répétitions</span></div><div><strong>${data.sets.toLocaleString('fr-FR')}</strong><span>séries enregistrées</span></div><div><strong>${data.exerciseCount}</strong><span>exercices</span></div><div><strong>${Math.round(data.holdSeconds/60)}</strong><span>min de holds</span></div></div>
+    <div class="rep-source"><span>Séances <b>${data.guidedReps.toLocaleString('fr-FR')} reps · ${data.guidedSets} séries</b></span><span>Quick Log <b>${data.quickReps.toLocaleString('fr-FR')} reps · ${data.quickSets} séries</b></span></div>
+    ${top.length?`<div class="rep-ranking">${top.map((r,i)=>`<div class="rep-rank-row"><div class="rep-rank-head"><span><i>${i+1}</i><strong>${r.name}</strong></span><b>${r.reps.toLocaleString('fr-FR')} reps</b></div><div class="rep-track"><i style="width:${Math.max(3,(r.reps/max)*100)}%"></i></div><small>${r.sets} séries · séances ${r.guidedReps.toLocaleString('fr-FR')} · Quick Log ${r.quickReps.toLocaleString('fr-FR')}</small></div>`).join('')}</div>`:'<div class="empty">Aucune répétition enregistrée sur cette période.</div>'}
+    ${holds.length?`<details class="parameter-details rep-holds"><summary><div><strong>Holds & isométriques</strong><small>${Math.round(data.holdSeconds/60)} min cumulées</small></div><span>⌄</span></summary><div class="parameter-body">${holds.map(r=>`<div class="detail-row"><span>${r.name} · ${r.sets} séries</span><strong>${r.holdSeconds.toLocaleString('fr-FR')} s</strong></div>`).join('')}</div></details>`:''}
+    ${data.rows.length>10?`<details class="parameter-details"><summary><div><strong>Tous les exercices</strong><small>${data.rows.length} exercices enregistrés</small></div><span>⌄</span></summary><div class="parameter-body rep-all-list">${data.rows.map(r=>`<div class="detail-row"><span>${r.name}<small>${r.sets} séries</small></span><strong>${r.reps?r.reps.toLocaleString('fr-FR')+' reps':''}${r.reps&&r.holdSeconds?' · ':''}${r.holdSeconds?r.holdSeconds.toLocaleString('fr-FR')+' s':''}</strong></div>`).join('')}</div></details>`:''}
+    <details class="parameter-details"><summary><div><strong>Règles de comptage</strong><small>Pour garder un volume cohérent</small></div><span>⌄</span></summary><div class="parameter-body"><p>Une répétition unilatérale saisie « par côté » compte pour les deux côtés : 8 Bulgarian split squats par jambe = 16 répétitions totales. Les exercices assistés restent séparés des versions strictes. Les timers de cardio, échauffement et mobilité ne sont pas comptés en répétitions.</p><p>Le total historique est recalculé à partir de tes données existantes : tu n'as rien à ressaisir.</p></div></details>
+  </section>`;
+}
+
 const PHOTO_DB = "calisthenie-coach-media";
 function openPhotoDB(){
   return new Promise((resolve,reject)=>{
@@ -980,7 +1147,7 @@ async function exportBackup(){
     if(!row.photoId||photos[row.photoId])continue;
     try{const blob=await getPhoto(row.photoId);if(blob)photos[row.photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',row.photoId,e);}
   }
-  const backup={app:'Calisthenie Coach',schema:1,version:'9.2.4',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'Calisthenie Coach',schema:1,version:'9.3',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1202,8 +1369,8 @@ function prepareWorkoutObject(base, readiness=null){
   return w;
 }
 function preparedWorkout(day, readiness=null, sessionLength="full") {
-  const base=applySessionLength(workouts[day],sessionLength);
-  return prepareWorkoutObject(base,readiness);
+  const base=applySessionLength(workoutTemplateForDay(day),sessionLength);
+  const out=prepareWorkoutObject(base,readiness);out.trainingCycleId=getActiveTrainingCycleId();out.trainingCycleName=getActiveTrainingCycle().name;return out;
 }
 function customWorkoutById(id){return getCustomWorkouts().find(x=>String(x.id)===String(id))||null;}
 function preparedCustomWorkout(id,readiness=null){
@@ -1228,7 +1395,7 @@ function warmupForWorkout(w){
 }
 function renderCycleMini(){
   const c=getCycleState();
-  return `<section class="card cycle-mini"><div class="section-head"><div><div class="kicker">Cycle ${c.cycleNumber} · semaine ${c.week}/8</div><h2>${c.name}</h2></div><span class="pill">${c.week===8?'−35 % volume':c.week===4?'consolider':'progresser'}</span></div><div class="cycle-track">${Array.from({length:8},(_,i)=>`<span class="${i+1<c.week?'done':i+1===c.week?'current':''}">${i+1}</span>`).join('')}</div><p class="muted small">${c.note}</p></section>`;
+  return `<section class="card cycle-mini"><div class="section-head"><div><div class="kicker">Progression ${c.cycleNumber} · semaine ${c.week}/8</div><h2>${c.name}</h2></div><span class="pill">${c.week===8?'−35 % volume':c.week===4?'consolider':'progresser'}</span></div><div class="cycle-track">${Array.from({length:8},(_,i)=>`<span class="${i+1<c.week?'done':i+1===c.week?'current':''}">${i+1}</span>`).join('')}</div><p class="muted small">${c.note}</p></section>`;
 }
 function renderSessionModePicker(){
   const r=state.sessionModeEditor,day=Number(r.day),full=preparedWorkout(day,null,'full'),short=preparedWorkout(day,null,'short');
@@ -1241,12 +1408,12 @@ function renderReadiness(){
     <div class="readiness-group"><strong>Énergie</strong><span class="muted small">1 = à plat · 5 = très en forme</span><div class="readiness-scale">${[1,2,3,4,5].map(n=>`<button data-energy="${n}" class="${Number(r.energy)===n?'active':''}">${n}</button>`).join('')}</div></div>
     <div class="readiness-group"><strong>Courbatures</strong><span class="muted small">1 = aucune · 5 = très fortes</span><div class="readiness-scale">${[1,2,3,4,5].map(n=>`<button data-soreness="${n}" class="${Number(r.soreness)===n?'active':''}">${n}</button>`).join('')}</div></div>
     <div class="readiness-group"><strong>Articulations / tendons</strong><div class="joint-choice"><button data-joints="ok" class="${r.joints==='ok'?'active':''}">OK</button><button data-joints="sensitive" class="${r.joints==='sensitive'?'active':''}">Sensibles</button><button data-joints="pain" class="${r.joints==='pain'?'active':''}">Gênées</button></div></div>
-    <div class="readiness-result mode-${plan.mode}"><div><div class="kicker">Plan du jour</div><strong>${plan.label}</strong></div><p>${plan.note}</p><div class="meta"><span class="pill">Cycle S${c.week}</span><span class="pill">${base.name}</span>${r.sessionLength?`<span class="pill">${r.sessionLength==='short'?'Express':'Complète'}</span>`:''}<span class="pill">${Math.round(plan.setFactor*100)} % volume readiness</span></div></div>
+    <div class="readiness-result mode-${plan.mode}"><div><div class="kicker">Plan du jour</div><strong>${plan.label}</strong></div><p>${plan.note}</p><div class="meta"><span class="pill">Progression S${c.week}</span><span class="pill">${base.name}</span>${r.sessionLength?`<span class="pill">${r.sessionLength==='short'?'Express':'Complète'}</span>`:''}<span class="pill">${Math.round(plan.setFactor*100)} % volume readiness</span></div></div>
     <div class="warmup-box"><strong>Échauffement prévu</strong>${warmupForWorkout(base).map(x=>`<span>• ${x}</span>`).join('')}</div>
     <button class="btn btn-primary" id="confirmReadiness">${plan.mode==='recovery'?'Lancer très léger':'Lancer la séance'}</button></section></main>`;
 }
 function requestWorkoutStart(day=todayDay()){
-  const w=workouts[Number(day)];if(!w?.exercises?.length)return;
+  const w=workoutTemplateForDay(Number(day));if(!w?.exercises?.length)return;
   state.sessionModeEditor={day:Number(day)};render();
 }
 function requestCustomWorkoutStart(id){
@@ -1266,7 +1433,7 @@ function progressionReady(baseName,currentName){
 }
 function progressionRecommendations(){
   const seen=new Set(),out=[];
-  Object.values(workouts).forEach(w=>w.exercises.forEach(e=>{
+  Object.values(getActiveTrainingCycle().days||workouts).forEach(w=>(w.exercises||[]).forEach(e=>{
     if(seen.has(e.name))return;seen.add(e.name);
     const current=currentExerciseName(e.name),rec=progressionReady(e.name,current);
     if(rec?.next)out.push(rec);
@@ -1308,7 +1475,7 @@ function weeklyVolume(){
   getHistory().filter(s=>new Date(s.date).getTime()>=start).forEach(s=>(s.entries||[]).forEach(entry=>{if(entry.type==='timer')return;const info=exerciseInfo(entry.exercise);if(info){volumeAdd(actual,info.volume,1);volumeBreakdownAdd(actualBreakdown,info.volume,1,cfg);}}));
   // Les micro-séries Quick Log font partie de la charge réelle, même si elles restent hors XP / PR / progression automatique.
   getQuickLogs().filter(x=>new Date(x.date).getTime()>=start).forEach(entry=>{if(entry.type==='timer')return;const info=exerciseInfo(entry.exercise);if(info){volumeAdd(actual,info.volume,1);volumeBreakdownAdd(actualBreakdown,info.volume,1,cfg);}});
-  const planned={},plannedBreakdown=emptyVolumeBreakdown();[2,3,4,5,6,0].forEach(day=>{const w=preparedWorkout(day,null,'full'),v=volumeForWorkout(w),b=volumeBreakdownForWorkout(w);Object.entries(v).forEach(([g,n])=>planned[g]=(planned[g]||0)+n);VOLUME_GROUPS.forEach(g=>{for(const k of ['primary','secondary','technical','total'])plannedBreakdown[g][k]+=b[g]?.[k]||0;});});
+  const planned={},plannedBreakdown=emptyVolumeBreakdown();[0,1,2,3,4,5,6].filter(day=>(workoutTemplateForDay(day).exercises||[]).length).forEach(day=>{const w=preparedWorkout(day,null,'full'),v=volumeForWorkout(w),b=volumeBreakdownForWorkout(w);Object.entries(v).forEach(([g,n])=>planned[g]=(planned[g]||0)+n);VOLUME_GROUPS.forEach(g=>{for(const k of ['primary','secondary','technical','total'])plannedBreakdown[g][k]+=b[g]?.[k]||0;});});
   return {actual,planned,actualBreakdown,plannedBreakdown};
 }
 function volumeStatus(value,target){if(value<target.min)return {label:'Sous cible',cls:'warn'};if(value>target.max)return {label:'Au-dessus',cls:'high'};return {label:'Dans la cible',cls:'good'};}
@@ -1442,11 +1609,12 @@ function selectQuickExerciseCard(card){
 function renderExerciseLibrary(){
   const visible=visibleExerciseLibrary();
   const cats=['Tous',...new Set(visible.map(x=>x.category))];
-  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.2.4 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
+  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.3 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
 }
 function filterLibraryDom(){const q=(document.getElementById('librarySearch')?.value||'').trim().toLowerCase(),cat=state.libraryCategory;document.querySelectorAll('.library-item').forEach(el=>{const okCat=cat==='Tous'||el.dataset.libCategory===cat,okQ=!q||(el.dataset.libText||'').includes(q);el.style.display=okCat&&okQ?'':'none';});}
 
 function exerciseTemplateByName(name){
+  for(const w of Object.values(getActiveTrainingCycle().days||{})){const found=(w.exercises||[]).find(e=>e.name===name);if(found)return clone(found);}
   for(const w of Object.values(workouts)){const found=(w.exercises||[]).find(e=>e.name===name);if(found)return clone(found);}
   for(const r of (typeof FLEX_ROUTINES!=='undefined'?FLEX_ROUTINES:[])){const found=(r.exercises||[]).find(e=>e.name===name);if(found)return clone(found);}
   const info=exerciseInfo(name);if(info)return exerciseFromLibrary(name,{sets:3});
@@ -1466,9 +1634,9 @@ function defaultCustomWorkout(){
   ]};
 }
 function openCustomSessionEditor(id=null,cloneDay=null){
-  let draft=null;
+  state.cycleDayTarget=null;let draft=null;
   if(id!=null)draft=customWorkoutById(id);
-  else if(cloneDay!=null){const w=applySessionLength(workouts[Number(cloneDay)],'full');draft={...clone(w),id:null,name:`${w.name} · perso`,subtitle:'Copie personnalisable du programme',duration:w.duration};}
+  else if(cloneDay!=null){const w=applySessionLength(workoutTemplateForDay(Number(cloneDay)),'full');draft={...clone(w),id:null,name:`${w.name} · perso`,subtitle:'Copie personnalisable du programme',duration:w.duration};}
   else draft=defaultCustomWorkout();
   state.customSessionDraft=clone(draft);state.customSessionEditor=true;state.view='custom';render();
 }
@@ -1482,25 +1650,39 @@ function customSessionQuality(w){
   const phases=new Set((w.exercises||[]).map(e=>e.phase||'main')),cov=customSessionCoverage(w);
   return {warmup:phases.has('warmup'),cardio:phases.has('cardio'),cooldown:phases.has('cooldown'),groups:cov.groups.length,equipment:cov.equipment.length};
 }
+function cycleStats(c){
+  const activeDays=[0,1,2,3,4,5,6].filter(d=>(cycleDayTemplate(c,d).exercises||[]).length),rest=7-activeDays.length,cardio=activeDays.reduce((n,d)=>n+Math.round(cardioTargetSeconds(cycleDayTemplate(c,d))/60),0);
+  return {activeDays:activeDays.length,rest,cardio};
+}
+function renderTrainingCycleCard(c){
+  const active=String(c.id)===String(getActiveTrainingCycleId()),st=cycleStats(c),days=[1,2,3,4,5,6,0];
+  return `<article class="card training-cycle-card ${active?'active-cycle':''}"><div class="training-cycle-head"><div><div class="kicker">${c.base?'Programme de référence':'Cycle personnalisé'}</div><h2>${esc(c.name)}</h2><p class="muted small">${esc(c.description||'Cycle personnalisé')}</p></div>${active?'<span class="cycle-active-badge">● ACTIF</span>':'<button class="btn btn-primary compact activate-cycle" data-cycle-id="'+c.id+'">Utiliser ce cycle</button>'}</div><div class="cycle-stat-line"><span>${st.activeDays} jours actifs</span><span>${st.rest} repos</span><span>${st.cardio} min cardio</span></div><div class="cycle-day-list">${days.map(day=>{const w=cycleDayTemplate(c,day),rest=!(w.exercises||[]).length;return `<div class="cycle-day-item ${rest?'is-rest':''}"><span class="cycle-day-code">${DAY_NAMES[day].slice(0,3).toUpperCase()}</span><div class="grow"><strong>${rest?'Repos':esc(w.name)}</strong><small>${rest?'Récupération complète':`${w.duration||estimateWorkoutMinutes(w)} min · Express ${w.shortDuration||Math.max(20,Math.round((w.duration||45)*.48))}`}</small></div>${!c.base?`<div class="cycle-day-actions">${rest?`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Ajouter une séance</button>${(cycleDayTemplate(baseTrainingCycle(),day).exercises||[]).length?`<button class="mini-action restore-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Copier le jour de base</button>`:''}`:`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Modifier</button><button class="mini-action rest-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Repos</button>`}</div>`:''}</div>`}).join('')}</div><div class="training-cycle-actions">${c.base?`<button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer pour personnaliser</button><span class="muted small">Le cycle de base reste protégé.</span>`:`<button class="btn btn-outline rename-cycle" data-cycle-id="${c.id}">Renommer</button><button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer</button><button class="btn btn-outline danger archive-cycle" data-cycle-id="${c.id}">Archiver</button>`}</div></article>`;
+}
 function renderCustomSessions(){
   if(state.customSessionEditor)return renderCustomSessionEditor();
-  const list=getCustomWorkouts();
-  return shell(`<header class="topbar"><div><div class="brand">Mes séances</div><div class="daylabel">Crée et modifie tes propres entraînements</div></div><button class="btn btn-primary compact" id="newCustomSession">＋ Nouvelle</button></header>
-    <section class="card"><div class="kicker">Créer plus vite</div><h2>Partir d'une séance du programme</h2><p class="muted small">La copie devient indépendante : tu peux remplacer, ajouter, supprimer ou réordonner les exercices sans toucher au programme principal.</p><div class="clone-day-grid">${[2,3,4,5,6,0].map(day=>`<button class="btn btn-outline clone-program-day" data-clone-day="${day}">${DAY_NAMES[day]} · ${workouts[day].name}</button>`).join('')}</div></section>
-    ${list.length?`<section class="custom-session-list">${list.map(w=>{const cov=customSessionCoverage(w);return `<article class="card custom-session-card"><div class="section-head"><div><div class="kicker">Séance personnelle</div><h2>${esc(w.name)}</h2><p class="muted">${esc(w.subtitle||'')}</p></div><span class="pill">≈ ${w.duration||estimateWorkoutMinutes(w)} min</span></div><div class="meta"><span class="pill">${(w.exercises||[]).length} étapes</span><span class="pill">${cov.groups.length} zones</span><span class="pill">${cov.equipment.length} équipements</span></div><div class="custom-session-actions"><button class="btn btn-primary start-custom-session" data-custom-id="${w.id}">Lancer</button><button class="btn btn-secondary edit-custom-session" data-custom-id="${w.id}">Modifier</button><button class="btn btn-outline duplicate-custom-session" data-custom-id="${w.id}">Dupliquer</button><button class="btn btn-outline danger delete-custom-session" data-custom-id="${w.id}">Supprimer</button></div></article>`}).join('')}</section>`:`<section class="card empty-custom"><h2>Aucune séance personnelle</h2><p class="muted">Crée une séance vide ou copie une journée du programme pour commencer.</p><button class="btn btn-primary" id="newCustomSession2">Créer ma première séance</button></section>`}`,'more');
+  const list=getCustomWorkouts(),cycles=allTrainingCycles(false),active=getActiveTrainingCycle();
+  return shell(`<header class="topbar"><div><div class="brand">Mes séances</div><div class="daylabel">Cycles hebdomadaires et séances libres</div></div><div class="topbar-actions"><button class="btn btn-secondary compact" id="newCustomSession">＋ Séance</button><button class="btn btn-primary compact" id="newTrainingCycle">＋ Cycle</button></div></header>
+    <section class="cycle-page-intro"><div><div class="kicker">Cycle actif</div><h1>${esc(active.name)}</h1><p class="muted">La page Semaine et la séance du jour utilisent automatiquement ce cycle.</p></div></section>
+    <section class="training-cycle-list">${cycles.map(renderTrainingCycleCard).join('')}</section>
+    ${renderCycleHeatmap(16)}
+    <section class="custom-free-head"><div><div class="kicker">Hors cycle</div><h2>Séances libres</h2><p class="muted small">Pour un entraînement ponctuel qui ne remplace pas ton planning hebdomadaire.</p></div><button class="btn btn-secondary compact" id="newCustomSession2">＋ Nouvelle séance</button></section>
+    <section class="card clone-card"><div class="kicker">Créer plus vite</div><h2>Partir d'une journée du cycle actif</h2><p class="muted small">La copie devient indépendante : tu peux la modifier sans toucher au cycle.</p><div class="clone-day-grid">${[1,2,3,4,5,6,0].map(day=>{const w=workoutTemplateForDay(day);return (w.exercises||[]).length?`<button class="btn btn-outline clone-program-day" data-clone-day="${day}">${DAY_NAMES[day]} · ${esc(w.name)}</button>`:''}).join('')}</div></section>
+    ${list.length?`<section class="custom-session-list">${list.map(w=>{const cov=customSessionCoverage(w);return `<article class="card custom-session-card"><div class="section-head"><div><div class="kicker">Séance libre</div><h2>${esc(w.name)}</h2><p class="muted">${esc(w.subtitle||'')}</p></div><span class="pill">≈ ${w.duration||estimateWorkoutMinutes(w)} min</span></div><div class="meta"><span class="pill">${(w.exercises||[]).length} étapes</span><span class="pill">${cov.groups.length} zones</span><span class="pill">${cov.equipment.length} équipements</span></div><div class="custom-session-actions"><button class="btn btn-primary start-custom-session" data-custom-id="${w.id}">Lancer</button><button class="btn btn-secondary edit-custom-session" data-custom-id="${w.id}">Modifier</button><button class="btn btn-outline duplicate-custom-session" data-custom-id="${w.id}">Dupliquer</button><button class="btn btn-outline danger delete-custom-session" data-custom-id="${w.id}">Supprimer</button></div></article>`}).join('')}</section>`:`<section class="card empty-custom"><h2>Aucune séance libre</h2><p class="muted">Tes cycles suffisent pour le quotidien. Crée une séance libre uniquement pour un entraînement ponctuel.</p></section>`}`,'more');
 }
 function renderCustomSessionEditor(){
-  const w=state.customSessionDraft||defaultCustomWorkout(),names=customExerciseNames(),quality=customSessionQuality(w);
-  return `<main class="shell custom-editor-shell"><section class="card editor-card"><button class="back-btn" id="closeCustomEditor">← Mes séances</button><div class="kicker">Éditeur de séance</div><h1>${w.id?'Modifier':'Créer'} une séance</h1><p class="muted">Ajoute, remplace, supprime et réordonne librement les exercices. Le contrôle ci-dessous te signale si tu oublies une phase essentielle.</p><label class="field-label">Nom</label><input class="big-input custom-session-meta" data-custom-meta="name" value="${esc(w.name||'')}"><label class="field-label">Description</label><input class="url-input custom-session-meta" data-custom-meta="subtitle" value="${esc(w.subtitle||'')}"><div class="custom-quality"><span class="${quality.warmup?'ok':'warn'}">${quality.warmup?'✓':'!'} Échauffement</span><span class="${quality.cardio?'ok':'warn'}">${quality.cardio?'✓':'!'} Cardio</span><span class="${quality.cooldown?'ok':'warn'}">${quality.cooldown?'✓':'!'} Étirements</span><span>${quality.groups} zones</span><span>${quality.equipment} équipements</span></div><div class="custom-builder-head"><strong>Exercices</strong><button class="btn btn-secondary compact" id="addCustomExercise">＋ Ajouter</button></div><div class="custom-builder-list">${(w.exercises||[]).map((e,i)=>`<article class="custom-builder-row" data-custom-index="${i}"><div class="custom-builder-number">${i+1}</div><div class="custom-builder-main"><select class="select custom-exercise-name" data-custom-index="${i}">${names.map(n=>`<option value="${esc(n)}" ${n===e.name?'selected':''}>${n}</option>`).join('')}</select><div class="custom-builder-grid"><label><span>Phase</span><select class="select custom-ex-field" data-custom-index="${i}" data-key="phase">${['warmup','main','cardio','cooldown'].map(ph=>`<option value="${ph}" ${ph===(e.phase||'main')?'selected':''}>${phaseLabel(ph)}</option>`).join('')}</select></label><label><span>Séries</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="sets" type="number" min="1" max="10" value="${Number(e.sets||1)}"></label><label><span>${e.type==='timer'||e.type?.startsWith('hold')?'Secondes':'Répétitions'}</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="target" type="number" min="1" value="${Number(e.target||1)}"></label><label><span>Repos (s)</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="rest" type="number" min="0" value="${Number(e.rest||0)}"></label></div><div class="custom-row-info"><span>${esc(equipmentForExercise(e.name).join(' · ')||exerciseInfo(e.name)?.equipment||'Sans matériel')}</span><span>${esc((exerciseInfo(e.name)?.muscles||[]).join(' · '))}</span></div></div><div class="custom-row-actions"><button class="icon-btn move-custom-up" data-custom-index="${i}" aria-label="Monter">↑</button><button class="icon-btn move-custom-down" data-custom-index="${i}" aria-label="Descendre">↓</button><button class="icon-btn remove-custom-ex" data-custom-index="${i}" aria-label="Supprimer">×</button></div></article>`).join('')}</div><div class="custom-editor-summary"><span>≈ ${estimateWorkoutMinutes(w)} min</span><span>${(w.exercises||[]).length} étapes</span></div><button class="btn btn-primary" id="saveCustomSession">Enregistrer la séance</button></section></main>`;
+  const w=state.customSessionDraft||defaultCustomWorkout(),names=customExerciseNames(),quality=customSessionQuality(w),ct=state.cycleDayTarget,cycle=ct?trainingCycleById(ct.cycleId):null;
+  return `<main class="shell custom-editor-shell"><section class="card editor-card"><button class="back-btn" id="closeCustomEditor">← Mes séances</button><div class="kicker">${ct?`${esc(cycle.name)} · ${DAY_NAMES[ct.day]}`:'Éditeur de séance'}</div><h1>${ct?'Modifier la journée':w.id?'Modifier une séance':'Créer une séance'}</h1><p class="muted">Ajoute, remplace, supprime et réordonne librement les exercices. Le contrôle ci-dessous te signale si tu oublies une phase essentielle.</p><label class="field-label">Nom</label><input class="big-input custom-session-meta" data-custom-meta="name" value="${esc(w.name||'')}"><label class="field-label">Description</label><input class="url-input custom-session-meta" data-custom-meta="subtitle" value="${esc(w.subtitle||'')}"><div class="custom-quality"><span class="${quality.warmup?'ok':'warn'}">${quality.warmup?'✓':'!'} Échauffement</span><span class="${quality.cardio?'ok':'warn'}">${quality.cardio?'✓':'!'} Cardio</span><span class="${quality.cooldown?'ok':'warn'}">${quality.cooldown?'✓':'!'} Étirements</span><span>${quality.groups} zones</span><span>${quality.equipment} équipements</span></div><div class="custom-builder-head"><strong>Exercices</strong><button class="btn btn-secondary compact" id="addCustomExercise">＋ Ajouter</button></div><div class="custom-builder-list">${(w.exercises||[]).map((e,i)=>`<article class="custom-builder-row" data-custom-index="${i}"><div class="custom-builder-number">${i+1}</div><div class="custom-builder-main"><select class="select custom-exercise-name" data-custom-index="${i}">${names.map(n=>`<option value="${esc(n)}" ${n===e.name?'selected':''}>${n}</option>`).join('')}</select><div class="custom-builder-grid"><label><span>Phase</span><select class="select custom-ex-field" data-custom-index="${i}" data-key="phase">${['warmup','main','cardio','cooldown'].map(ph=>`<option value="${ph}" ${ph===(e.phase||'main')?'selected':''}>${phaseLabel(ph)}</option>`).join('')}</select></label>${ct?`<label class="cycle-express-toggle"><span>Express</span><input class="custom-ex-bool" data-custom-index="${i}" data-key="express" type="checkbox" ${e.express?'checked':''}><small>Inclure dans la séance courte</small></label>`:''}<label><span>Séries</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="sets" type="number" min="1" max="10" value="${Number(e.sets||1)}"></label><label><span>${e.type==='timer'||e.type?.startsWith('hold')?'Secondes':'Répétitions'}</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="target" type="number" min="1" value="${Number(e.target||1)}"></label><label><span>Repos (s)</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="rest" type="number" min="0" value="${Number(e.rest||0)}"></label></div><div class="custom-row-info"><span>${esc(equipmentForExercise(e.name).join(' · ')||exerciseInfo(e.name)?.equipment||'Sans matériel')}</span><span>${esc((exerciseInfo(e.name)?.muscles||[]).join(' · '))}</span></div></div><div class="custom-row-actions"><button class="icon-btn move-custom-up" data-custom-index="${i}" aria-label="Monter">↑</button><button class="icon-btn move-custom-down" data-custom-index="${i}" aria-label="Descendre">↓</button><button class="icon-btn remove-custom-ex" data-custom-index="${i}" aria-label="Supprimer">×</button></div></article>`).join('')}</div><div class="custom-editor-summary"><span>≈ ${estimateWorkoutMinutes(w)} min</span><span>${(w.exercises||[]).length} étapes</span></div><button class="btn btn-primary" id="saveCustomSession">Enregistrer la séance</button></section></main>`;
 }
 function syncCustomDraftFromDom(){
   const d=state.customSessionDraft;if(!d)return;
   document.querySelectorAll('.custom-session-meta').forEach(el=>d[el.dataset.customMeta]=el.value);
   document.querySelectorAll('.custom-ex-field').forEach(el=>{const i=Number(el.dataset.customIndex),key=el.dataset.key;if(!d.exercises[i])return;d.exercises[i][key]=['sets','target','rest'].includes(key)?Number(el.value||0):el.value;if(key==='target')d.exercises[i].baseTarget=Number(el.value||0);});
+  document.querySelectorAll('.custom-ex-bool').forEach(el=>{const i=Number(el.dataset.customIndex),key=el.dataset.key;if(d.exercises[i])d.exercises[i][key]=!!el.checked;});
   d.duration=estimateWorkoutMinutes(d);
 }
 function saveCustomSession(){
   syncCustomDraftFromDom();const d=state.customSessionDraft;if(!d||!d.name?.trim()||!d.exercises?.length)return;
+  if(state.cycleDayTarget){const t=state.cycleDayTarget,c=trainingCycleById(t.cycleId);if(c&& !c.base){const candidate=clone(c);candidate.days=clone(candidate.days||{});const savedDay={...clone(d),id:undefined,duration:estimateWorkoutMinutes(d),shortDuration:d.shortDuration||Math.max(20,Math.round(estimateWorkoutMinutes(d)*.48))};savedDay.exercises=(savedDay.exercises||[]).map(e=>{const essential=['warmup','cardio','cooldown'].includes(e.phase);const express=essential?true:!!e.express;let shortSets=e.shortSets,shortTarget=e.shortTarget;if(express&&shortSets==null&&e.phase==='main')shortSets=Math.max(1,Number(e.sets||1)-1);if(express&&shortTarget==null&&essential)shortTarget=Math.max(e.phase==='cardio'?300:120,Math.round(Number(e.target||0)*.5));return {...e,express,shortSets,shortTarget};});candidate.days[Number(t.day)]=savedDay;if(!cycleHasRest(candidate)){alert('Un cycle doit conserver au moins un jour de repos. Passe d’abord un autre jour en repos.');return;}updateTrainingCycle(candidate);}state.customSessionEditor=null;state.customSessionDraft=null;state.cycleDayTarget=null;render();return;}
   const list=getCustomWorkouts(),item={...clone(d),id:d.id||Date.now(),updatedAt:new Date().toISOString()};
   const idx=list.findIndex(x=>String(x.id)===String(item.id));if(idx>=0)list[idx]=item;else list.unshift(item);setCustomWorkouts(list.slice(0,50));state.customSessionEditor=null;state.customSessionDraft=null;render();
 }
@@ -1515,14 +1697,14 @@ function equipmentForExercise(name){
   return [...new Set(out)];
 }
 function programAudit(){
-  const days=[2,3,4,5,6,0],muscles={},equipment=Object.fromEntries(HOME_EQUIPMENT.map(x=>[x,new Set()]));let cardio=0,expressCardio=0,warmups=0,cooldowns=0;const cfg=getTrainingConfig();
+  const days=[0,1,2,3,4,5,6].filter(day=>(workoutTemplateForDay(day).exercises||[]).length),muscles={},equipment=Object.fromEntries(HOME_EQUIPMENT.map(x=>[x,new Set()]));let cardio=0,expressCardio=0,warmups=0,cooldowns=0;const cfg=getTrainingConfig();
   days.forEach(day=>{const w=preparedWorkout(day,null,'full'),short=preparedWorkout(day,null,'short');cardio+=cardioTargetSeconds(w);expressCardio+=cardioTargetSeconds(short);if(w.exercises.some(e=>e.phase==='warmup'))warmups++;if(w.exercises.some(e=>e.phase==='cooldown'))cooldowns++;const v=volumeForWorkout(w);Object.entries(v).forEach(([g,n])=>muscles[g]=(muscles[g]||0)+n);w.exercises.forEach(e=>equipmentForExercise(e.name).forEach(eq=>equipment[eq]?.add(day)));});
   const covered=VOLUME_GROUPS.filter(g=>(muscles[g]||0)>=(cfg.volumeTargets[g]?.min||0)).length;
   return {days,muscles,equipment,cardioMinutes:Math.round(cardio/60),expressCardioMinutes:Math.round(expressCardio/60),warmups,cooldowns,covered,cfg};
 }
 function renderProgramAudit(){
   const a=programAudit(),cardioOK=a.cardioMinutes>=a.cfg.cardioMin&&a.cardioMinutes<=a.cfg.cardioMax;
-  return `<section class="card program-audit"><div class="section-head"><div><div class="kicker">Audit automatique du programme</div><h2>Couverture hebdomadaire</h2></div><span class="pill ${a.covered===VOLUME_GROUPS.length?'badge-success':'badge-warn'}">${a.covered}/${VOLUME_GROUPS.length} zones dans tes cibles</span></div><div class="audit-hero"><div><strong>6/7</strong><span>jours actifs</span></div><div><strong>${a.cardioMinutes}</strong><span>min cardio · cible ${a.cfg.cardioMin}–${a.cfg.cardioMax}</span></div><div><strong>${a.warmups}/6</strong><span>échauffements</span></div><div><strong>${a.cooldowns}/6</strong><span>retours au calme</span></div></div><div class="audit-section"><strong>Muscles / fonctions · programme complet</strong><div class="audit-chip-grid">${VOLUME_GROUPS.map(g=>{const n=a.muscles[g]||0,t=a.cfg.volumeTargets[g],ok=n>=t.min&&n<=t.max;return `<span class="audit-chip ${ok?'ok':'warn'}">${g} <b>${n.toFixed(1)}</b> <small>${t.min}–${t.max}</small></span>`}).join('')}</div></div><div class="audit-section"><strong>Matériel utilisé dans la semaine</strong><div class="equipment-audit">${HOME_EQUIPMENT.map(eq=>`<div><span>${eq}</span><strong>${a.equipment[eq]?.size||0} j</strong></div>`).join('')}</div></div><div class="audit-note ${cardioOK?'audit-ok':''}"><strong>Mode Express</strong><span>${a.expressCardioMinutes} min de cardio si tu faisais les 6 séances en Express. Les cibles cardio et musculaires sont maintenant les tiennes : modifie-les dans Volume musculaire selon ton objectif et ta récupération.</span></div><p class="muted small">L'audit compare désormais le programme complet à tes propres fourchettes paramétriques, au lieu d'un seuil fixe.</p></section>`;
+  return `<section class="card program-audit"><div class="section-head"><div><div class="kicker">Audit automatique · ${esc(getActiveTrainingCycle().name)}</div><h2>Couverture hebdomadaire</h2></div><span class="pill ${a.covered===VOLUME_GROUPS.length?'badge-success':'badge-warn'}">${a.covered}/${VOLUME_GROUPS.length} zones dans tes cibles</span></div><div class="audit-hero"><div><strong>${a.days.length}/7</strong><span>jours actifs</span></div><div><strong>${a.cardioMinutes}</strong><span>min cardio · cible ${a.cfg.cardioMin}–${a.cfg.cardioMax}</span></div><div><strong>${a.warmups}/${a.days.length}</strong><span>échauffements</span></div><div><strong>${a.cooldowns}/${a.days.length}</strong><span>retours au calme</span></div></div><div class="audit-section"><strong>Muscles / fonctions · programme complet</strong><div class="audit-chip-grid">${VOLUME_GROUPS.map(g=>{const n=a.muscles[g]||0,t=a.cfg.volumeTargets[g],ok=n>=t.min&&n<=t.max;return `<span class="audit-chip ${ok?'ok':'warn'}">${g} <b>${n.toFixed(1)}</b> <small>${t.min}–${t.max}</small></span>`}).join('')}</div></div><div class="audit-section"><strong>Matériel utilisé dans la semaine</strong><div class="equipment-audit">${HOME_EQUIPMENT.map(eq=>`<div><span>${eq}</span><strong>${a.equipment[eq]?.size||0} j</strong></div>`).join('')}</div></div><div class="audit-note ${cardioOK?'audit-ok':''}"><strong>Mode Express</strong><span>${a.expressCardioMinutes} min de cardio si tu faisais toutes les séances actives en Express. Les cibles cardio et musculaires sont maintenant les tiennes : modifie-les dans Volume musculaire selon ton objectif et ta récupération.</span></div><p class="muted small">L'audit compare désormais le programme complet à tes propres fourchettes paramétriques, au lieu d'un seuil fixe.</p></section>`;
 }
 
 function render() {
@@ -1559,7 +1741,7 @@ function shell(content, activeTab=state.view) {
 }
 
 function renderMore(){
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.2.4</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.3</div></div></header>
     <section class="more-grid">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1567,7 +1749,7 @@ function renderMore(){
       <button class="card more-tile" data-view="custom"><span class="more-icon">＋</span><div><strong>Mes séances</strong><small>Créer, copier et modifier tes entraînements</small></div></button>
       <button class="card more-tile" data-view="profile"><span class="more-icon">○</span><div><strong>Profil</strong><small>Mesures, sauvegarde & réglages</small></div></button>
     </section>
-    <details class="today-details"><summary><div><div class="kicker">Détails</div><strong>Cycle, rang & coach adaptatif</strong></div><span>⌄</span></summary><div class="details-stack">${renderCycleMini()}${renderRankMini()}${renderProgressionRecommendations()}</div></details>
+    <details class="today-details"><summary><div><div class="kicker">Détails</div><strong>Progression, rang & coach adaptatif</strong></div><span>⌄</span></summary><div class="details-stack">${renderCycleMini()}${renderRankMini()}${renderProgressionRecommendations()}</div></details>
     ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}
     <section class="card home-equipment"><div class="kicker">Matériel maison</div><h2>Ton setup</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les dips et L-sit utilisent en priorité les barres parallèles. Les pompes peuvent se faire sur poignées. Pour les jambes, la résistance vient actuellement des bandes : aucun sac à dos n’est utilisé dans le programme.</p></section>`, 'more');
 }
@@ -1575,7 +1757,8 @@ function renderToday() {
   const day=todayDay(),w=preparedWorkout(day),history=getHistory(),seven=Date.now()-7*86400000;
   const recent=history.filter(h=>new Date(h.date).getTime()>=seven),weeklyMinutes=recent.reduce((a,h)=>a+(h.durationMinutes||0),0);
   const rank=getRankState(),warning=dailyQuickLoadWarning(),todayEquipment=[...new Set((w.exercises||[]).flatMap(e=>equipmentForExercise(e.name)))];
-  const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>Repos</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${workouts[day].shortDuration} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment"><strong>Matériel prévu</strong><div>${todayEquipment.map(x=>`<span class="pill">${x}</span>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
+  const baseToday=workoutTemplateForDay(day),activeCycle=getActiveTrainingCycle();
+  const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p><div class="rest-reward-note"><strong>+10 XP récupération</strong><span>Le bonus sera validé demain si aucune séance, micro-série de renforcement ou course de 15 min+ n'est enregistrée aujourd'hui.</span></div></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment"><strong>Matériel prévu</strong><div>${todayEquipment.map(x=>`<span class="pill">${x}</span>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
     <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>＋</span><strong>Quick Log</strong><small>Ajouter une micro-série</small></button><div class="cockpit-card"><span>↗</span><strong>${rank.current.name}</strong><small>${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><div class="cockpit-card"><span>◷</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
@@ -1604,7 +1787,8 @@ function renderWeek() {
   const order = [1,2,3,4,5,6,0];
   const dayNow = todayDay();
   const audit=programAudit();
-  return shell(`<header class="topbar"><div><div class="brand">Semaine</div><div class="daylabel">6 jours actifs · ${audit.cardioMinutes} min cardio · formats Complet / Express</div></div></header>
+  const activeCycle=getActiveTrainingCycle();
+  return shell(`<header class="topbar"><div><div class="brand">Semaine</div><div class="daylabel">${esc(activeCycle.name)} · ${audit.cardioMinutes} min cardio · Complet / Express</div></div><button class="btn btn-outline compact" data-view="custom">Changer de cycle</button></header>
     <section class="week-list">${order.map(day=>{
       const w=preparedWorkout(day), isToday=day===dayNow, expanded=state.expandedWeekDay===day;
       const details = w.exercises.length
@@ -1622,7 +1806,7 @@ function renderWeek() {
           <div class="week-main">
             <div class="week-titleline"><h2>${w.name}</h2>${isToday?'<span class="week-today-label">Aujourd’hui</span>':''}</div>
             <p class="week-subtitle">${w.subtitle}</p>
-            <div class="week-inline-meta">${w.exercises.length?`<span>${w.duration} min</span><span>Express ${workouts[day].shortDuration}</span>${cardioMin?`<span>Cardio ${cardioMin}</span>`:''}`:`<span>Repos complet</span>`}</div>
+            <div class="week-inline-meta">${w.exercises.length?`<span>${w.duration} min</span><span>Express ${workoutTemplateForDay(day).shortDuration||Math.max(20,Math.round((workoutTemplateForDay(day).duration||45)*.48))}</span>${cardioMin?`<span>Cardio ${cardioMin}</span>`:''}`:`<span>Repos complet</span>`}</div>
           </div>
           <span class="week-chevron" aria-hidden="true">⌄</span>
         </button>
@@ -1750,7 +1934,7 @@ function startWorkout(day=todayDay(), readiness=null) {
   if (!w?.exercises?.length) return;
   state.readinessEditor=null;state.sessionModeEditor=null;
   state.active = {
-    kind:isCustom?"custom":"workout", day:isCustom?"custom":Number(day), customWorkoutId:isCustom?readiness.customWorkoutId:null, sessionLength:w.sessionLength||readiness?.sessionLength||'full', workout:w, cycle:w.cycle, readiness:readiness||{energy:3,soreness:2,joints:'ok'}, startedAt:Date.now(), exerciseIndex:0, setIndex:0, phase:"work", entries:[],
+    kind:isCustom?"custom":"workout", day:isCustom?"custom":Number(day), customWorkoutId:isCustom?readiness.customWorkoutId:null, trainingCycleId:isCustom?null:(w.trainingCycleId||getActiveTrainingCycleId()), sessionLength:w.sessionLength||readiness?.sessionLength||'full', workout:w, cycle:w.cycle, readiness:readiness||{energy:3,soreness:2,joints:'ok'}, startedAt:Date.now(), exerciseIndex:0, setIndex:0, phase:"work", entries:[],
     currentValue:w.exercises[0].target, currentBand:w.exercises[0].type==='reps_band'?(lastBandForExercise(w.exercises[0].name)||defaultBandForExercise(w.exercises[0].name)):'Aucune', timerRemaining:null, timerRunning:false,
     reviewRpe:6, reviewDiscomfort:false, reviewNote:"", sessionPaused:false, pauseStartedAt:null, pausedTotalMs:0, resumeTimerAfterPause:false, currentLoadKg:0
   };
@@ -1866,7 +2050,7 @@ function renderWorkoutReview() {
   if(a.kind==="flexibility") return `<main class="shell coach-shell"><section class="card review-card"><div class="kicker">Routine terminée</div><h1>Mobilité faite.</h1><div class="stat-grid"><div class="stat"><div class="stat-value">${duration}</div><div class="stat-label">minutes</div></div><div class="stat"><div class="stat-value">${a.workout.exercises.length}</div><div class="stat-label">étapes</div></div></div><div class="divider"></div><h2>Confort global</h2><p class="muted small">1 = très raide aujourd'hui · 5 = amplitude fluide et confortable.</p><div class="comfort-row">${[1,2,3,4,5].map(n=>`<button class="comfort-btn ${a.reviewComfort===n?'active':''}" data-comfort="${n}">${n}</button>`).join('')}</div><label class="checkline"><input id="jointDiscomfort" type="checkbox" ${a.reviewDiscomfort?'checked':''}><span><strong>Douleur ou pincement inhabituel</strong><small>À distinguer d'une tension musculaire normale.</small></span></label><label class="field-label">Note facultative</label><textarea class="textarea" id="reviewNote" placeholder="Ex. hanche droite plus raide, chevilles très libres…">${esc(a.reviewNote)}</textarea><button class="btn btn-primary" id="saveWorkout">Enregistrer la routine</button></section></main>`;
   return `<main class="shell coach-shell"><section class="card review-card"><div class="kicker">Séance terminée</div><h1>Bien joué.</h1>
     <div class="stat-grid"><div class="stat"><div class="stat-value">${duration}</div><div class="stat-label">minutes</div></div><div class="stat"><div class="stat-value">${score}%</div><div class="stat-label">objectifs atteints</div></div></div>
-    <div class="meta"><span class="pill">Cycle S${a.cycle?.week||'—'} · ${a.cycle?.name||'—'}</span><span class="pill">${a.kind==='custom'?'Personnelle':a.sessionLength==='short'?'Express':'Complète'}</span><span class="pill">Readiness ${readinessPlan(a.readiness).label}</span></div><div class="divider"></div><h2>Effort perçu</h2><p class="muted small">Pour une reprise, vise le plus souvent 5–7/10.</p>
+    <div class="meta"><span class="pill">Progression S${a.cycle?.week||'—'} · ${a.cycle?.name||'—'}</span><span class="pill">${a.kind==='custom'?'Personnelle':a.sessionLength==='short'?'Express':'Complète'}</span><span class="pill">Readiness ${readinessPlan(a.readiness).label}</span></div><div class="divider"></div><h2>Effort perçu</h2><p class="muted small">Pour une reprise, vise le plus souvent 5–7/10.</p>
     <div class="rpe-row">${[4,5,6,7,8,9].map(n=>`<button class="rpe-btn ${a.reviewRpe===n?'active':''}" data-rpe="${n}">${n}</button>`).join('')}</div>
     <label class="checkline"><input id="jointDiscomfort" type="checkbox" ${a.reviewDiscomfort?'checked':''}><span><strong>Gêne articulaire ou tendineuse</strong><small>Poignets, coudes, épaules, genoux…</small></span></label>
     <label class="field-label">Note facultative</label><textarea class="textarea" id="reviewNote" placeholder="Ex. grip fatigué, très facile, épaule raide…">${esc(a.reviewNote)}</textarea>
@@ -1886,7 +2070,7 @@ function saveWorkoutReview() {
   const beforeRank=getRankState().current.id;
   const history=getHistory();
   const prs=detectPRs(a.entries,history);
-  history.unshift({ id:Date.now(), date:new Date().toISOString(), day:a.day, name:a.workout.name, durationMinutes, score, rpe:a.reviewRpe, jointDiscomfort:a.reviewDiscomfort, note:a.reviewNote, sessionLength:a.sessionLength||'full', customWorkoutId:a.customWorkoutId||null, readiness:{...a.readiness,mode:readinessPlan(a.readiness).mode}, cycle:a.cycle, prs, entries:a.entries });
+  history.unshift({ id:Date.now(), date:new Date().toISOString(), day:a.day, name:a.workout.name, durationMinutes, score, rpe:a.reviewRpe, jointDiscomfort:a.reviewDiscomfort, note:a.reviewNote, sessionLength:a.sessionLength||'full', customWorkoutId:a.customWorkoutId||null, trainingCycleId:a.trainingCycleId||null, readiness:{...a.readiness,mode:readinessPlan(a.readiness).mode}, cycle:a.cycle, prs, entries:a.entries });
   setHistory(history.slice(0,1000));
   if(prs.length)state.prNotice=prs;
   const afterRank=getRankState();
@@ -2024,7 +2208,8 @@ function xpSummary(){
   const skills=completedSkills*60;
   const uniqueTests=new Set(getTests().map(t=>t.testId)).size;
   const tests=uniqueTests*30;
-  return {total:training+consistency+skills+tests,training,consistency,skills,tests,consistentWeeks,completedSkills,uniqueTests};
+  const recoveryDays=respectedRestDays(),recovery=recoveryDays*10;
+  return {total:training+consistency+skills+tests+recovery,training,consistency,skills,tests,recovery,recoveryDays,consistentWeeks,completedSkills,uniqueTests};
 }
 function objectiveProgress(obj){
   let current=0;
@@ -2068,7 +2253,7 @@ function renderRankPanel(){
   return `${notice}<section class="card rank-card rank-${r.current.id}"><div class="rank-head"><div class="rank-emblem">${r.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><div class="rank-name">${r.current.name}</div><p class="muted">Promotion visée : <strong>${next.name}</strong></p></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div>
     <div class="rank-block"><div class="rank-progress-label"><span>XP vers ${next.name}</span><strong>${r.xp.total.toLocaleString('fr-FR')} / ${next.xpMin.toLocaleString('fr-FR')}</strong></div><div class="rank-progress"><span style="width:${r.xpProgress*100}%"></span></div></div>
     <div class="rank-block"><div class="section-head"><div><div class="kicker">Missions de promotion</div><h2>${r.nextEval.completed}/${r.nextEval.required} requises</h2></div><span class="pill">${r.nextEval.items.filter(x=>x.done).length}/${r.nextEval.items.length} réalisées</span></div><div class="rank-objectives">${r.nextEval.items.map(item=>`<div class="rank-objective ${item.done?'done':''}"><div class="rank-check">${item.done?'✓':'○'}</div><div class="grow"><strong>${item.obj.label}</strong><small>${objectiveValueText(item)}</small></div></div>`).join('')}</div></div>
-    <div class="xp-breakdown"><span>Entraînement <strong>${r.xp.training}</strong></span><span>Régularité <strong>${r.xp.consistency}</strong></span><span>Skills <strong>${r.xp.skills}</strong></span><span>Tests <strong>${r.xp.tests}</strong></span></div>
+    <div class="xp-breakdown"><span>Entraînement <strong>${r.xp.training}</strong></span><span>Régularité <strong>${r.xp.consistency}</strong></span><span>Skills <strong>${r.xp.skills}</strong></span><span>Tests <strong>${r.xp.tests}</strong></span><span>Récupération <strong>${r.xp.recovery||0}</strong></span></div>
     <p class="muted small">XP : environ 50–110 par séance selon la qualité, +100 pour une semaine avec au moins 5 jours entraînés, +60 par skill validé et +30 par type de test enregistré. Aucun bonus n’incite à supprimer le lundi de repos.</p>${roadmap}</section>`;
 }
 
@@ -2093,6 +2278,7 @@ function renderProgress() {
     ${renderProgressionRecommendations()}
     ${renderProgramAudit()}
     ${renderQuickVolumePanel()}
+    ${renderRepetitionVolumePanel()}
     ${renderVolumePanel()}
     ${renderRecordsPanel()}
     <section class="stat-grid"><div class="stat"><div class="stat-value">${recent.length}</div><div class="stat-label">séances / 7 j</div></div><div class="stat"><div class="stat-value">${mins}</div><div class="stat-label">minutes / 7 j</div></div><div class="stat"><div class="stat-value">${avg||'—'}</div><div class="stat-label">score moyen %</div></div><div class="stat"><div class="stat-value">${bestMetric(h,'Dead hang')||'—'}</div><div class="stat-label">best dead hang s</div></div></section>
@@ -2139,7 +2325,7 @@ function renderProfile(){const logs=getBodyLogs(),p=getPrefs();const latest=logs
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + barres parallèles + poignées + bandes + tapis</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les barres parallèles et poignées de pompes sont intégrées aux recommandations. Pour le moment, les séances utilisent les bandes à la place du sac à dos pour ajouter de la résistance.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.2.4</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.3</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Phase de progression · 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`, "profile");}
 
 function renderBodyChart(logs,key,unit){const pts=logs.filter(x=>Number(x[key])>0).slice(0,12).reverse();if(pts.length<2)return'';const vals=pts.map(x=>Number(x[key])),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.5,max-min);const coords=vals.map((v,i)=>{const x=(i/(vals.length-1))*100,y=88-((v-min)/range)*70;return `${x},${y}`}).join(' ');return `<div class="mini-chart"><div class="chart-head"><strong>${key==='weight'?'Poids':'Tour de taille'}</strong><span>${vals[0]} → ${vals[vals.length-1]} ${unit}</span></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Évolution ${key}"><polyline points="${coords}" fill="none" vector-effect="non-scaling-stroke"/></svg></div>`;}
@@ -2183,25 +2369,37 @@ function bindEvents(){
   document.querySelectorAll('[data-library-category]').forEach(b=>b.onclick=()=>{state.libraryCategory=b.dataset.libraryCategory;document.querySelectorAll('[data-library-category]').forEach(x=>x.classList.toggle('active',x.dataset.libraryCategory===state.libraryCategory));filterLibraryDom();});
   const libSearch=document.getElementById('librarySearch');if(libSearch)libSearch.oninput=filterLibraryDom;
   const newCustom=document.getElementById('newCustomSession'),newCustom2=document.getElementById('newCustomSession2');if(newCustom)newCustom.onclick=()=>openCustomSessionEditor();if(newCustom2)newCustom2.onclick=()=>openCustomSessionEditor();
+  const newCycle=document.getElementById('newTrainingCycle');if(newCycle)newCycle.onclick=()=>createTrainingCycle();
+  document.querySelectorAll('.activate-cycle').forEach(b=>b.onclick=()=>activateTrainingCycle(b.dataset.cycleId));
+  document.querySelectorAll('.duplicate-cycle').forEach(b=>b.onclick=()=>duplicateTrainingCycle(b.dataset.cycleId));
+  document.querySelectorAll('.rename-cycle').forEach(b=>b.onclick=()=>renameTrainingCycle(b.dataset.cycleId));
+  document.querySelectorAll('.archive-cycle').forEach(b=>b.onclick=()=>archiveTrainingCycle(b.dataset.cycleId));
+  document.querySelectorAll('.edit-cycle-day').forEach(b=>b.onclick=()=>openCycleDayEditor(b.dataset.cycleId,Number(b.dataset.day)));
+  document.querySelectorAll('.rest-cycle-day').forEach(b=>b.onclick=()=>{if(confirm(`Passer ${DAY_NAMES[Number(b.dataset.day)]} en repos complet ?`))setCycleDayRest(b.dataset.cycleId,Number(b.dataset.day));});
+  document.querySelectorAll('.restore-cycle-day').forEach(b=>b.onclick=()=>restoreCycleDayFromBase(b.dataset.cycleId,Number(b.dataset.day)));
   document.querySelectorAll('.clone-program-day').forEach(b=>b.onclick=()=>openCustomSessionEditor(null,Number(b.dataset.cloneDay)));
   document.querySelectorAll('.start-custom-session').forEach(b=>b.onclick=()=>requestCustomWorkoutStart(b.dataset.customId));
   document.querySelectorAll('.edit-custom-session').forEach(b=>b.onclick=()=>openCustomSessionEditor(b.dataset.customId));
   document.querySelectorAll('.duplicate-custom-session').forEach(b=>b.onclick=()=>{const w=customWorkoutById(b.dataset.customId);if(!w)return;const list=getCustomWorkouts(),copy={...clone(w),id:Date.now(),name:`${w.name} · copie`,updatedAt:new Date().toISOString()};list.unshift(copy);setCustomWorkouts(list);render();});
   document.querySelectorAll('.delete-custom-session').forEach(b=>b.onclick=()=>{if(!confirm('Supprimer cette séance personnelle ?'))return;setCustomWorkouts(getCustomWorkouts().filter(x=>String(x.id)!==String(b.dataset.customId)));render();});
-  const closeCustom=document.getElementById('closeCustomEditor');if(closeCustom)closeCustom.onclick=()=>{state.customSessionEditor=null;state.customSessionDraft=null;render();};
+  const closeCustom=document.getElementById('closeCustomEditor');if(closeCustom)closeCustom.onclick=()=>{state.customSessionEditor=null;state.customSessionDraft=null;state.cycleDayTarget=null;render();};
   const addCustom=document.getElementById('addCustomExercise');if(addCustom)addCustom.onclick=()=>{syncCustomDraftFromDom();state.customSessionDraft.exercises.push(exerciseTemplateByName('Pompes'));render();};
-  document.querySelectorAll('.custom-exercise-name').forEach(el=>el.onchange=()=>{syncCustomDraftFromDom();const i=Number(el.dataset.customIndex),old=state.customSessionDraft.exercises[i],fresh=exerciseTemplateByName(el.value);state.customSessionDraft.exercises[i]={...fresh,phase:old?.phase||fresh.phase||'main'};render();});
+  document.querySelectorAll('.custom-exercise-name').forEach(el=>el.onchange=()=>{syncCustomDraftFromDom();const i=Number(el.dataset.customIndex),old=state.customSessionDraft.exercises[i],fresh=exerciseTemplateByName(el.value);state.customSessionDraft.exercises[i]={...fresh,phase:old?.phase||fresh.phase||'main',express:old?.express??fresh.express,shortSets:old?.shortSets??fresh.shortSets,shortTarget:old?.shortTarget??fresh.shortTarget};render();});
   document.querySelectorAll('.custom-ex-field').forEach(el=>el.onchange=()=>{syncCustomDraftFromDom();render();});
+  document.querySelectorAll('.custom-ex-bool').forEach(el=>el.onchange=()=>syncCustomDraftFromDom());
   document.querySelectorAll('.custom-session-meta').forEach(el=>el.onchange=syncCustomDraftFromDom);
   document.querySelectorAll('.move-custom-up').forEach(b=>b.onclick=()=>{syncCustomDraftFromDom();const i=Number(b.dataset.customIndex);if(i<=0)return;const arr=state.customSessionDraft.exercises;[arr[i-1],arr[i]]=[arr[i],arr[i-1]];render();});
   document.querySelectorAll('.move-custom-down').forEach(b=>b.onclick=()=>{syncCustomDraftFromDom();const i=Number(b.dataset.customIndex),arr=state.customSessionDraft.exercises;if(i>=arr.length-1)return;[arr[i+1],arr[i]]=[arr[i],arr[i+1]];render();});
   document.querySelectorAll('.remove-custom-ex').forEach(b=>b.onclick=()=>{syncCustomDraftFromDom();state.customSessionDraft.exercises.splice(Number(b.dataset.customIndex),1);render();});
   const saveCustom=document.getElementById('saveCustomSession');if(saveCustom)saveCustom.onclick=saveCustomSession;
-  const resetC=document.getElementById('resetCycle');if(resetC)resetC.onclick=()=>{if(confirm('Recommencer un cycle de 8 semaines à partir de cette semaine ?'))resetCycle();};
+  const resetC=document.getElementById('resetCycle');if(resetC)resetC.onclick=()=>{if(confirm('Recommencer la progression de 8 semaines à partir de cette semaine ?'))resetCycle();};
   const dismissPR=document.getElementById('dismissPR');if(dismissPR)dismissPR.onclick=()=>{state.prNotice=null;render();};
   document.querySelectorAll('[data-flex-toggle]').forEach(b=>b.onclick=()=>{const id=b.dataset.flexToggle;state.expandedFlexRoutine=state.expandedFlexRoutine===id?null:id;render();});
   document.querySelectorAll('.start-flex').forEach(b=>b.onclick=()=>startFlexRoutine(b.dataset.flex));
   document.querySelectorAll('.save-mobility').forEach(b=>b.onclick=()=>saveMobilityTest(b.dataset.test));
+  document.querySelectorAll('[data-rep-period]').forEach(b=>b.onclick=()=>{state.repVolumePeriod=b.dataset.repPeriod;render();});
+  const repFrom=document.getElementById('repVolumeFrom');if(repFrom)repFrom.onchange=()=>{state.repVolumeFrom=repFrom.value;render();};
+  const repTo=document.getElementById('repVolumeTo');if(repTo)repTo.onchange=()=>{state.repVolumeTo=repTo.value;render();};
   const saveTrainCfg=document.getElementById('saveTrainingConfig');if(saveTrainCfg)saveTrainCfg.onclick=saveTrainingConfigFromDom;
   const resetTrainCfg=document.getElementById('resetTrainingConfig');if(resetTrainCfg)resetTrainCfg.onclick=()=>{if(confirm('Revenir aux cibles de volume par défaut ?')){localStorage.removeItem(STORAGE.trainingConfig);render();}};
   const saveFlexCfg=document.getElementById('saveFlexConfig');if(saveFlexCfg)saveFlexCfg.onclick=saveFlexConfigFromDom;
