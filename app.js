@@ -399,13 +399,13 @@ function renderStravaProfile(){
 }
 async function loadStravaStatus(){
   state.stravaStatus.loading=true;
-  try{const r=await fetch('/api/strava/status',{credentials:'same-origin'});const data=await r.json();state.stravaStatus={checked:true,loading:false,connected:!!data.connected,athlete:data.athlete||null,scope:data.scope||''};}
+  try{const r=await fetch('/api/strava/status',{credentials:'same-origin',cache:'no-store'});const data=await r.json();state.stravaStatus={checked:true,loading:false,connected:!!data.connected,athlete:data.athlete||null,scope:data.scope||''};}
   catch{state.stravaStatus={checked:true,loading:false,connected:false,athlete:null,scope:''};}
   if(!state.active&&!state.quickEditor)render();
 }
 async function syncStravaActivities(){
   if(state.stravaSyncing)return;state.stravaSyncing=true;state.stravaMessage='Synchronisation…';render();
-  try{const r=await fetch('/api/strava/activities?days=21',{credentials:'same-origin'});const data=await r.json();if(!r.ok)throw new Error(data.error||'Strava');setStravaActivities(data.activities||[]);setStravaMeta({lastSync:new Date().toISOString()});state.stravaMessage=`${(data.activities||[]).filter(isRunActivity).length} course(s) synchronisée(s)`;}
+  try{const r=await fetch('/api/strava/activities?days=21',{credentials:'same-origin',cache:'no-store'});const data=await r.json();if(!r.ok)throw new Error(data.error||'Strava');setStravaActivities(data.activities||[]);setStravaMeta({lastSync:new Date().toISOString()});state.stravaMessage=`${(data.activities||[]).filter(isRunActivity).length} course(s) synchronisée(s)`;}
   catch(e){state.stravaMessage=e.message||'Synchronisation impossible';}
   finally{state.stravaSyncing=false;render();}
 }
@@ -1255,7 +1255,7 @@ function shell(content, activeTab=state.view) {
 }
 
 function renderMore(){
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.0.1</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.0.2</div></div></header>
     <section class="more-grid">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
