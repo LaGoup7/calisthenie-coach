@@ -1,14 +1,11 @@
-# Calisthénie Coach · V9.6 — Skills & Ranks
+# Calisthénie Coach · V9.6.1 — Rank Colors & Category Gates
 
-Refonte complète de la gamification et du Skill Tree.
-
-## Nouveautés
-- Tous les rangs Bronze → Légende sont visibles à l’avance avec leurs objectifs.
-- Promotion = XP + missions + critères obligatoires + minimum de skills aux rangs avancés.
-- Rangs repensés comme une progression réelle : fondations, contrôle, force de base, intermédiaire confirmé, athlète complet, skills avancés, maîtrise.
-- 8 branches Skills : Tirage, Poussée, Handstand, Core/L-sit, Muscle-up, Front Lever, Human Flag, Jambes unilatérales.
-- Jalons automatiques depuis séances guidées/tests quand c’est mesurable ; validation manuelle conservée pour la technique.
-- UI premium avec palette spécifique Bronze/Argent/Or/Platine/Diamant/Maître/Légende.
-- La carte Rang sur Aujourd’hui reprend automatiquement la couleur du rang actif.
-- Prochains jalons accessibles affichés en priorité.
-- Données existantes et validations de skills conservées.
+- Corrige le conflit CSS qui neutralisait les couleurs Bronze / Argent / Or / Platine / Diamant / Maître / Légende dans Aujourd’hui et Skills.
+- Le bloc Rang de la page Aujourd’hui utilise désormais clairement la couleur du rang actif.
+- La page Skills colore le hero, les cartes de rang et le détail avec la palette propre à chaque rang.
+- Bronze → Or conserve la logique simple de missions.
+- À partir de Platine, la promotion est structurée par catégories : Expérience, Force, Skills, Condition, Récupération.
+- Platine exige 4/5 catégories avec Expérience + Force + Skills obligatoires.
+- Diamant, Maître et Légende exigent les cinq catégories, tout en conservant plusieurs choix à l’intérieur de Force/Skills.
+- La logique XP reste un prérequis d’expérience mais ne permet jamais une promotion à elle seule.
+- Nouveau cache PWA V9.6.1.
