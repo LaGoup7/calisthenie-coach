@@ -1932,29 +1932,50 @@ function render() {
   bindEvents();
 }
 
+
+function uiIcon(name, cls="ui-icon") {
+  const icons={
+    add:'<path d="M12 5v14M5 12h14"/>',
+    today:'<circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2"/>',
+    week:'<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M7.5 3v4M16.5 3v4M3.5 9.5h17"/>',
+    progress:'<path d="M4 17l5-5 3.5 3.5L20 8"/><path d="M15.5 8H20v4.5"/>',
+    more:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+    flex:'<path d="M5 7c3.5 0 4.5 3 7 3s3.5-3 7-3M5 17c3.5 0 4.5-3 7-3s3.5 3 7 3"/>',
+    skills:'<path d="M12 3.5l7.5 8.5-7.5 8.5L4.5 12 12 3.5z"/>',
+    exercises:'<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+    sessions:'<path d="M5 7.5h14M5 12h14M5 16.5h9"/><path d="M17.5 15v6M14.5 18h6"/>',
+    measurements:'<path d="M5 19L19 5"/><path d="M8 16l-2-2M11 13l-2-2M14 10l-2-2M17 7l-2-2"/>',
+    profile:'<circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.8-4 3-6 6.5-6s5.7 2 6.5 6"/>',
+    clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    award:'<path d="M8 4h8v5a4 4 0 01-8 0V4z"/><path d="M6 5H4.5v2A3.5 3.5 0 008 10.5M18 5h1.5v2a3.5 3.5 0 01-3.5 3.5M12 13v4M8.5 20h7"/>',
+    spark:'<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M18.5 15.5l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1z"/>'
+  };
+  return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.spark}</svg>`;
+}
+
 function shell(content, activeTab=state.view) {
   const navTab=['today','week','progress'].includes(activeTab)?activeTab:'more';
   return `<main class="shell">${content}</main>
   <button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une série rapide"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>
   ${renderQuickLogModal()}
-  <nav class="bottom-nav bottom-nav-simple">
-    <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>●</span>Aujourd'hui</button>
-    <button class="nav-btn ${navTab==='week'?'active':''}" data-view="week"><span>▦</span>Semaine</button>
-    <button class="nav-btn ${navTab==='progress'?'active':''}" data-view="progress"><span>↗</span>Progrès</button>
-    <button class="nav-btn ${navTab==='more'?'active':''}" data-view="more"><span>•••</span>Plus</button>
+  <nav class="bottom-nav bottom-nav-simple" aria-label="Navigation principale">
+    <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>${uiIcon('today')}</span>Aujourd'hui</button>
+    <button class="nav-btn ${navTab==='week'?'active':''}" data-view="week"><span>${uiIcon('week')}</span>Semaine</button>
+    <button class="nav-btn ${navTab==='progress'?'active':''}" data-view="progress"><span>${uiIcon('progress')}</span>Progrès</button>
+    <button class="nav-btn ${navTab==='more'?'active':''}" data-view="more"><span>${uiIcon('more')}</span>Plus</button>
   </nav>`;
 }
 
 function renderMore(){
   const logs=getBodyLogs(),latest=logs[0];
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.1</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.2</div></div></header>
     <section class="more-grid more-grid-six">
-      <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
-      <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
-      <button class="card more-tile" id="openExerciseLibrary"><span class="more-icon">▤</span><div><strong>Exercices</strong><small>${visibleExerciseLibrary().length} mouvements & progressions</small></div></button>
-      <button class="card more-tile" data-view="custom"><span class="more-icon">＋</span><div><strong>Mes séances</strong><small>Cycles & entraînements personnalisés</small></div></button>
-      <button class="card more-tile" data-view="measurements"><span class="more-icon">◉</span><div><strong>Mesures</strong><small>${latest?(latest.weight?latest.weight+' kg · ':'')+(latest.waist?latest.waist+' cm taille':'Dernier relevé enregistré'):'Poids, mensurations & évolution'}</small></div></button>
-      <button class="card more-tile" data-view="profile"><span class="more-icon">○</span><div><strong>Profil</strong><small>Réglages, sauvegarde & préférences</small></div></button>
+      <button class="card more-tile" data-view="flexibility"><span class="more-icon">${uiIcon('flex')}</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
+      <button class="card more-tile" data-view="skills"><span class="more-icon">${uiIcon('skills')}</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
+      <button class="card more-tile" id="openExerciseLibrary"><span class="more-icon">${uiIcon('exercises')}</span><div><strong>Exercices</strong><small>${visibleExerciseLibrary().length} mouvements & progressions</small></div></button>
+      <button class="card more-tile" data-view="custom"><span class="more-icon">${uiIcon('sessions')}</span><div><strong>Mes séances</strong><small>Cycles & entraînements personnalisés</small></div></button>
+      <button class="card more-tile" data-view="measurements"><span class="more-icon">${uiIcon('measurements')}</span><div><strong>Mesures</strong><small>${latest?(latest.weight?latest.weight+' kg · ':'')+(latest.waist?latest.waist+' cm taille':'Dernier relevé enregistré'):'Poids, mensurations & évolution'}</small></div></button>
+      <button class="card more-tile" data-view="profile"><span class="more-icon">${uiIcon('profile')}</span><div><strong>Profil</strong><small>Réglages, sauvegarde & préférences</small></div></button>
     </section>
     <details class="today-details"><summary><div><div class="kicker">Détails</div><strong>Progression, rang & coach adaptatif</strong></div><span>⌄</span></summary><div class="details-stack">${renderCycleMini()}${renderRankMini()}${renderProgressionRecommendations()}</div></details>
     ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}
@@ -1968,7 +1989,7 @@ function renderToday() {
   const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p><div class="rest-reward-note"><strong>+10 XP récupération</strong><span>Le bonus sera validé demain si aucune séance, micro-série de renforcement ou course de 15 min+ n'est enregistrée aujourd'hui.</span></div></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment"><strong>Matériel prévu</strong><div>${todayEquipment.map(x=>`<span class="pill">${x}</span>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
-    <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>＋</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card rank-cockpit rank-${rank.current.id}"><strong>${rank.current.name}</strong><small>${rank.next?`${rankProgressText(rank.next,rank.nextEval)} vers ${rank.next.name}`:`${rank.xp.total.toLocaleString('fr-FR')} XP · rang maximal`}</small></div><div class="cockpit-card"><span>◷</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
+    <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>${uiIcon('add')}</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card rank-cockpit rank-${rank.current.id}"><strong>${rank.current.name}</strong><small>${rank.next?`${rankProgressText(rank.next,rank.nextEval)} vers ${rank.next.name}`:`${rank.xp.total.toLocaleString('fr-FR')} XP · rang maximal`}</small></div><div class="cockpit-card"><span>${uiIcon('clock')}</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
     ${renderDailyVolumeCard()}${program}`, 'today');
 }
 function renderWeekExercise(e, i) {
@@ -3122,7 +3143,7 @@ function smartReminderItems(){
 }
 function renderReminderSettings(){const p=getReminderPrefs();return `<section class="card reminder-settings"><div class="section-head"><div><div class="kicker">Rappels locaux</div><h2>À faire dans l’app</h2></div><span class="pill">sans cloud</span></div><p class="muted small">Ces rappels apparaissent quand tu ouvres l’app. Une notification garantie quand l’iPhone est verrouillé nécessiterait un service push côté serveur.</p><div class="switchline"><div><strong>Rappels intelligents</strong></div><input id="remindersEnabled" type="checkbox" ${p.enabled?'checked':''}></div><div class="switchline"><div><strong>Séance du jour</strong></div><input class="reminder-toggle" data-reminder="workout" type="checkbox" ${p.workout?'checked':''}></div><div class="switchline"><div><strong>Mesures à faire</strong></div><input class="reminder-toggle" data-reminder="measurements" type="checkbox" ${p.measurements?'checked':''}></div><div class="switchline"><div><strong>Tests périodiques</strong></div><input class="reminder-toggle" data-reminder="tests" type="checkbox" ${p.tests?'checked':''}></div></section>`;}
 function renderAppearanceSettings(){const p=getPrefs(),theme=p.appTheme||'system';return `<section class="card"><div class="kicker">Interface</div><h2>Apparence & accessibilité</h2><label class="field-label">Thème</label><select class="select" id="appTheme"><option value="system" ${theme==='system'?'selected':''}>Système</option><option value="light" ${theme==='light'?'selected':''}>Clair</option><option value="dark" ${theme==='dark'?'selected':''}>Sombre</option></select><p class="muted small">Les animations respectent automatiquement “Réduire les animations” du système et les éléments interactifs gardent une zone tactile adaptée au mobile.</p></section>`;}
-function applyAppTheme(){const p=getPrefs(),wanted=p.appTheme||'system',dark=wanted==='dark'||(wanted==='system'&&window.matchMedia?.('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=dark?'dark':'light';const meta=document.querySelector('meta[name=\"theme-color\"]');if(meta)meta.setAttribute('content',dark?'#070b12':'#f3f5f9');}
+function applyAppTheme(){const p=getPrefs(),wanted=p.appTheme||'system',dark=wanted==='dark'||(wanted==='system'&&window.matchMedia?.('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=dark?'dark':'light';const meta=document.querySelector('meta[name=\"theme-color\"]');if(meta)meta.setAttribute('content',dark?'#090d14':'#f7f8fa');}
 
 const _renderProfileV97=renderProfile;
 renderProfile=function(){
@@ -3135,14 +3156,14 @@ renderProfile=function(){
 };
 renderMore=function(){
   const logs=getBodyLogs(),latest=logs[0],setup=getEquipmentSetup(),available=EQUIPMENT_CATALOG.filter(x=>setup[x.id]).length;
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.1</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.2</div></div></header>
     <section class="more-grid more-grid-six">
-      <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
-      <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Rangs, priorités & Skill Tree</small></div></button>
-      <button class="card more-tile" id="openExerciseLibrary"><span class="more-icon">▤</span><div><strong>Exercices</strong><small>${visibleExerciseLibrary().length} mouvements & variantes</small></div></button>
+      <button class="card more-tile" data-view="flexibility"><span class="more-icon">${uiIcon('flex')}</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
+      <button class="card more-tile" data-view="skills"><span class="more-icon">${uiIcon('skills')}</span><div><strong>Skills</strong><small>Rangs, priorités & Skill Tree</small></div></button>
+      <button class="card more-tile" id="openExerciseLibrary"><span class="more-icon">${uiIcon('exercises')}</span><div><strong>Exercices</strong><small>${visibleExerciseLibrary().length} mouvements & variantes</small></div></button>
       <button class="card more-tile" data-view="custom"><span class="more-icon">＋</span><div><strong>Mes séances</strong><small>Cycles & entraînements personnalisés</small></div></button>
-      <button class="card more-tile" data-view="measurements"><span class="more-icon">◉</span><div><strong>Mesures</strong><small>${latest?(latest.weight?latest.weight+' kg · ':'')+(latest.waist?latest.waist+' cm taille':'Dernier relevé enregistré'):'Corps, photos & tendances'}</small></div></button>
-      <button class="card more-tile" data-view="profile"><span class="more-icon">○</span><div><strong>Profil</strong><small>${available}/${EQUIPMENT_CATALOG.length} équipements · adaptations & réglages</small></div></button>
+      <button class="card more-tile" data-view="measurements"><span class="more-icon">${uiIcon('measurements')}</span><div><strong>Mesures</strong><small>${latest?(latest.weight?latest.weight+' kg · ':'')+(latest.waist?latest.waist+' cm taille':'Dernier relevé enregistré'):'Corps, photos & tendances'}</small></div></button>
+      <button class="card more-tile" data-view="profile"><span class="more-icon">${uiIcon('profile')}</span><div><strong>Profil</strong><small>${available}/${EQUIPMENT_CATALOG.length} équipements · adaptations & réglages</small></div></button>
     </section>
     <details class="today-details"><summary><div><div class="kicker">Détails</div><strong>Progression, rang & coach adaptatif</strong></div><span>⌄</span></summary><div class="details-stack">${renderCycleMini()}${renderRankMini()}${renderProgressionRecommendations()}</div></details>
     ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}`, 'more');
