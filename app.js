@@ -33,7 +33,7 @@ function ex(name, type, sets, target, rest, tip, opts={}) {
   };
 }
 
-// V9.5 · Progression Builder · progression propre à chaque cycle + modes Auto / Modèle / Personnalisé.
+// V9.6 · Skills & Ranks + Progression Builder · progression propre à chaque cycle + modes Auto / Modèle / Personnalisé.
 // Chaque journée conserve échauffement + travail principal + cardio + retour au calme,
 // y compris en mode Express. Lundi reste le jour de récupération complète.
 const workouts = {
@@ -746,96 +746,133 @@ const TEST_GUIDED_EXERCISES = {
 };
 
 const SKILL_TREES = [
-  { id: "pull", name: "Tirage", levels: [
-    { id:"pull-1", name:"1 traction stricte", auto:{ test:"pullups", value:1 } },
-    { id:"pull-5", name:"5 tractions strictes", auto:{ test:"pullups", value:5 } },
-    { id:"pull-10", name:"10 tractions strictes", auto:{ test:"pullups", value:10 } },
-    { id:"pull-chest", name:"Chest-to-bar", manual:true },
-    { id:"pull-explosive", name:"Traction explosive poitrine", manual:true },
-    { id:"muscle-up", name:"Muscle-up strict", manual:true }
+  { id:"pull", name:"Tirage", icon:"↟", description:"Construire la force de tirage avant les mouvements explosifs.", levels:[
+    {id:"pull-1",name:"1 traction stricte",auto:{test:"pullups",value:1}},
+    {id:"pull-5",name:"5 tractions strictes",auto:{test:"pullups",value:5}},
+    {id:"pull-10",name:"10 tractions strictes",auto:{test:"pullups",value:10}},
+    {id:"pull-15",name:"15 tractions strictes",auto:{test:"pullups",value:15}},
+    {id:"pull-chest",name:"Chest-to-bar propre",auto:{exercise:"Chest-to-bar",value:1},manual:true},
+    {id:"pull-explosive",name:"Traction explosive poitrine",auto:{exercise:"Tractions explosives",value:1},manual:true}
   ]},
-  { id: "handstand", name: "Handstand", levels: [
-    { id:"hs-wall-30", name:"Mur 30 sec", auto:{ test:"wall_handstand", value:30 } },
-    { id:"hs-wall-60", name:"Mur 60 sec", auto:{ test:"wall_handstand", value:60 } },
-    { id:"hs-free-5", name:"Libre 5 sec", manual:true },
-    { id:"hs-free-20", name:"Libre 20 sec", manual:true },
-    { id:"hspu-wall", name:"Handstand push-up au mur", manual:true },
-    { id:"hspu-free", name:"Handstand push-up libre", manual:true }
+  { id:"push", name:"Poussée", icon:"↑", description:"Dips, poussée verticale et force nécessaire aux HSPU.", levels:[
+    {id:"dip-5",name:"5 dips stricts",auto:{test:"dips",value:5}},
+    {id:"dip-10",name:"10 dips stricts",auto:{test:"dips",value:10}},
+    {id:"dip-15",name:"15 dips stricts",auto:{test:"dips",value:15}},
+    {id:"dip-20",name:"20 dips stricts",auto:{test:"dips",value:20}},
+    {id:"pike-elevated",name:"Pike push-up pieds surélevés propre",auto:{exercise:"Pike push-ups pieds surélevés",value:1},manual:true},
+    {id:"hspu-wall",name:"Handstand push-up au mur",auto:{exercise:"Handstand push-up au mur",value:1},manual:true},
+    {id:"hspu-free",name:"Handstand push-up libre",auto:{exercise:"Handstand push-up libre",value:1},manual:true}
   ]},
-  { id: "core", name: "Core / L-sit", levels: [
-    { id:"tuck-10", name:"Tuck L-sit 10 sec", auto:{ exercise:"Tuck L-sit", value:10 } },
-    { id:"tuck-20", name:"Tuck L-sit 20 sec", auto:{ exercise:"Tuck L-sit", value:20 } },
-    { id:"lsit-10", name:"L-sit 10 sec", manual:true },
-    { id:"lsit-20", name:"L-sit 20 sec", manual:true },
-    { id:"toes-bar", name:"Toes-to-bar propre", manual:true }
+  { id:"handstand", name:"Handstand", icon:"◇", description:"Ligne, équilibre et contrôle avant la poussée libre.", levels:[
+    {id:"hs-wall-30",name:"Mur 30 sec",auto:{test:"wall_handstand",value:30}},
+    {id:"hs-wall-60",name:"Mur 60 sec",auto:{test:"wall_handstand",value:60}},
+    {id:"hs-free-5",name:"Libre 5 sec",auto:{exercise:"Handstand libre",value:5},manual:true},
+    {id:"hs-free-20",name:"Libre 20 sec",auto:{exercise:"Handstand libre",value:20},manual:true},
+    {id:"hs-free-30",name:"Libre 30 sec",auto:{exercise:"Handstand libre",value:30},manual:true}
   ]},
-  { id: "lever", name: "Front lever", levels: [
-    { id:"lever-tuck", name:"Tuck front lever 10 sec", manual:true },
-    { id:"lever-adv", name:"Advanced tuck 10 sec", manual:true },
-    { id:"lever-oneleg", name:"One-leg front lever", manual:true },
-    { id:"lever-straddle", name:"Straddle front lever", manual:true },
-    { id:"lever-full", name:"Front lever", manual:true }
+  { id:"core", name:"Core / L-sit", icon:"⌁", description:"Compression, gainage et contrôle du bassin.", levels:[
+    {id:"tuck-10",name:"Tuck L-sit 10 sec",auto:{exercise:"Tuck L-sit",value:10}},
+    {id:"tuck-20",name:"Tuck L-sit 20 sec",auto:{exercise:"Tuck L-sit",value:20}},
+    {id:"oneleg-lsit",name:"One-leg L-sit 10 sec",auto:{exercise:"One-leg L-sit",value:10},manual:true},
+    {id:"lsit-10",name:"L-sit 10 sec",auto:{exercise:"L-sit",value:10},manual:true},
+    {id:"lsit-20",name:"L-sit 20 sec",auto:{exercise:"L-sit",value:20},manual:true},
+    {id:"toes-bar",name:"Toes-to-bar propre",auto:{exercise:"Toes-to-bar",value:1},manual:true}
   ]},
-  { id: "flag", name: "Human flag", levels: [
-    { id:"flag-support", name:"Side support solide", manual:true },
-    { id:"flag-tuck", name:"Tuck flag", manual:true },
-    { id:"flag-oneleg", name:"One-leg flag", manual:true },
-    { id:"flag-straddle", name:"Straddle flag", manual:true },
-    { id:"flag-full", name:"Human flag", manual:true }
+  { id:"muscleup", name:"Muscle-up", icon:"↥", description:"Explosivité, transition et contrôle au-dessus de la barre.", levels:[
+    {id:"mu-highpull",name:"Traction explosive poitrine",auto:{exercise:"Tractions explosives",value:1},manual:true},
+    {id:"mu-assisted",name:"3 muscle-ups assistés propres",auto:{exercise:"Muscle-up assisté",value:3},manual:true},
+    {id:"muscle-up",name:"1 muscle-up strict",auto:{exercise:"Muscle-up strict",value:1},manual:true},
+    {id:"muscle-up-3",name:"3 muscle-ups stricts",auto:{exercise:"Muscle-up strict",value:3},manual:true}
+  ]},
+  { id:"lever", name:"Front lever", icon:"—", description:"Progression de levier : qualité de ligne avant durée.", levels:[
+    {id:"lever-tuck",name:"Tuck front lever 10 sec",auto:{exercise:"Tuck front lever",value:10},manual:true},
+    {id:"lever-adv",name:"Advanced tuck 10 sec",auto:{exercise:"Advanced tuck front lever",value:10},manual:true},
+    {id:"lever-oneleg",name:"One-leg front lever 5 sec",auto:{exercise:"One-leg front lever",value:5},manual:true},
+    {id:"lever-straddle",name:"Straddle front lever 5 sec",auto:{exercise:"Straddle front lever",value:5},manual:true},
+    {id:"lever-full",name:"Front lever 5 sec",auto:{exercise:"Front lever",value:5},manual:true}
+  ]},
+  { id:"flag", name:"Human flag", icon:"⚑", description:"Stabilité latérale, tirage/poussée asymétrique et levier.", levels:[
+    {id:"flag-support",name:"Support vertical solide",auto:{exercise:"Human flag support vertical",value:10},manual:true},
+    {id:"flag-tuck",name:"Tuck human flag 5 sec",auto:{exercise:"Tuck human flag",value:5},manual:true},
+    {id:"flag-oneleg",name:"One-leg human flag 5 sec",auto:{exercise:"One-leg human flag",value:5},manual:true},
+    {id:"flag-straddle",name:"Straddle human flag 5 sec",auto:{exercise:"Straddle human flag",value:5},manual:true},
+    {id:"flag-full",name:"Human flag 5 sec",auto:{exercise:"Human flag",value:5},manual:true}
+  ]},
+  { id:"legs", name:"Jambes unilatérales", icon:"△", description:"Force, équilibre et contrôle sur une jambe.", levels:[
+    {id:"pistol-assisted",name:"Pistol squat assisté propre",auto:{exercise:"Pistol squat assisté",value:5},manual:true},
+    {id:"pistol",name:"1 pistol squat par jambe",auto:{exercise:"Pistol squat",value:1},manual:true},
+    {id:"pistol-5",name:"5 pistol squats par jambe",auto:{exercise:"Pistol squat",value:5},manual:true},
+    {id:"shrimp",name:"Shrimp squat propre",auto:{exercise:"Shrimp squat",value:1},manual:true}
   ]}
 ];
 
 const RANKS = [
-  { id:"bronze", name:"Bronze", xpMin:0, requireCount:0, objectives:[] },
-  { id:"silver", name:"Argent", xpMin:1500, requireCount:4, objectives:[
-    { type:"sessions", value:12, label:"12 séances terminées" },
-    { type:"test", id:"pullups", value:5, label:"5 tractions strictes", unit:"reps" },
-    { type:"test", id:"dips", value:8, label:"8 dips stricts", unit:"reps" },
-    { type:"test", id:"dead_hang", value:45, label:"Dead hang 45 sec", unit:"sec" },
-    { type:"test", id:"wall_handstand", value:45, label:"Handstand au mur 45 sec", unit:"sec" }
+  {id:"bronze",name:"Bronze",title:"Fondations",xpMin:0,requireCount:0,minSkillCount:0,description:"Apprendre les mouvements de base, construire la régularité et enregistrer ses premières références.",objectives:[]},
+  {id:"silver",name:"Argent",title:"Contrôle",xpMin:1200,requireCount:4,minSkillCount:0,description:"Un socle fiable : régularité, tirage, poussée et contrôle du poids du corps.",objectives:[
+    {type:"sessions",value:12,label:"12 séances terminées",mandatory:true},
+    {type:"test",id:"pullups",value:5,label:"5 tractions strictes",unit:"reps"},
+    {type:"test",id:"dips",value:8,label:"8 dips stricts",unit:"reps"},
+    {type:"test",id:"dead_hang",value:45,label:"Dead hang 45 sec",unit:"sec"},
+    {type:"test",id:"wall_handstand",value:45,label:"Handstand au mur 45 sec",unit:"sec"},
+    {type:"recovery",value:2,label:"2 jours de repos planifiés respectés",unit:"j"}
   ]},
-  { id:"gold", name:"Or", xpMin:4000, requireCount:4, objectives:[
-    { type:"sessions", value:30, label:"30 séances terminées" },
-    { type:"test", id:"pullups", value:8, label:"8 tractions strictes", unit:"reps" },
-    { type:"test", id:"dips", value:12, label:"12 dips stricts", unit:"reps" },
-    { type:"test", id:"dead_hang", value:60, label:"Dead hang 60 sec", unit:"sec" },
-    { type:"exercise", name:"Tuck L-sit", value:20, label:"Tuck L-sit 20 sec", unit:"sec" }
+  {id:"gold",name:"Or",title:"Force de base",xpMin:3500,requireCount:5,minSkillCount:0,description:"La force de base devient solide et permet d'aborder les premières progressions techniques.",objectives:[
+    {type:"sessions",value:30,label:"30 séances terminées",mandatory:true},
+    {type:"weeks",value:3,label:"3 semaines régulières (5+ jours)",unit:"sem"},
+    {type:"test",id:"pullups",value:8,label:"8 tractions strictes",unit:"reps"},
+    {type:"test",id:"dips",value:12,label:"12 dips stricts",unit:"reps"},
+    {type:"test",id:"dead_hang",value:60,label:"Dead hang 60 sec",unit:"sec"},
+    {type:"skill",id:"tuck-20",label:"Tuck L-sit 20 sec"},
+    {type:"test",id:"cardio12",value:1900,label:"1 900 m en 12 min",unit:"m"}
   ]},
-  { id:"platinum", name:"Platine", xpMin:8000, requireCount:4, objectives:[
-    { type:"sessions", value:60, label:"60 séances terminées" },
-    { type:"test", id:"pullups", value:12, label:"12 tractions strictes", unit:"reps" },
-    { type:"test", id:"dips", value:15, label:"15 dips stricts", unit:"reps" },
-    { type:"test", id:"dead_hang", value:75, label:"Dead hang 75 sec", unit:"sec" },
-    { type:"skill", id:"hs-free-5", label:"Handstand libre 5 sec" },
-    { type:"skill", id:"lsit-10", label:"L-sit 10 sec" }
+  {id:"platinum",name:"Platine",title:"Intermédiaire confirmé",xpMin:7000,requireCount:5,minSkillCount:1,description:"Force relative, contrôle et premier vrai skill : le niveau intermédiaire est consolidé.",objectives:[
+    {type:"sessions",value:60,label:"60 séances terminées",mandatory:true},
+    {type:"weeks",value:6,label:"6 semaines régulières",unit:"sem"},
+    {type:"test",id:"pullups",value:12,label:"12 tractions strictes",unit:"reps"},
+    {type:"test",id:"dips",value:15,label:"15 dips stricts",unit:"reps"},
+    {type:"skill",id:"hs-free-5",label:"Handstand libre 5 sec"},
+    {type:"skill",id:"lsit-10",label:"L-sit 10 sec"},
+    {type:"skill",id:"pull-chest",label:"Chest-to-bar propre"},
+    {type:"test",id:"cardio12",value:2100,label:"2 100 m en 12 min",unit:"m"},
+    {type:"recovery",value:8,label:"8 repos planifiés respectés",unit:"j"}
   ]},
-  { id:"diamond", name:"Diamant", xpMin:14000, requireCount:5, objectives:[
-    { type:"sessions", value:100, label:"100 séances terminées" },
-    { type:"test", id:"pullups", value:15, label:"15 tractions strictes", unit:"reps" },
-    { type:"test", id:"dips", value:20, label:"20 dips stricts", unit:"reps" },
-    { type:"test", id:"dead_hang", value:90, label:"Dead hang 90 sec", unit:"sec" },
-    { type:"skill", id:"hs-free-20", label:"Handstand libre 20 sec" },
-    { type:"skill", id:"pull-chest", label:"Chest-to-bar propre" },
-    { type:"skill", id:"lsit-20", label:"L-sit 20 sec" }
+  {id:"diamond",name:"Diamant",title:"Athlète complet",xpMin:12000,requireCount:6,minSkillCount:1,description:"Un niveau équilibré : force relative élevée, endurance correcte et au moins un skill avancé.",objectives:[
+    {type:"sessions",value:100,label:"100 séances terminées",mandatory:true},
+    {type:"weeks",value:10,label:"10 semaines régulières",unit:"sem"},
+    {type:"test",id:"pullups",value:15,label:"15 tractions strictes",unit:"reps"},
+    {type:"test",id:"dips",value:20,label:"20 dips stricts",unit:"reps"},
+    {type:"test",id:"dead_hang",value:90,label:"Dead hang 90 sec",unit:"sec"},
+    {type:"skill",id:"hs-free-20",label:"Handstand libre 20 sec"},
+    {type:"skill",id:"lsit-20",label:"L-sit 20 sec"},
+    {type:"skill",id:"muscle-up",label:"1 muscle-up strict"},
+    {type:"skill",id:"lever-adv",label:"Advanced tuck front lever 10 sec"},
+    {type:"test",id:"cardio12",value:2300,label:"2 300 m en 12 min",unit:"m"}
   ]},
-  { id:"master", name:"Maître", xpMin:22000, requireCount:5, objectives:[
-    { type:"sessions", value:160, label:"160 séances terminées" },
-    { type:"test", id:"pullups", value:18, label:"18 tractions strictes", unit:"reps" },
-    { type:"test", id:"dips", value:25, label:"25 dips stricts", unit:"reps" },
-    { type:"skill", id:"muscle-up", label:"Muscle-up strict" },
-    { type:"skill", id:"hspu-wall", label:"Handstand push-up au mur" },
-    { type:"skill", id:"lever-adv", label:"Advanced tuck front lever 10 sec" },
-    { type:"skill", id:"flag-tuck", label:"Tuck human flag" }
+  {id:"master",name:"Maître",title:"Skills avancés",xpMin:19000,requireCount:6,minSkillCount:2,description:"La force de base est acquise ; la progression se joue désormais sur plusieurs skills avancés.",objectives:[
+    {type:"sessions",value:160,label:"160 séances terminées",mandatory:true},
+    {type:"weeks",value:16,label:"16 semaines régulières",unit:"sem"},
+    {type:"test",id:"pullups",value:18,label:"18 tractions strictes",unit:"reps"},
+    {type:"test",id:"dips",value:25,label:"25 dips stricts",unit:"reps"},
+    {type:"skill",id:"muscle-up-3",label:"3 muscle-ups stricts"},
+    {type:"skill",id:"hspu-wall",label:"Handstand push-up au mur"},
+    {type:"skill",id:"lever-oneleg",label:"One-leg front lever 5 sec"},
+    {type:"skill",id:"flag-tuck",label:"Tuck human flag 5 sec"},
+    {type:"skill",id:"pistol",label:"Pistol squat par jambe"},
+    {type:"test",id:"cardio12",value:2500,label:"2 500 m en 12 min",unit:"m"}
   ]},
-  { id:"legend", name:"Légende", xpMin:32000, requireCount:5, objectives:[
-    { type:"sessions", value:250, label:"250 séances terminées" },
-    { type:"test", id:"pullups", value:20, label:"20 tractions strictes", unit:"reps" },
-    { type:"test", id:"dips", value:30, label:"30 dips stricts", unit:"reps" },
-    { type:"test", id:"cardio12", value:2400, label:"2 400 m en 12 min", unit:"m" },
-    { type:"skill", id:"muscle-up", label:"Muscle-up strict" },
-    { type:"skill", id:"hspu-free", label:"Handstand push-up libre" },
-    { type:"skill", id:"lever-full", label:"Front lever complet" },
-    { type:"skill", id:"flag-full", label:"Human flag complète" }
+  {id:"legend",name:"Légende",title:"Maîtrise",xpMin:28000,requireCount:7,minSkillCount:3,description:"Un rang de long terme : forte régularité, excellente force relative et maîtrise de plusieurs familles de skills.",objectives:[
+    {type:"sessions",value:250,label:"250 séances terminées",mandatory:true},
+    {type:"weeks",value:25,label:"25 semaines régulières",unit:"sem"},
+    {type:"test",id:"pullups",value:20,label:"20 tractions strictes",unit:"reps"},
+    {type:"test",id:"dips",value:30,label:"30 dips stricts",unit:"reps"},
+    {type:"skill",id:"hs-free-30",label:"Handstand libre 30 sec"},
+    {type:"skill",id:"hspu-free",label:"Handstand push-up libre"},
+    {type:"skill",id:"muscle-up-3",label:"3 muscle-ups stricts"},
+    {type:"skill",id:"lever-full",label:"Front lever 5 sec"},
+    {type:"skill",id:"flag-full",label:"Human flag 5 sec"},
+    {type:"skill",id:"pistol-5",label:"5 pistol squats par jambe"},
+    {type:"test",id:"cardio12",value:2700,label:"2 700 m en 12 min",unit:"m"},
+    {type:"recovery",value:30,label:"30 repos planifiés respectés",unit:"j"}
   ]}
 ];
 
@@ -855,6 +892,7 @@ const state = {
   bodyPhotoCompareB: "",
   selectedHistoryId: null,
   rankUpNotice: null,
+  selectedRankId: null,
   expandedWeekDay: null,
   expandedFlexRoutine: null,
   tutorialManager: false,
@@ -1714,7 +1752,7 @@ function selectQuickExerciseCard(card){
 function renderExerciseLibrary(){
   const visible=visibleExerciseLibrary();
   const cats=['Tous',...new Set(visible.map(x=>x.category))];
-  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.5 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
+  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.6 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
 }
 function filterLibraryDom(){const q=(document.getElementById('librarySearch')?.value||'').trim().toLowerCase(),cat=state.libraryCategory;document.querySelectorAll('.library-item').forEach(el=>{const okCat=cat==='Tous'||el.dataset.libCategory===cat,okQ=!q||(el.dataset.libText||'').includes(q);el.style.display=okCat&&okQ?'':'none';});}
 
@@ -1878,7 +1916,7 @@ function shell(content, activeTab=state.view) {
 
 function renderMore(){
   const logs=getBodyLogs(),latest=logs[0];
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.5</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.6</div></div></header>
     <section class="more-grid more-grid-six">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1899,7 +1937,7 @@ function renderToday() {
   const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p><div class="rest-reward-note"><strong>+10 XP récupération</strong><span>Le bonus sera validé demain si aucune séance, micro-série de renforcement ou course de 15 min+ n'est enregistrée aujourd'hui.</span></div></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment"><strong>Matériel prévu</strong><div>${todayEquipment.map(x=>`<span class="pill">${x}</span>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
-    <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>＋</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card"><span>↗</span><strong>${rank.current.name}</strong><small>${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><div class="cockpit-card"><span>◷</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
+    <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>＋</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card rank-cockpit rank-${rank.current.id}"><span class="rank-cockpit-emblem">${rank.index===6?'★':rank.index+1}</span><strong>${rank.current.name}</strong><small>${rank.next?`${rank.nextEval.completed}/${rank.nextEval.required} missions vers ${rank.next.name}`:`${rank.xp.total.toLocaleString('fr-FR')} XP · rang maximal`}</small></div><div class="cockpit-card"><span>◷</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
     ${renderDailyVolumeCard()}${program}`, 'today');
 }
 function renderWeekExercise(e, i) {
@@ -2337,12 +2375,14 @@ function mondayWeekKey(iso){
   const offset=(copy.getDay()+6)%7; copy.setDate(copy.getDate()-offset);
   return `${copy.getFullYear()}-${String(copy.getMonth()+1).padStart(2,'0')}-${String(copy.getDate()).padStart(2,'0')}`;
 }
+function consistentWeeksCount(){
+  const weeks=new Map();
+  getHistory().forEach(s=>{const key=mondayWeekKey(s.date),day=new Date(s.date).toDateString();if(!weeks.has(key))weeks.set(key,new Set());weeks.get(key).add(day);});
+  return [...weeks.values()].filter(days=>days.size>=5).length;
+}
 function xpSummary(){
   const history=getHistory(), training=history.reduce((sum,s)=>sum+sessionXP(s),0);
-  const weeks=new Map();
-  history.forEach(s=>{const key=mondayWeekKey(s.date),day=new Date(s.date).toDateString();if(!weeks.has(key))weeks.set(key,new Set());weeks.get(key).add(day);});
-  const consistentWeeks=[...weeks.values()].filter(days=>days.size>=5).length;
-  const consistency=consistentWeeks*100;
+  const consistentWeeks=consistentWeeksCount(),consistency=consistentWeeks*100;
   const completedSkills=SKILL_TREES.flatMap(t=>t.levels).filter(skillDone).length;
   const skills=completedSkills*60;
   const uniqueTests=new Set(getTests().map(t=>t.testId)).size;
@@ -2353,6 +2393,8 @@ function xpSummary(){
 function objectiveProgress(obj){
   let current=0;
   if(obj.type==='sessions')current=getHistory().length;
+  else if(obj.type==='weeks')current=consistentWeeksCount();
+  else if(obj.type==='recovery')current=respectedRestDays();
   else if(obj.type==='test')current=performanceValueForTest(obj.id);
   else if(obj.type==='exercise')current=bestMetric(getHistory(),obj.name);
   else if(obj.type==='skill')current=skillDoneById(obj.id)?1:0;
@@ -2362,7 +2404,10 @@ function objectiveProgress(obj){
 function evaluateRank(rank){
   const items=(rank.objectives||[]).map(obj=>({obj,...objectiveProgress(obj)}));
   const completed=items.filter(x=>x.done).length;
-  return {items,completed,required:rank.requireCount||0,goalsMet:completed>=(rank.requireCount||0)};
+  const mandatory=items.filter(x=>x.obj.mandatory),mandatoryDone=mandatory.filter(x=>x.done).length;
+  const skillItems=items.filter(x=>x.obj.type==='skill'),skillCompleted=skillItems.filter(x=>x.done).length;
+  const mandatoryMet=mandatoryDone===mandatory.length,skillsMet=skillCompleted>=(rank.minSkillCount||0);
+  return {items,completed,required:rank.requireCount||0,mandatoryDone,mandatoryTotal:mandatory.length,mandatoryMet,skillCompleted,skillTotal:skillItems.length,minSkillCount:rank.minSkillCount||0,skillsMet,goalsMet:mandatoryMet&&skillsMet&&completed>=(rank.requireCount||0)};
 }
 function getRankState(){
   const xp=xpSummary(); let index=0;
@@ -2380,20 +2425,38 @@ function objectiveValueText(item){
   const cur=Math.min(item.current,item.target),unit=item.obj.unit?` ${item.obj.unit}`:'';
   return `${Number(cur.toFixed?.(1) ?? cur)} / ${item.target}${unit}`;
 }
+function rankIndexById(id){const i=RANKS.findIndex(r=>r.id===id);return i<0?0:i;}
+function rankStateLabel(index,currentIndex){return index<currentIndex?'Débloqué':index===currentIndex?'Rang actuel':'À venir';}
+function renderRankObjective(item){
+  const tag=item.obj.mandatory?'<span class="rank-mission-tag required">Obligatoire</span>':item.obj.type==='skill'?'<span class="rank-mission-tag skill">Skill</span>':'<span class="rank-mission-tag">Mission</span>';
+  return `<div class="rank-objective ${item.done?'done':''}"><div class="rank-check">${item.done?'✓':'○'}</div><div class="grow"><strong>${item.obj.label}</strong><small>${objectiveValueText(item)}</small></div>${tag}</div>`;
+}
+function renderRankExplorer(){
+  const rs=getRankState(),selectedId=state.selectedRankId||rs.current.id,selectedIndex=rankIndexById(selectedId),rank=RANKS[selectedIndex],ev=evaluateRank(rank),unlocked=selectedIndex<=rs.index;
+  const xpPct=rank.xpMin===0?100:clamp(rs.xp.total/rank.xpMin,0,1)*100;
+  return `<section class="rank-explorer">
+    <div class="rank-ladder" role="list">${RANKS.map((r,i)=>{const e=evaluateRank(r),status=rankStateLabel(i,rs.index);return `<button class="rank-ladder-card rank-${r.id} ${selectedId===r.id?'selected':''} ${i<rs.index?'done':i===rs.index?'current':'future'}" data-rank-select="${r.id}"><span class="rank-ladder-emblem">${i<rs.index?'✓':i+1}</span><strong>${r.name}</strong><small>${r.title}</small><i>${status}</i></button>`}).join('')}</div>
+    <section class="card rank-detail rank-${rank.id}"><div class="rank-detail-head"><div class="rank-emblem rank-emblem-large">${selectedIndex===6?'★':selectedIndex+1}</div><div class="grow"><div class="kicker">${unlocked?'Progression personnelle':'Objectifs visibles à l’avance'}</div><div class="rank-name">${rank.name}</div><h2>${rank.title}</h2><p>${rank.description}</p></div><span class="rank-status-pill">${rankStateLabel(selectedIndex,rs.index)}</span></div>
+      ${selectedIndex===0?`<div class="rank-foundation-note"><strong>Point de départ</strong><span>Bronze est le rang d'entrée. Les premières séances construisent l'XP et les références nécessaires pour Argent.</span></div>`:`<div class="rank-requirement-grid"><div><span>XP requis</span><strong>${rs.xp.total.toLocaleString('fr-FR')} / ${rank.xpMin.toLocaleString('fr-FR')}</strong><div class="rank-progress"><span style="width:${xpPct}%"></span></div></div><div><span>Missions</span><strong>${ev.completed} / ${ev.required} requises</strong><small>${ev.items.length} disponibles</small></div>${rank.minSkillCount?`<div><span>Skills minimum</span><strong>${ev.skillCompleted} / ${rank.minSkillCount}</strong><small>parmi ${ev.skillTotal} missions skill</small></div>`:''}</div>`}
+      <div class="section-head rank-missions-head"><div><div class="kicker">Critères du rang</div><h2>${selectedIndex<rs.index?'Objectifs validés':selectedIndex===rs.index?'Ce que tu consolides':'Tu peux déjà préparer ce rang'}</h2></div><span class="pill">${ev.completed}/${ev.items.length}</span></div>
+      ${ev.items.length?`<div class="rank-objectives rank-objectives-detailed">${ev.items.map(renderRankObjective).join('')}</div>`:''}
+      ${rank.minSkillCount?`<p class="rank-rule-note"><strong>Règle de spécialisation :</strong> ${rank.name} demande au moins ${rank.minSkillCount} mission${rank.minSkillCount>1?'s':''} de type skill. Tu n'es pas obligé de maîtriser toutes les branches.</p>`:''}
+    </section>
+  </section>`;
+}
 function renderRankMini(){
   const r=getRankState(),next=r.next;
-  return `<section class="card rank-card rank-${r.current.id} rank-mini"><div class="rank-head"><div class="rank-emblem">${r.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><div class="rank-name">${r.current.name}</div></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div>${next?`<div class="rank-progress-label"><span>Vers ${next.name}</span><strong>${Math.round(r.xpProgress*100)}% XP</strong></div><div class="rank-progress"><span style="width:${r.xpProgress*100}%"></span></div><div class="rank-nextline">${r.nextEval.completed}/${r.nextEval.required} objectifs de promotion validés</div>`:`<div class="rank-legend-line">Rang maximal atteint · Légende</div>`}</section>`;
+  return `<section class="card rank-card rank-${r.current.id} rank-mini"><div class="rank-head"><div class="rank-emblem">${r.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><div class="rank-name">${r.current.name}</div><small class="rank-title-mini">${r.current.title}</small></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div>${next?`<div class="rank-progress-label"><span>Vers ${next.name}</span><strong>${Math.round(r.xpProgress*100)}% XP</strong></div><div class="rank-progress"><span style="width:${r.xpProgress*100}%"></span></div><div class="rank-nextline">${r.nextEval.completed}/${r.nextEval.required} objectifs de promotion validés</div>`:`<div class="rank-legend-line">Rang maximal atteint · Légende</div>`}</section>`;
 }
 function renderRankPanel(){
   const r=getRankState(),next=r.next;
-  const notice=state.rankUpNotice?`<section class="card rank-up-banner"><div><div class="kicker">Promotion</div><h2>Rang ${state.rankUpNotice} débloqué !</h2><p>Ta régularité et tes performances ont validé ce palier.</p></div><button class="icon-btn" id="dismissRankUp">×</button></section>`:'';
-  const roadmap=`<div class="rank-roadmap">${RANKS.map((rank,i)=>`<div class="rank-roadmap-node ${i<r.index?'done':i===r.index?'current':'locked'} rank-${rank.id}"><span>${i<r.index?'✓':i+1}</span><small>${rank.name}</small></div>`).join('')}</div>`;
-  if(!next)return `${notice}<section class="card rank-card rank-legend"><div class="rank-head"><div class="rank-emblem">★</div><div class="grow"><div class="kicker">Rang maximal</div><div class="rank-name">Légende</div><p class="muted">Tu as atteint le dernier rang. L’objectif devient de consolider les skills avancés et tes records.</p></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div>${roadmap}</section>`;
-  return `${notice}<section class="card rank-card rank-${r.current.id}"><div class="rank-head"><div class="rank-emblem">${r.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><div class="rank-name">${r.current.name}</div><p class="muted">Promotion visée : <strong>${next.name}</strong></p></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div>
+  const notice=state.rankUpNotice?`<section class="card rank-up-banner rank-${r.current.id}"><div><div class="kicker">Promotion</div><h2>Rang ${state.rankUpNotice} débloqué !</h2><p>XP, régularité et missions de progression ont validé ce palier.</p></div><button class="icon-btn" id="dismissRankUp">×</button></section>`:'';
+  if(!next)return `${notice}<section class="card rank-card rank-legend"><div class="rank-head"><div class="rank-emblem">★</div><div class="grow"><div class="kicker">Rang maximal</div><div class="rank-name">Légende</div><strong class="rank-subtitle">${r.current.title}</strong><p class="muted">${r.current.description}</p></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div></section>`;
+  return `${notice}<section class="card rank-card rank-${r.current.id}"><div class="rank-head"><div class="rank-emblem">${r.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><div class="rank-name">${r.current.name}</div><strong class="rank-subtitle">${r.current.title}</strong><p class="muted">Prochain palier : <strong>${next.name} · ${next.title}</strong></p></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div>
     <div class="rank-block"><div class="rank-progress-label"><span>XP vers ${next.name}</span><strong>${r.xp.total.toLocaleString('fr-FR')} / ${next.xpMin.toLocaleString('fr-FR')}</strong></div><div class="rank-progress"><span style="width:${r.xpProgress*100}%"></span></div></div>
-    <div class="rank-block"><div class="section-head"><div><div class="kicker">Missions de promotion</div><h2>${r.nextEval.completed}/${r.nextEval.required} requises</h2></div><span class="pill">${r.nextEval.items.filter(x=>x.done).length}/${r.nextEval.items.length} réalisées</span></div><div class="rank-objectives">${r.nextEval.items.map(item=>`<div class="rank-objective ${item.done?'done':''}"><div class="rank-check">${item.done?'✓':'○'}</div><div class="grow"><strong>${item.obj.label}</strong><small>${objectiveValueText(item)}</small></div></div>`).join('')}</div></div>
+    <div class="rank-next-summary"><span><strong>${r.nextEval.completed}/${r.nextEval.required}</strong> missions</span>${next.minSkillCount?`<span><strong>${r.nextEval.skillCompleted}/${next.minSkillCount}</strong> skills min.</span>`:''}<button data-view="skills">Voir tous les rangs →</button></div>
     <div class="xp-breakdown"><span>Entraînement <strong>${r.xp.training}</strong></span><span>Régularité <strong>${r.xp.consistency}</strong></span><span>Skills <strong>${r.xp.skills}</strong></span><span>Tests <strong>${r.xp.tests}</strong></span><span>Récupération <strong>${r.xp.recovery||0}</strong></span></div>
-    <p class="muted small">XP : environ 50–110 par séance selon la qualité, +100 pour une semaine avec au moins 5 jours entraînés, +60 par skill validé et +30 par type de test enregistré. Aucun bonus n’incite à supprimer le lundi de repos.</p>${roadmap}</section>`;
+    <p class="muted small">L'XP récompense l'activité, mais une promotion exige aussi les missions du rang. Aux niveaux avancés, un nombre minimum de skills est obligatoire.</p></section>`;
 }
 
 function exerciseProgressRows() {
@@ -2451,9 +2514,26 @@ function skillAutoLabel(level){
   const current=Number(d.value||0),source=d.source?` · ${d.source}`:'';
   return `Auto · ${current} / ${level.auto.value} ${unit}${source}`;
 }
-function renderSkills(){const manual=getManualSkills();return shell(`<header class="topbar"><div><div class="brand">Skill tree</div><div class="daylabel">De la base aux mouvements avancés</div></div></header>
-  <section class="card"><p class="muted">Les jalons mesurables utilisent maintenant ton meilleur résultat enregistré dans une <strong>séance guidée</strong> ou un <strong>test périodique</strong>. Les Quick Logs restent hors validation pour éviter de débloquer un palier avec du volume libre. Les skills techniques avancés restent validables manuellement.</p></section>
-  ${SKILL_TREES.map(tree=>{let previous=true;return `<section class="card skill-card"><div class="section-head"><h2>${tree.name}</h2><span class="pill">${tree.levels.filter(skillDone).length}/${tree.levels.length}</span></div><div class="skill-path">${tree.levels.map((level,i)=>{const done=skillDone(level),unlocked=previous||done;previous=done;return `<div class="skill-node ${done?'done':unlocked?'available':'locked'}"><div class="skill-dot">${done?'✓':i+1}</div><div class="grow"><strong>${level.name}</strong><small>${skillAutoLabel(level)}</small></div>${level.manual&&unlocked?`<button class="skill-toggle" data-skill="${level.id}">${manual[level.id]?'Retirer':'Valider'}</button>`:''}</div>`}).join('')}</div></section>`}).join('')}`, "skills");}
+function nextSkillMilestones(limit=4){
+  const rows=[];
+  for(const tree of SKILL_TREES){
+    const idx=tree.levels.findIndex(l=>!skillDone(l));
+    if(idx>=0)rows.push({tree,level:tree.levels[idx],index:idx});
+  }
+  return rows.slice(0,limit);
+}
+function renderSkills(){
+  const manual=getManualSkills(),rank=getRankState(),allLevels=SKILL_TREES.flatMap(t=>t.levels),doneCount=allLevels.filter(skillDone).length,nextMilestones=nextSkillMilestones(5);
+  return shell(`<header class="topbar skills-topbar"><div><div class="brand">Skills & Rangs</div><div class="daylabel">Progression technique · objectifs visibles à tous les niveaux</div></div></header>
+    <section class="skills-rank-hero rank-${rank.current.id}"><div class="skills-rank-icon">${rank.index===6?'★':rank.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><h1>${rank.current.name}</h1><strong>${rank.current.title}</strong><p>${rank.current.description}</p></div><div class="skills-rank-xp"><strong>${rank.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></section>
+    <section class="skill-summary-grid"><div class="skill-summary"><span>Jalons validés</span><strong>${doneCount}/${allLevels.length}</strong><small>${Math.round(doneCount/Math.max(1,allLevels.length)*100)} % du Skill Tree</small></div><div class="skill-summary"><span>Branches commencées</span><strong>${SKILL_TREES.filter(t=>t.levels.some(skillDone)).length}/${SKILL_TREES.length}</strong><small>force + skills</small></div><div class="skill-summary"><span>Prochain rang</span><strong>${rank.next?rank.next.name:'Légende'}</strong><small>${rank.next?`${rank.nextEval.completed}/${rank.nextEval.required} missions`:'rang maximal'}</small></div></section>
+    <section class="skills-section-head"><div><div class="kicker">Rangs</div><h2>Ta progression globale</h2><p>Chaque rang mélange expérience, régularité et capacités physiques. Tous les objectifs restent visibles : touche un rang pour voir ce qu'il demandera.</p></div></section>
+    ${renderRankExplorer()}
+    ${nextMilestones.length?`<section class="card next-skills-card"><div class="section-head"><div><div class="kicker">Prochains jalons</div><h2>Priorités accessibles</h2></div><span class="pill">${nextMilestones.length}</span></div><div class="next-skill-grid">${nextMilestones.map(x=>`<div class="next-skill-item"><span>${x.tree.icon||'◆'}</span><div><small>${x.tree.name}</small><strong>${x.level.name}</strong><em>${skillAutoLabel(x.level)}</em></div></div>`).join('')}</div></section>`:''}
+    <section class="skills-section-head skill-tree-heading"><div><div class="kicker">Skill Tree</div><h2>Branches techniques</h2><p>Les performances mesurables se valident automatiquement avec une séance guidée ou un test. Les validations manuelles servent aux mouvements techniques difficiles à détecter automatiquement.</p></div></section>
+    <div class="skill-tree-grid">${SKILL_TREES.map(tree=>{let previous=true;const completed=tree.levels.filter(skillDone).length;return `<section class="card skill-card skill-card-pro"><div class="skill-card-head"><div class="skill-tree-icon">${tree.icon||'◆'}</div><div class="grow"><h2>${tree.name}</h2><p>${tree.description||''}</p></div><span class="skill-tree-count">${completed}/${tree.levels.length}</span></div><div class="skill-tree-progress"><i style="width:${completed/tree.levels.length*100}%"></i></div><div class="skill-path">${tree.levels.map((level,i)=>{const done=skillDone(level),unlocked=previous||done;previous=done;return `<div class="skill-node ${done?'done':unlocked?'available':'locked'}"><div class="skill-dot">${done?'✓':i+1}</div><div class="grow"><strong>${level.name}</strong><small>${skillAutoLabel(level)}</small>${!done&&!unlocked?`<em>Après : ${tree.levels[i-1]?.name||'jalon précédent'}</em>`:''}</div>${level.manual&&unlocked?`<button class="skill-toggle" data-skill="${level.id}">${manual[level.id]?'Retirer':'Valider'}</button>`:''}</div>`}).join('')}</div></section>`}).join('')}</div>
+    <section class="card skill-method-note"><strong>Comment les rangs sont pensés</strong><p>Bronze → Or construit les fondations. Platine → Diamant confirme le niveau intermédiaire. Maître → Légende demande plusieurs skills avancés, mais laisse une part de spécialisation : tout le monde n'a pas besoin de valider Front Lever + Human Flag + HSPU en même temps.</p></section>`, "skills");
+}
 
 
 const BODY_FIELDS = [
@@ -2557,7 +2637,7 @@ function renderProfile(){const p=getPrefs();return shell(`<header class="topbar"
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + barres parallèles + poignées + bandes + tapis</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les barres parallèles et poignées de pompes sont intégrées aux recommandations. Pour le moment, les séances utilisent les bandes à la place du sac à dos pour ajouter de la résistance.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.5</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Progression du cycle actif</strong><div class="small muted">${progressionModeLabel(getCycleState().plan)} · Semaine ${getCycleState().week}/${getCycleState().weekCount} · ${getCycleState().name}</div></div><div class="profile-progression-actions"><button class="btn btn-secondary compact edit-cycle-progression" data-cycle-id="${getActiveTrainingCycleId()}">Configurer</button><button class="btn btn-outline compact" id="resetCycle">Nouveau bloc</button></div></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.6</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Progression du cycle actif</strong><div class="small muted">${progressionModeLabel(getCycleState().plan)} · Semaine ${getCycleState().week}/${getCycleState().weekCount} · ${getCycleState().name}</div></div><div class="profile-progression-actions"><button class="btn btn-secondary compact edit-cycle-progression" data-cycle-id="${getActiveTrainingCycleId()}">Configurer</button><button class="btn btn-outline compact" id="resetCycle">Nouveau bloc</button></div></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`,'profile');}
 
 
@@ -2675,6 +2755,7 @@ function bindEvents(){
   document.querySelectorAll('.history-button').forEach(b=>b.onclick=()=>{state.selectedHistoryId=b.dataset.history;render();});
   const closeH=document.getElementById('closeHistory');if(closeH)closeH.onclick=()=>{state.selectedHistoryId=null;render();};
   const dismissRank=document.getElementById('dismissRankUp');if(dismissRank)dismissRank.onclick=()=>{state.rankUpNotice=null;render();};
+  document.querySelectorAll('[data-rank-select]').forEach(b=>b.onclick=()=>{state.selectedRankId=b.dataset.rankSelect;render();});
   document.querySelectorAll('.skill-toggle').forEach(b=>b.onclick=()=>{const beforeRank=getRankState().current.id;const m=getManualSkills();m[b.dataset.skill]=!m[b.dataset.skill];setManualSkills(m);const afterRank=getRankState();if(afterRank.current.id!==beforeRank)state.rankUpNotice=afterRank.current.name;render();});
   const openBody=(mode='quick')=>{state.bodyEditorMode=mode;state.bodyEditor=true;render();};
   const addBody=document.getElementById('addBody');if(addBody)addBody.onclick=()=>openBody('quick');
