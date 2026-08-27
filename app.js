@@ -33,7 +33,7 @@ function ex(name, type, sets, target, rest, tip, opts={}) {
   };
 }
 
-// V9.6.1 · Rank Colors + Category Gates + Progression Builder · progression propre à chaque cycle + modes Auto / Modèle / Personnalisé.
+// V9.7 · Progress Hub · Progrès organisé en Vue d’ensemble / Performance / Volume / Historique.
 // Chaque journée conserve échauffement + travail principal + cardio + retour au calme,
 // y compris en mode Express. Lundi reste le jour de récupération complète.
 const workouts = {
@@ -943,6 +943,7 @@ const state = {
   customSessionEditor: null,
   customSessionDraft: null,
   cycleDayTarget: null,
+  progressTab: "overview",
   repVolumePeriod: "30d",
   repVolumeFrom: "",
   repVolumeTo: "",
@@ -1782,7 +1783,7 @@ function selectQuickExerciseCard(card){
 function renderExerciseLibrary(){
   const visible=visibleExerciseLibrary();
   const cats=['Tous',...new Set(visible.map(x=>x.category))];
-  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.6.1 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
+  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.7 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
 }
 function filterLibraryDom(){const q=(document.getElementById('librarySearch')?.value||'').trim().toLowerCase(),cat=state.libraryCategory;document.querySelectorAll('.library-item').forEach(el=>{const okCat=cat==='Tous'||el.dataset.libCategory===cat,okQ=!q||(el.dataset.libText||'').includes(q);el.style.display=okCat&&okQ?'':'none';});}
 
@@ -1946,7 +1947,7 @@ function shell(content, activeTab=state.view) {
 
 function renderMore(){
   const logs=getBodyLogs(),latest=logs[0];
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.6.1</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.7</div></div></header>
     <section class="more-grid more-grid-six">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1967,7 +1968,7 @@ function renderToday() {
   const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p><div class="rest-reward-note"><strong>+10 XP récupération</strong><span>Le bonus sera validé demain si aucune séance, micro-série de renforcement ou course de 15 min+ n'est enregistrée aujourd'hui.</span></div></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment"><strong>Matériel prévu</strong><div>${todayEquipment.map(x=>`<span class="pill">${x}</span>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
-    <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>＋</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card rank-cockpit rank-${rank.current.id}"><span class="rank-cockpit-emblem">${rank.index===6?'★':rank.index+1}</span><strong>${rank.current.name}</strong><small>${rank.next?`${rankProgressText(rank.next,rank.nextEval)} vers ${rank.next.name}`:`${rank.xp.total.toLocaleString('fr-FR')} XP · rang maximal`}</small></div><div class="cockpit-card"><span>◷</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
+    <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>＋</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card rank-cockpit rank-${rank.current.id}"><strong>${rank.current.name}</strong><small>${rank.next?`${rankProgressText(rank.next,rank.nextEval)} vers ${rank.next.name}`:`${rank.xp.total.toLocaleString('fr-FR')} XP · rang maximal`}</small></div><div class="cockpit-card"><span>◷</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
     ${renderDailyVolumeCard()}${program}`, 'today');
 }
 function renderWeekExercise(e, i) {
@@ -2523,27 +2524,59 @@ function exerciseProgressRows() {
   }).join('');
 }
 
-function renderProgress() {
-  const h=getHistory(), seven=Date.now()-7*86400000, recent=h.filter(x=>new Date(x.date).getTime()>=seven);
-  const mins=recent.reduce((a,x)=>a+(x.durationMinutes||0),0), avg=recent.length?Math.round(recent.reduce((a,x)=>a+x.score,0)/recent.length):0;
-  const tests=getTests(), due=testDueSummary();
-  return shell(`<header class="topbar"><div><div class="brand">Progression</div><div class="daylabel">Performances, cycles, volume et adaptation</div></div><button class="btn btn-secondary compact" id="openExerciseLibrary">Exercices</button></header>
+
+function progressWeekStats(){
+  const h=getHistory(),seven=Date.now()-7*86400000,recent=h.filter(x=>new Date(x.date).getTime()>=seven);
+  const mins=recent.reduce((a,x)=>a+Number(x.durationMinutes||0),0),avg=recent.length?Math.round(recent.reduce((a,x)=>a+Number(x.score||0),0)/recent.length):0;
+  const reps7=repetitionVolume('7d'),cycle=progressionWeekSnapshot(),c=getCycleState(),due=testDueSummary(),recs=progressionRecommendations();
+  return {h,recent,mins,avg,reps7,cycle,c,due,recs};
+}
+function renderProgressTabs(){
+  const tabs=[['overview','Vue d’ensemble','Résumé'],['performance','Performance','Force & tests'],['volume','Volume','Charge & équilibre'],['history','Historique','Séances passées']];
+  return `<nav class="progress-hub-tabs" aria-label="Sections Progrès">${tabs.map(([id,label,small])=>`<button class="progress-hub-tab ${state.progressTab===id?'active':''}" data-progress-tab="${id}"><strong>${label}</strong><small>${small}</small></button>`).join('')}</nav>`;
+}
+function renderProgressOverview(){
+  const x=progressWeekStats(),rank=getRankState(),next=rank.next;
+  const sessionPct=x.cycle.planned?Math.round(x.cycle.done/x.cycle.planned*100):0;
+  return `<section class="progress-overview-hero"><div><div class="kicker">Cette semaine · ${esc(getActiveTrainingCycle().name)}</div><h1>${esc(x.c.name)}</h1><p>${x.c.week}/${x.c.weekCount} · ${x.c.rir} RIR · ${Math.round(x.c.setFactor*100)} % volume prévu</p></div><div class="progress-overview-week"><strong>${x.c.week}</strong><span>/ ${x.c.weekCount}</span><small>semaine</small></div></section>
+    <section class="progress-overview-kpis">
+      <article><span>Séances</span><strong>${x.cycle.done}/${x.cycle.planned}</strong><small>${Math.min(100,sessionPct)} % de la semaine</small></article>
+      <article><span>Temps</span><strong>${x.mins}</strong><small>min · 7 jours</small></article>
+      <article><span>Répétitions</span><strong>${x.reps7.reps.toLocaleString('fr-FR')}</strong><small>${x.reps7.sets} séries · 7 jours</small></article>
+      <article><span>Score moyen</span><strong>${x.avg||'—'}</strong><small>${x.avg?'% qualité séance':'en attente'}</small></article>
+    </section>
+    <section class="card progress-watch-card"><div class="section-head"><div><div class="kicker">À surveiller</div><h2>Ce qui mérite ton attention</h2></div><span class="pill">${x.recs.length+(x.due.overdue?1:0)}</span></div><div class="progress-watch-list">
+      ${x.recs.length?`<button class="progress-watch-item" data-progress-tab="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}
+      <button class="progress-watch-item" data-progress-tab="performance"><span class="progress-watch-icon">◷</span><div><strong>Tests périodiques</strong><small>${x.due.label}</small></div><b>Voir →</b></button>
+      ${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)} · ${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><b>Rangs →</b></button>`:''}
+    </div></section>
     ${renderCycleMini()}
-    ${renderRankPanel()}
-    ${renderProgressionRecommendations()}
-    ${renderProgramAudit()}
-    ${renderQuickVolumePanel()}
-    ${renderRepetitionVolumePanel()}
-    ${renderVolumePanel()}
-    ${renderRecordsPanel()}
-    <section class="stat-grid"><div class="stat"><div class="stat-value">${recent.length}</div><div class="stat-label">séances / 7 j</div></div><div class="stat"><div class="stat-value">${mins}</div><div class="stat-label">minutes / 7 j</div></div><div class="stat"><div class="stat-value">${avg||'—'}</div><div class="stat-label">score moyen %</div></div><div class="stat"><div class="stat-value">${bestMetric(h,'Dead hang')||'—'}</div><div class="stat-label">best dead hang s</div></div></section>
-    <section class="card"><div class="section-head"><div><div class="kicker">Progression intelligente</div><h2>Tendances</h2></div><span class="pill">5 dernières</span></div>${exerciseProgressRows()||'<div class="empty">Termine quelques séances pour voir les tendances.</div>'}</section>
+    <section class="card progress-overview-trends"><div class="section-head"><div><div class="kicker">Tendance rapide</div><h2>Dernières performances</h2></div><button class="progress-text-link" data-progress-tab="performance">Analyse complète →</button></div>${exerciseProgressRows()||'<div class="empty">Termine quelques séances pour voir les tendances.</div>'}</section>`;
+}
+function renderProgressPerformance(){
+  const tests=getTests(),due=testDueSummary();
+  return `${renderProgressionRecommendations()}${renderRecordsPanel()}
+    <section class="card"><div class="section-head"><div><div class="kicker">Progression intelligente</div><h2>Tendances par exercice</h2></div><span class="pill">5 dernières</span></div>${exerciseProgressRows()||'<div class="empty">Termine quelques séances pour voir les tendances.</div>'}</section>
     <section class="card"><div class="section-head"><div><div class="kicker">Tous les 42 jours</div><h2>Tests périodiques</h2></div><span class="pill ${due.overdue?'badge-warn':'badge-success'}">${due.label}</span></div>
-      <p class="muted small">Pas besoin d’aller à l’échec absolu : privilégie une exécution propre et arrête si une articulation gêne.</p>
+      <p class="muted small">Les tests servent de points de référence. Pas besoin d’aller à l’échec absolu : privilégie une exécution propre et arrête si une articulation gêne.</p>
       <div class="test-grid">${TEST_DEFS.map(t=>{const best=bestTestValue(t.id),last=tests.filter(x=>x.testId===t.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];return `<button class="test-tile edit-test" data-test="${t.id}"><span>${t.name}</span><strong>${best?best+' '+t.unit:'—'}</strong><small>${last?'Dernier '+formatShortDate(last.date):'À mesurer'}</small></button>`}).join('')}</div>
     </section>
-    <section class="card"><h2>Historique</h2>${h.length?h.slice(0,20).map(x=>`<button class="history-item history-button" data-history="${x.id}"><div class="history-top"><div><div class="history-title">${x.name}</div><div class="small muted">${formatDate(x.date)} · ${x.durationMinutes} min · effort ${x.rpe||'—'}/10 · +${sessionXP(x)} XP</div></div><span class="pill ${x.jointDiscomfort?'badge-warn':'badge-success'}">${x.score}%</span></div>${summaryLine(x)}</button>`).join(''):'<div class="empty">Ta première séance terminée apparaîtra ici.</div>'}</section>
-    ${state.selectedHistoryId?renderHistoryDetail(state.selectedHistoryId):''}`, "progress");
+    <section class="card progress-rank-link rank-${getRankState().current.id}"><div><div class="kicker">Gamification</div><h2>${getRankState().current.name} · ${getRankState().current.title}</h2><p>Les critères complets de rang et le Skill Tree restent regroupés dans Skills pour ne pas surcharger Progrès.</p></div><button class="btn btn-secondary compact" data-view="skills">Voir Skills & Rangs</button></section>`;
+}
+function renderProgressVolume(){
+  return `${renderProgramAudit()}${renderRepetitionVolumePanel()}${renderQuickVolumePanel()}${renderVolumePanel()}`;
+}
+function renderProgressHistory(){
+  const x=progressWeekStats(),h=x.h;
+  return `<section class="progress-history-stats"><article><strong>${h.length}</strong><span>séances totales</span></article><article><strong>${x.recent.length}</strong><span>sur 7 jours</span></article><article><strong>${x.mins}</strong><span>minutes / 7 j</span></article><article><strong>${bestMetric(h,'Dead hang')||'—'}</strong><span>best dead hang s</span></article></section>
+    <section class="card"><div class="section-head"><div><div class="kicker">Journal</div><h2>Historique des séances</h2></div><span class="pill">${h.length}</span></div>${h.length?h.slice(0,40).map(x=>`<button class="history-item history-button" data-history="${x.id}"><div class="history-top"><div><div class="history-title">${x.name}</div><div class="small muted">${formatDate(x.date)} · ${x.durationMinutes} min · effort ${x.rpe||'—'}/10 · +${sessionXP(x)} XP</div></div><span class="pill ${x.jointDiscomfort?'badge-warn':'badge-success'}">${x.score}%</span></div>${summaryLine(x)}</button>`).join(''):'<div class="empty">Ta première séance terminée apparaîtra ici.</div>'}</section>
+    ${state.selectedHistoryId?renderHistoryDetail(state.selectedHistoryId):''}`;
+}
+function renderProgress() {
+  const content=state.progressTab==='performance'?renderProgressPerformance():state.progressTab==='volume'?renderProgressVolume():state.progressTab==='history'?renderProgressHistory():renderProgressOverview();
+  return shell(`<header class="topbar progress-topbar"><div><div class="brand">Progrès</div><div class="daylabel">Comprendre ce qui avance, puis explorer le détail si nécessaire</div></div></header>
+    ${renderProgressTabs()}
+    <div class="progress-hub-content">${content}</div>`, "progress");
 }
 
 function summaryLine(x){const pull=(x.entries||[]).filter(e=>e.exercise.includes('Tractions')).map(e=>e.value).filter(v=>v!==undefined);const hang=(x.entries||[]).filter(e=>e.exercise==='Dead hang').map(e=>e.value).filter(v=>v!==undefined);const bits=[];if(pull.length)bits.push(`tractions ${pull.join('/')}`);if(hang.length)bits.push(`hang ${hang.join('/')} s`);if(x.note)bits.push(esc(x.note));return bits.length?`<div class="small muted summary">${bits.join(' · ')}</div>`:'';}
@@ -2690,7 +2723,7 @@ function renderProfile(){const p=getPrefs();return shell(`<header class="topbar"
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + barres parallèles + poignées + bandes + tapis</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les barres parallèles et poignées de pompes sont intégrées aux recommandations. Pour le moment, les séances utilisent les bandes à la place du sac à dos pour ajouter de la résistance.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.6.1</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Progression du cycle actif</strong><div class="small muted">${progressionModeLabel(getCycleState().plan)} · Semaine ${getCycleState().week}/${getCycleState().weekCount} · ${getCycleState().name}</div></div><div class="profile-progression-actions"><button class="btn btn-secondary compact edit-cycle-progression" data-cycle-id="${getActiveTrainingCycleId()}">Configurer</button><button class="btn btn-outline compact" id="resetCycle">Nouveau bloc</button></div></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.7</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Progression du cycle actif</strong><div class="small muted">${progressionModeLabel(getCycleState().plan)} · Semaine ${getCycleState().week}/${getCycleState().weekCount} · ${getCycleState().name}</div></div><div class="profile-progression-actions"><button class="btn btn-secondary compact edit-cycle-progression" data-cycle-id="${getActiveTrainingCycleId()}">Configurer</button><button class="btn btn-outline compact" id="resetCycle">Nouveau bloc</button></div></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`,'profile');}
 
 
@@ -2704,6 +2737,7 @@ async function hydrateBodyPhotos(){const imgs=[...document.querySelectorAll('[da
 
 function bindEvents(){
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;state.selectedHistoryId=null;render();});
+  document.querySelectorAll('[data-progress-tab]').forEach(b=>b.onclick=()=>{state.progressTab=b.dataset.progressTab;state.selectedHistoryId=null;render();});
   const openQuick=document.getElementById('openQuickLog');if(openQuick)openQuick.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();};
   document.querySelectorAll('[data-open-quick-log]').forEach(b=>b.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();});
   const closeQuick=document.getElementById('closeQuickLog');if(closeQuick)closeQuick.onclick=()=>{state.quickEditor=false;state.quickToast=null;render();};
