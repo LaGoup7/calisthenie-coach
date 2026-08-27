@@ -31,7 +31,7 @@ function ex(name, type, sets, target, rest, tip, opts={}) {
   };
 }
 
-// V9.4 · Measurements System complet + cycles + suivi paramétrique.
+// V9.4.1 · Progression block refresh + Measurements System complet + cycles + suivi paramétrique.
 // Chaque journée conserve échauffement + travail principal + cardio + retour au calme,
 // y compris en mode Express. Lundi reste le jour de récupération complète.
 const workouts = {
@@ -1157,7 +1157,7 @@ async function exportBackup(){
     if(!row.photoId||photos[row.photoId])continue;
     try{const blob=await getPhoto(row.photoId);if(blob)photos[row.photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',row.photoId,e);}
   }
-  const backup={app:'Calisthenie Coach',schema:1,version:'9.4',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'Calisthenie Coach',schema:1,version:'9.4.1',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1299,9 +1299,12 @@ function getCycleState(date=new Date()){
   let weeks=Math.floor((current-start)/604800000);
   if(weeks<0)weeks=0;
   const cycleNumber=Math.floor(weeks/8)+1, week=(weeks%8)+1;
-  let name="Construction", setFactor=1, targetFactor=1, allowProgress=true, note="Progression graduelle, sans échec.";
-  if(week===4){name="Consolidation";setFactor=.85;allowProgress=false;note="Volume légèrement réduit pour consolider les adaptations.";}
-  if(week===8){name="Deload + tests";setFactor=.65;targetFactor=.9;allowProgress=false;note="Volume réduit d’environ un tiers. Aucun test maximal si tu ne récupères pas bien.";}
+  let name="Construction", setFactor=1, targetFactor=1, allowProgress=true, note="Construis des répétitions propres avec 2–3 reps en réserve. La progression reste graduelle, sans échec.";
+  if(week===3) note="Dernière semaine de construction : consolide les cibles avant la semaine allégée.";
+  if(week===4){name="Consolidation";setFactor=.85;allowProgress=false;note="Volume réduit d’environ 15 % : garde la technique propre et laisse la fatigue redescendre.";}
+  if(week>=5&&week<=7){name="Intensification";note="Progression active avec un peu plus de cardio. Cherche des performances propres sans aller à l’échec.";}
+  if(week===7) note="Dernière semaine haute du bloc : progresse seulement si la récupération reste bonne avant le deload.";
+  if(week===8){name="Deload + tests";setFactor=.65;targetFactor=.9;allowProgress=false;note="Volume réduit d’environ un tiers. Consolide, récupère et réalise les tests seulement si tu te sens frais.";}
   return {start:start.toISOString(),cycleNumber,week,name,setFactor,targetFactor,allowProgress,note};
 }
 function resetCycle(){const p=getPrefs();p.cycleStart=mondayDate(new Date()).toISOString();setPrefs(p);render();}
@@ -1403,9 +1406,55 @@ function warmupForWorkout(w){
   if(/Full Body/i.test(name))return ["Poignets + épaules","Hanches + chevilles","Scapulas","1 série facile de chaque pattern"];
   return ["Mobilité articulaire douce","Montée progressive en température","Première série facile"];
 }
+function progressionPhaseForWeek(week){
+  if(week<=3)return {id:'build',name:'Construction',range:'S1–3',short:'Base + technique',volume:'100 %',progression:true};
+  if(week===4)return {id:'consolidate',name:'Consolidation',range:'S4',short:'Fatigue ↓',volume:'≈ 85 %',progression:false};
+  if(week<=7)return {id:'intensify',name:'Intensification',range:'S5–7',short:'Performance +',volume:'100 %',progression:true};
+  return {id:'deload',name:'Deload + tests',range:'S8',short:'Récupérer + mesurer',volume:'≈ 65 %',progression:false};
+}
+function progressionNextStep(c){
+  const w=c.week;
+  if(w<3)return `S${w+1} · Construction — même structure, progression si les cibles restent propres.`;
+  if(w===3)return 'S4 · Consolidation — environ 15 % de volume en moins, progression gelée.';
+  if(w===4)return 'S5 · Intensification — progression réactivée et cardio légèrement augmenté.';
+  if(w<7)return `S${w+1} · Intensification — continue à progresser seulement si la récupération suit.`;
+  if(w===7)return 'S8 · Deload + tests — environ 35 % de volume en moins puis bilan si tu es frais.';
+  return `Bloc ${c.cycleNumber+1} · S1 — nouveau départ sur 8 semaines avec tes niveaux actualisés.`;
+}
+function progressionWeekSnapshot(){
+  const monday=mondayDate(new Date()),days=[];let planned=0,done=0,restPlanned=0,restOk=0,missed=0;
+  for(let i=0;i<7;i++){const d=new Date(monday);d.setDate(d.getDate()+i);const st=dailyCycleStatus(d);const hasWorkout=(st.w?.exercises||[]).length>0;if(hasWorkout)planned++;else restPlanned++;if(st.status==='done')done++;if(st.status==='rest-ok')restOk++;if(st.status==='missed')missed++;days.push(st);}
+  return {planned,done,restPlanned,restOk,missed,days};
+}
+function progressionWeekGoal(c){
+  if(c.week<=3)return 'Valide le volume prévu avec une technique propre et garde généralement 2–3 reps en réserve. Deux séances maîtrisées à la même cible peuvent déclencher +1 rep.';
+  if(c.week===4)return 'Ne cherche pas de record. Réduis la fatigue, conserve les amplitudes et termine les séances en ayant clairement de la marge.';
+  if(c.week<=7)return 'Transforme la base construite en performance : progression autorisée, mais seulement si les dernières séances sont maîtrisées et la récupération correcte.';
+  return 'Réduis volontairement la charge, récupère et utilise les tests comme mesure de progression — pas comme obligation d’aller à l’échec.';
+}
 function renderCycleMini(){
-  const c=getCycleState();
-  return `<section class="card cycle-mini"><div class="section-head"><div><div class="kicker">Progression ${c.cycleNumber} · semaine ${c.week}/8</div><h2>${c.name}</h2></div><span class="pill">${c.week===8?'−35 % volume':c.week===4?'consolider':'progresser'}</span></div><div class="cycle-track">${Array.from({length:8},(_,i)=>`<span class="${i+1<c.week?'done':i+1===c.week?'current':''}">${i+1}</span>`).join('')}</div><p class="muted small">${c.note}</p></section>`;
+  const c=getCycleState(),phase=progressionPhaseForWeek(c.week),snap=progressionWeekSnapshot(),activeCycle=getActiveTrainingCycle();
+  const phases=[progressionPhaseForWeek(1),progressionPhaseForWeek(4),progressionPhaseForWeek(5),progressionPhaseForWeek(8)];
+  const currentIndex=phases.findIndex(p=>p.id===phase.id);
+  const progressionLabel=c.allowProgress?'Active':'Gelée';
+  const targetLabel=c.targetFactor===1?'100 %':`${Math.round(c.targetFactor*100)} %`;
+  return `<section class="card cycle-mini progression-cycle-card">
+    <div class="progression-cycle-head">
+      <div class="grow"><div class="kicker">Bloc de progression ${c.cycleNumber} · ${esc(activeCycle.name)}</div><h2>${c.name}</h2><p class="muted">${c.note}</p></div>
+      <div class="progression-week-badge" aria-label="Semaine ${c.week} sur 8"><strong>${c.week}</strong><span>/8</span><small>semaine</small></div>
+    </div>
+    <div class="progression-phase-rail" aria-label="Phases du bloc de progression">${phases.map((p,i)=>`<div class="progression-phase ${i<currentIndex?'done':i===currentIndex?'current':''} phase-${p.id}" style="--phase-flex:${p.id==='build'||p.id==='intensify'?3:1}"><span>${p.name}</span><small>${p.range}</small></div>`).join('')}</div>
+    <div class="cycle-track progression-week-track">${Array.from({length:8},(_,i)=>`<span class="${i+1<c.week?'done':i+1===c.week?'current':''}" title="Semaine ${i+1}">${i+1}</span>`).join('')}</div>
+    <div class="progression-metrics">
+      <div><span>Charge prévue</span><strong>${phase.volume}</strong><small>${c.week===4?'consolidation':c.week===8?'deload':'volume normal'}</small></div>
+      <div><span>Cible reps / holds</span><strong>${targetLabel}</strong><small>vs prescription</small></div>
+      <div><span>Progression auto</span><strong>${progressionLabel}</strong><small>${c.allowProgress?'si maîtrise confirmée':'volontairement'}</small></div>
+      <div><span>Semaine en cours</span><strong>${snap.done} / ${snap.planned}</strong><small>séances terminées</small></div>
+    </div>
+    <div class="progression-focus"><div class="progression-focus-icon">◎</div><div><div class="kicker">Objectif de la semaine</div><strong>${progressionWeekGoal(c)}</strong></div></div>
+    <div class="progression-next"><span>Ensuite</span><strong>${progressionNextStep(c)}</strong></div>
+    <details class="progression-explainer"><summary>Comprendre le bloc de 8 semaines <span>⌄</span></summary><div><p><strong>S1–3 · Construction</strong> — accumuler des répétitions propres et stabiliser la technique.</p><p><strong>S4 · Consolidation</strong> — réduire le volume pour absorber le travail des trois premières semaines.</p><p><strong>S5–7 · Intensification</strong> — reprendre la progression et convertir la base en meilleures performances.</p><p><strong>S8 · Deload + tests</strong> — réduire nettement la charge, récupérer puis mesurer les progrès si les sensations sont bonnes.</p><p class="muted small">Ce bloc de progression est indépendant de ton cycle d’entraînement hebdomadaire. Le cycle choisit les séances ; ce bloc adapte leur charge au fil des 8 semaines.</p></div></details>
+  </section>`;
 }
 function renderSessionModePicker(){
   const r=state.sessionModeEditor,day=Number(r.day),full=preparedWorkout(day,null,'full'),short=preparedWorkout(day,null,'short');
@@ -1619,7 +1668,7 @@ function selectQuickExerciseCard(card){
 function renderExerciseLibrary(){
   const visible=visibleExerciseLibrary();
   const cats=['Tous',...new Set(visible.map(x=>x.category))];
-  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.4 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
+  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.4.1 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
 }
 function filterLibraryDom(){const q=(document.getElementById('librarySearch')?.value||'').trim().toLowerCase(),cat=state.libraryCategory;document.querySelectorAll('.library-item').forEach(el=>{const okCat=cat==='Tous'||el.dataset.libCategory===cat,okQ=!q||(el.dataset.libText||'').includes(q);el.style.display=okCat&&okQ?'':'none';});}
 
@@ -1753,7 +1802,7 @@ function shell(content, activeTab=state.view) {
 
 function renderMore(){
   const logs=getBodyLogs(),latest=logs[0];
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.4</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.4.1</div></div></header>
     <section class="more-grid more-grid-six">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -2432,7 +2481,7 @@ function renderProfile(){const p=getPrefs();return shell(`<header class="topbar"
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + barres parallèles + poignées + bandes + tapis</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les barres parallèles et poignées de pompes sont intégrées aux recommandations. Pour le moment, les séances utilisent les bandes à la place du sac à dos pour ajouter de la résistance.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.4</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Phase de progression · 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.4.1</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Phase de progression · 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`,'profile');}
 
 

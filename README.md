@@ -1,4 +1,4 @@
-# Calisthénie Coach · V9.4 — Measurements System
+# Calisthénie Coach · V9.4.1 — Progression Block
 
 Cette version transforme Mesures en module complet et paramétrique.
 
@@ -19,3 +19,12 @@ Cette version transforme Mesures en module complet et paramétrique.
 - compatibilité avec les anciens relevés et anciennes photos.
 
 Les données restent locales et sont incluses dans l'export JSON existant.
+
+
+## V9.4.1 — Progression Block
+- Refonte complète du bloc `Progrès → Bloc de progression`
+- Phases explicites : S1–3 Construction, S4 Consolidation, S5–7 Intensification, S8 Deload + tests
+- Affichage de la charge prévue, cibles reps/holds, statut de progression automatique et séances hebdomadaires réalisées
+- Objectif contextuel de la semaine et aperçu de l’étape suivante
+- Explication intégrée de la logique 8 semaines
+- Aucun changement des données utilisateur ou du moteur de progression existant, hormis le nom explicite `Intensification` en S5–7
