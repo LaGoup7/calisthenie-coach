@@ -1,4 +1,4 @@
-# Calisthénie Coach · V10.0 — Adaptive Local Coach
+# Calisthénie Coach · V10.1 — Professional Dark Theme
 
 - Setup matériel paramétrique : équipements cochables, détection du matériel manquant et variantes proposées.
 - Restrictions d’entraînement persistantes + zones temporaires au check-in readiness.
@@ -12,3 +12,10 @@
 - Technique enrichie : points clés et erreurs fréquentes dans la bibliothèque et le coach.
 - Mode clair/sombre/système + focus clavier et réduction des animations.
 - Cloud et onboarding volontairement repoussés à une étape ultérieure.
+
+
+## V10.1 · Professional Dark Theme
+- Dark theme rebuilt with layered near-black surfaces instead of light cards.
+- Consistent form, modal, Progress, Week, Measurements, Skills and bottom-nav styling.
+- Violet action accent, softer borders and readable muted text.
+- Dynamic browser/PWA theme-color follows the selected appearance.

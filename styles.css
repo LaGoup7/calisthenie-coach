@@ -1282,3 +1282,390 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .setup-card{scroll-margin-top:14px}
 .setup-card .setup-grid{margin-top:12px}
 @media(max-width:480px){.setup-card .section-head{align-items:flex-start}.setup-option{min-height:58px}.setup-option small{line-height:1.25}}
+
+
+/* V10.1 · Professional Dark Theme
+   Dark is a distinct visual system: layered near-black surfaces, violet accent,
+   softer borders and no light-theme cards leaking through. */
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#070b12;
+  --bg-accent:#11172a;
+  --surface:#101722;
+  --surface-2:#172131;
+  --surface-3:#202c40;
+  --text:#f4f7fb;
+  --muted:#93a3b8;
+  --line:#253247;
+  --line-strong:#34445d;
+  --primary:#8b7cf6;
+  --primary-2:#6f60e9;
+  --accent:#8b7cf6;
+  --accent-soft:#24213f;
+  --success:#72e3a8;
+  --success-bg:#102d24;
+  --warn:#f6bd73;
+  --warn-bg:#322316;
+  --danger:#f2a1aa;
+  --shadow:0 14px 34px rgba(0,0,0,.28);
+  --shadow-strong:0 22px 54px rgba(0,0,0,.38);
+}
+html[data-theme="dark"],html[data-theme="dark"] body{
+  background:
+    radial-gradient(circle at 8% -4%,rgba(124,108,242,.13),transparent 27rem),
+    radial-gradient(circle at 96% 4%,rgba(56,189,248,.055),transparent 24rem),
+    linear-gradient(180deg,#090e17 0%,#070b12 52%,#080c14 100%);
+  color:var(--text);
+}
+html[data-theme="dark"] body::before{
+  background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,0) 24%);
+}
+html[data-theme="dark"] .topbar{
+  background:linear-gradient(180deg,rgba(7,11,18,.96),rgba(7,11,18,.82) 72%,rgba(7,11,18,0));
+}
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .stat,
+html[data-theme="dark"] .detail-card,
+html[data-theme="dark"] .quick-sheet{
+  border-color:var(--line);
+  box-shadow:var(--shadow);
+}
+html[data-theme="dark"] .card{
+  background:linear-gradient(180deg,rgba(16,23,34,.98),rgba(13,20,30,.98));
+}
+html[data-theme="dark"] .hero{
+  background:
+    radial-gradient(circle at 96% 0%,rgba(139,124,246,.22),transparent 34%),
+    linear-gradient(145deg,#111827 0%,#121c2c 58%,#151a31 100%);
+  border-color:rgba(148,163,184,.13);
+  box-shadow:0 20px 46px rgba(0,0,0,.34);
+}
+html[data-theme="dark"] .hero::after{background:rgba(139,124,246,.08)}
+html[data-theme="dark"] .hero .kicker,
+html[data-theme="dark"] .hero .muted,
+html[data-theme="dark"] .hero .daylabel{color:#a9b5c7}
+html[data-theme="dark"] .pill{
+  background:#202a39;
+  color:#dce4ef;
+  border-color:#344154;
+  box-shadow:none;
+}
+html[data-theme="dark"] .btn{box-shadow:none}
+html[data-theme="dark"] .btn-primary,
+html[data-theme="dark"] .rpe-btn.active,
+html[data-theme="dark"] .readiness-scale button.active,
+html[data-theme="dark"] .joint-choice button.active,
+html[data-theme="dark"] .library-filter.active,
+html[data-theme="dark"] .skill-priority-btn.active,
+html[data-theme="dark"] .report-tabs button.active,
+html[data-theme="dark"] .review-choice button.active{
+  background:linear-gradient(135deg,#8b7cf6,#7161eb);
+  color:#fff;
+  border-color:transparent;
+}
+html[data-theme="dark"] .btn-secondary{background:#182334;border-color:#2a3950;color:var(--text)}
+html[data-theme="dark"] .btn-outline,
+html[data-theme="dark"] .btn.danger{
+  background:#131c2a;
+  color:var(--text);
+  border-color:#304057;
+}
+html[data-theme="dark"] .btn.danger{color:#f6a4ad;border-color:#5f3440}
+html[data-theme="dark"] :is(input,select,textarea,.select,.big-input,.textarea,.counter input,.library-search,.quick-exact-input,.load-input,.mini-input,.rep-custom-range input){
+  background:#0d1521;
+  color:var(--text);
+  border-color:#314158;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.018);
+}
+html[data-theme="dark"] :is(input,textarea)::placeholder{color:#65758c}
+html[data-theme="dark"] select option{background:#101722;color:var(--text)}
+html[data-theme="dark"] .counter button,
+html[data-theme="dark"] .timer-controls .btn{
+  background:#172131;
+  color:var(--text);
+  border-color:#2c3b50;
+  box-shadow:none;
+}
+html[data-theme="dark"] .num{
+  background:#1c2740;
+  color:#b8adff;
+  border-color:#313b64;
+}
+html[data-theme="dark"] .target,
+html[data-theme="dark"] .tip{background:#151f2e;border-color:#26364b}
+html[data-theme="dark"] .progress-track,
+html[data-theme="dark"] .volume-track,
+html[data-theme="dark"] .tutorial-progress{background:#202b3c}
+html[data-theme="dark"] .progress-bar,
+html[data-theme="dark"] .volume-track i,
+html[data-theme="dark"] .tutorial-progress>div{background:linear-gradient(90deg,#7c6df2,#a778f7)}
+html[data-theme="dark"] .bottom-nav{
+  background:rgba(10,15,24,.93);
+  border-color:#263348;
+  box-shadow:0 18px 44px rgba(0,0,0,.38);
+}
+html[data-theme="dark"] .nav-btn{color:#8292a9}
+html[data-theme="dark"] .nav-btn.active{
+  background:#1b2639;
+  color:#f5f7fb;
+  box-shadow:inset 0 0 0 1px #2b3a52;
+}
+html[data-theme="dark"] .quick-fab{
+  background:linear-gradient(135deg,#765cf5,#8b5cf6);
+  color:#fff;
+  box-shadow:0 12px 30px rgba(83,62,190,.36);
+}
+html[data-theme="dark"] .quick-overlay{background:rgba(2,5,10,.66)}
+html[data-theme="dark"] .quick-sheet{background:linear-gradient(180deg,#121a27,#0d141f)}
+html[data-theme="dark"] .quick-add,
+html[data-theme="dark"] .load-preset,
+html[data-theme="dark"] .band-choice,
+html[data-theme="dark"] .library-filter,
+html[data-theme="dark"] .quick-category,
+html[data-theme="dark"] .quick-search-wrap{
+  background:#131d2b;
+  color:var(--text);
+  border-color:#2b3b52;
+}
+html[data-theme="dark"] .band-choice.active,
+html[data-theme="dark"] .quick-exercise-card.selected,
+html[data-theme="dark"] .progression-mode.active{
+  background:#211e3a;
+  border-color:#7467d9;
+  box-shadow:0 0 0 2px rgba(139,124,246,.13);
+}
+
+/* Remove light surfaces that used hard-coded white in earlier versions. */
+html[data-theme="dark"] :is(
+  .rank-check,.tutorial-link-compact,.tutorial-link-full,.flex-routine,.mobility-test,
+  .mobility-entry input,.url-input,.quick-exercise-card,.quick-selected-exercise,
+  .quick-repeat,.flex-choice-card,.flex-preview .week-exercise-list,.session-mode-choice,
+  .custom-builder-row,.parameter-details,.week-card.week-card-pro.expanded,.mini-action,
+  .body-period,.body-photo-tab,.body-mode,.body-schedule-item,.progression-metrics>div,
+  .progression-focus-icon,.progression-mode,.progression-week-editor,.skill-summary,
+  .rank-ladder-card,.rank-mission-tag,.next-skill-item>span,.rank-category-card,
+  .progress-overview-kpis article,.progress-watch-icon,.progress-history-stats article,
+  .cycle-heat-cell.untracked,.cycle-heat-cell.future,.body-photo-empty,
+  .progression-week-editor-grid label,.skill-method-note
+){
+  background:#121b29;
+  color:var(--text);
+  border-color:#29384e;
+  box-shadow:none;
+}
+html[data-theme="dark"] :is(
+  .test-tile,.record-tile,.daily-volume-hero>div,.warmup-box,.readiness-result,.quick-preset,
+  .guided-block,.custom-editor-summary,.audit-hero>div,.audit-chip,.custom-quality span,
+  .target-state,.cycle-stat-line span,.cycle-express-toggle,.cycle-heat-summary span,
+  .body-quality-grid span,.report-kpis>div,.exercise-detail-kpis>div,.exercise-progress-button,
+  .next-skill-item,.skill-tree-icon,.skill-tree-count,.rank-next-summary>span,.progress-watch-item,
+  .setup-option,.restriction-option,.pain-zone,.review-choice button,.skill-priority-btn,.report-tabs button
+){
+  background:#172131;
+  color:var(--text);
+  border-color:#29394f;
+}
+html[data-theme="dark"] .progress-watch-item:hover{background:#1c293b}
+html[data-theme="dark"] .week-card.week-card-pro{
+  background:linear-gradient(180deg,rgba(17,25,37,.98),rgba(13,20,30,.98));
+  border-color:#253449;
+  box-shadow:none;
+}
+html[data-theme="dark"] .week-card.week-card-pro:hover{border-color:#364963;box-shadow:0 10px 26px rgba(0,0,0,.22)}
+html[data-theme="dark"] .today-card .week-daymark,
+html[data-theme="dark"] .week-today-label,
+html[data-theme="dark"] .rest-chip{
+  background:#252145;
+  color:#b9afff;
+  border-color:#3b3562;
+}
+html[data-theme="dark"] .week-card.week-card-pro h2,
+html[data-theme="dark"] .week-exercise-row .exercise-name,
+html[data-theme="dark"] .cycle-day-item strong,
+html[data-theme="dark"] .cycle-heat-summary strong,
+html[data-theme="dark"] .measurement-hero-value strong,
+html[data-theme="dark"] .measurement-kpi>strong,
+html[data-theme="dark"] .progression-metrics strong{color:var(--text)}
+html[data-theme="dark"] .measurement-hero-v94{
+  background:linear-gradient(145deg,#111a28,#151b31);
+  border-color:#283750;
+}
+html[data-theme="dark"] .body-period.active,
+html[data-theme="dark"] .body-mode.active{
+  background:#8b7cf6;
+  color:#fff;
+  border-color:#8b7cf6;
+}
+html[data-theme="dark"] .body-photo-tab.active,
+html[data-theme="dark"] .progression-phase.current{
+  background:#282246;
+  color:#c3b9ff;
+  border-color:#40386e;
+}
+html[data-theme="dark"] .progression-plan-chip{
+  background:#24213f;
+  color:#c5bcff;
+  border-color:#3d376a;
+}
+html[data-theme="dark"] .progress-hub-tabs{
+  background:rgba(14,21,32,.88);
+  border-color:#28364b;
+  box-shadow:none;
+}
+html[data-theme="dark"] .progress-hub-tab{color:#8595ab}
+html[data-theme="dark"] .progress-hub-tab.active{
+  background:#202b3d;
+  color:#f6f8fc;
+  box-shadow:inset 0 0 0 1px #34455d;
+}
+html[data-theme="dark"] .progress-overview-hero,
+html[data-theme="dark"] .adaptive-report{
+  background:linear-gradient(180deg,#111a28,#0e1622);
+  border-color:#293a50;
+}
+html[data-theme="dark"] .report-decision,
+html[data-theme="dark"] .exercise-next-prescription,
+html[data-theme="dark"] .adaptive-review-note{background:rgba(139,124,246,.105);border-color:rgba(139,124,246,.18)}
+html[data-theme="dark"] .setup-option.available{background:#122c25;border-color:#24493e}
+html[data-theme="dark"] .setup-icon{background:#0d1521;border:1px solid #26364a}
+html[data-theme="dark"] .microbadge.good,
+html[data-theme="dark"] .audit-chip.ok,
+html[data-theme="dark"] .custom-quality span.ok,
+html[data-theme="dark"] .target-state.good,
+html[data-theme="dark"] .flex-symmetry.good,
+html[data-theme="dark"] .audit-note.audit-ok{background:#102d24;color:#72e3a8;border-color:#245140}
+html[data-theme="dark"] .microbadge.warn,
+html[data-theme="dark"] .audit-chip.warn,
+html[data-theme="dark"] .custom-quality span.warn,
+html[data-theme="dark"] .target-state.warn,
+html[data-theme="dark"] .flex-symmetry.warn,
+html[data-theme="dark"] .volume-warning,
+html[data-theme="dark"] .body-schedule-item.due{background:#322316;color:#f6bd73;border-color:#5b4126}
+html[data-theme="dark"] .target-state.high{background:#321b22;color:#f2a1aa;border-color:#5f303c}
+html[data-theme="dark"] .custom-setup-warning{background:#322316;border-color:#5b4126;color:#f6bd73}
+html[data-theme="dark"] .custom-setup-warning small{color:#e8ad65}
+html[data-theme="dark"] .rank-mission-tag.required{background:#342319;color:#f4b36d}
+html[data-theme="dark"] .rank-rule-note{border:1px solid color-mix(in srgb,var(--rank) 20%,#29384e)}
+html[data-theme="dark"] .rank-cockpit,
+html[data-theme="dark"] .skills-rank-hero{box-shadow:0 18px 44px rgba(0,0,0,.30)}
+html[data-theme="dark"] .cycle-heat-cell.untracked{background:#0e151f;border-color:#202c3d}
+html[data-theme="dark"] .cycle-heat-cell.future{background:#111a27;border-color:#243146}
+html[data-theme="dark"] .cycle-heat-cell.missed{background:#4a2026;border-color:#77343d}
+html[data-theme="dark"] .cycle-heat-cell.rest-planned{background:#2c2a59;border-color:#484587}
+html[data-theme="dark"] .cycle-heat-cell.planned{background:#17304b;border-color:#254b71}
+html[data-theme="dark"] .detail-card{background:linear-gradient(180deg,#151e2c,#0d141f)}
+html[data-theme="dark"] .empty{color:#8797ad}
+html[data-theme="dark"] .divider,
+html[data-theme="dark"] .exercise-row,
+html[data-theme="dark"] .history-item,
+html[data-theme="dark"] .metric-row,
+html[data-theme="dark"] .insight,
+html[data-theme="dark"] .daily-volume-row,
+html[data-theme="dark"] .quick-week-row{border-color:#243247}
+html[data-theme="dark"] ::selection{background:#5145a4;color:#fff}
+html[data-theme="dark"] *{scrollbar-color:#394962 #0b111b}
+html[data-theme="dark"] button:focus-visible,
+html[data-theme="dark"] input:focus-visible,
+html[data-theme="dark"] select:focus-visible,
+html[data-theme="dark"] textarea:focus-visible,
+html[data-theme="dark"] summary:focus-visible,
+html[data-theme="dark"] a:focus-visible{outline-color:#9b8cff}
+
+/* V10.1 · Dark-theme coverage for late feature modules */
+html[data-theme="dark"] .flex-hero-start{background:#f4f7fb;color:#111827}
+html[data-theme="dark"] .body-insight-grid>div,
+html[data-theme="dark"] .body-goal,
+html[data-theme="dark"] .body-sym,
+html[data-theme="dark"] .body-track,
+html[data-theme="dark"] .body-save-note{
+  background:#121b29;
+  border-color:#29384e;
+  color:var(--text);
+}
+html[data-theme="dark"] .body-insight-grid strong,
+html[data-theme="dark"] .body-current-row strong,
+html[data-theme="dark"] .body-schedule-item strong,
+html[data-theme="dark"] .measurement-history-row strong,
+html[data-theme="dark"] .body-editor-group h3{color:#e7edf6}
+html[data-theme="dark"] .body-insight-grid span,
+html[data-theme="dark"] .body-current-row span,
+html[data-theme="dark"] .body-sym span,
+html[data-theme="dark"] .body-photo-compare figcaption,
+html[data-theme="dark"] .measurement-history-row>span,
+html[data-theme="dark"] .body-photo-inputs label,
+html[data-theme="dark"] .body-track,
+html[data-theme="dark"] .body-save-note{color:var(--muted)}
+html[data-theme="dark"] .body-goal-bar,
+html[data-theme="dark"] .body-quality-bar{background:#243044}
+html[data-theme="dark"] .body-photo-compare img,
+html[data-theme="dark"] .measurement-photo img{background:#0b121c}
+html[data-theme="dark"] .measurement-history-row,
+html[data-theme="dark"] .body-current-row{border-color:#243247}
+html[data-theme="dark"] .body-delete:hover{background:#321b22;color:#f2a1aa}
+
+html[data-theme="dark"] .progression-cycle-card{
+  background:linear-gradient(180deg,#111a28 0%,#0e1622 100%);
+  border-color:#29384e;
+}
+html[data-theme="dark"] .progression-week-badge{background:linear-gradient(145deg,#7567ed,#8b7cf6);box-shadow:none}
+html[data-theme="dark"] .progression-phase{background:#172131;color:#91a1b7;border-color:#26364b}
+html[data-theme="dark"] .progression-phase.done{background:#1b2738;color:#bdc8d7}
+html[data-theme="dark"] .progression-phase.current{background:#282246;color:#c6bdff;border-color:#443b77}
+html[data-theme="dark"] .progression-week-track span{background:#151f2e;color:#7f90a6}
+html[data-theme="dark"] .progression-week-track span.done{background:#202c3e;color:#c1cbd8}
+html[data-theme="dark"] .progression-week-track span.current{background:#8b7cf6;color:#fff}
+html[data-theme="dark"] .progression-focus-icon{color:#b9afff}
+
+/* Preserve rank identity without bringing light cards back into dark mode. */
+html[data-theme="dark"] .rank-ladder-card{
+  background:linear-gradient(180deg,#121b29 0%,color-mix(in srgb,var(--rank) 8%,#121b29) 100%);
+  border-color:color-mix(in srgb,var(--rank) 34%,#29384e);
+}
+html[data-theme="dark"] .rank-ladder-card.selected{
+  background:linear-gradient(180deg,#172131,color-mix(in srgb,var(--rank) 13%,#121b29));
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--rank) 30%,transparent),0 10px 24px rgba(0,0,0,.22);
+}
+html[data-theme="dark"] .rank-ladder-emblem,
+html[data-theme="dark"] .rank-emblem,
+html[data-theme="dark"] .rank-emblem-large,
+html[data-theme="dark"] .rank-status-pill,
+html[data-theme="dark"] .rank-mission-tag.skill,
+html[data-theme="dark"] .rank-mission-tag.category{
+  background:color-mix(in srgb,var(--rank) 18%,#121b29);
+  color:color-mix(in srgb,var(--rank) 72%,white);
+}
+html[data-theme="dark"] .rank-ladder-card strong,
+html[data-theme="dark"] .rank-detail-head h2,
+html[data-theme="dark"] .rank-category-card strong,
+html[data-theme="dark"] .rank-rule-note strong,
+html[data-theme="dark"] .rank-foundation-note strong{
+  color:color-mix(in srgb,var(--rank) 64%,white);
+}
+html[data-theme="dark"] .rank-detail{
+  background:linear-gradient(180deg,#111a28,color-mix(in srgb,var(--rank) 7%,#0e1622));
+  border-color:color-mix(in srgb,var(--rank) 32%,#29384e);
+  border-top-color:var(--rank);
+}
+html[data-theme="dark"] .rank-foundation-note,
+html[data-theme="dark"] .rank-rule-note{
+  background:color-mix(in srgb,var(--rank) 9%,#151f2e);
+}
+html[data-theme="dark"] .rank-category-card{
+  background:#141e2c;
+  border-color:color-mix(in srgb,var(--rank) 28%,#29384e);
+}
+html[data-theme="dark"] .rank-category-card.done{
+  background:color-mix(in srgb,var(--rank) 12%,#141e2c);
+  border-color:color-mix(in srgb,var(--rank) 46%,#29384e);
+}
+html[data-theme="dark"] .rank-category-card.done>span{color:color-mix(in srgb,var(--rank) 62%,white)}
+html[data-theme="dark"] .progress-rank-link{
+  background:linear-gradient(135deg,#111a28,color-mix(in srgb,var(--rank) 9%,#111a28))!important;
+  border-color:color-mix(in srgb,var(--rank) 32%,#29384e)!important;
+}
+html[data-theme="dark"] .progress-rank-link h2{color:color-mix(in srgb,var(--rank) 64%,white)}
+html[data-theme="dark"] .rank-cockpit strong{color:#fff}
+html[data-theme="dark"] .rank-cockpit small{color:rgba(255,255,255,.72)}
+html[data-theme="dark"] .skill-card-pro .skill-node.locked strong{color:#7f8da1}
+html[data-theme="dark"] .skill-method-note{background:#121b29}
+
