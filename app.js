@@ -18,6 +18,8 @@ const STORAGE = {
   flexConfig: "cc_flex_config_v1",
   trainingCycles: "cc_training_cycles_v1",
   cycleActivationHistory: "cc_cycle_activation_history_v1",
+  cycleProgressions: "cc_cycle_progressions_v1",
+  cycleProgressionStates: "cc_cycle_progression_states_v1",
 };
 
 function ex(name, type, sets, target, rest, tip, opts={}) {
@@ -31,7 +33,7 @@ function ex(name, type, sets, target, rest, tip, opts={}) {
   };
 }
 
-// V9.4.1 · Progression block refresh + Measurements System complet + cycles + suivi paramétrique.
+// V9.5 · Progression Builder · progression propre à chaque cycle + modes Auto / Modèle / Personnalisé.
 // Chaque journée conserve échauffement + travail principal + cardio + retour au calme,
 // y compris en mode Express. Lundi reste le jour de récupération complète.
 const workouts = {
@@ -876,6 +878,8 @@ const state = {
   repVolumePeriod: "30d",
   repVolumeFrom: "",
   repVolumeTo: "",
+  cycleProgressionEditor: null,
+  cycleProgressionDraft: null,
 };
 
 function parse(key, fallback) {
@@ -905,6 +909,71 @@ function getQuickLogs() { return parse(STORAGE.quickLogs, []); }
 function setQuickLogs(v) { save(STORAGE.quickLogs, v); }
 function getCustomWorkouts() { return parse(STORAGE.customWorkouts, []); }
 function setCustomWorkouts(v) { save(STORAGE.customWorkouts, v); }
+
+
+const PROGRESSION_TEMPLATE_DEFS = {
+  standard:{name:"Progression standard",goal:"Équilibré",description:"Construire, consolider, intensifier puis deload + tests.",weeks:[
+    ["Construction",1.00,1.00,1.00,3,true,false],["Construction",1.00,1.04,1.00,3,true,false],["Construction",1.05,1.06,1.00,2,true,false],["Consolidation",.85,.95,.90,4,false,false],
+    ["Intensification",1.00,1.05,1.05,2,true,false],["Intensification",1.05,1.08,1.08,2,true,false],["Pic contrôlé",1.08,1.10,1.05,1,true,false],["Deload + tests",.65,.90,.75,4,false,true]
+  ]},
+  restart:{name:"Reprise",goal:"Reprise",description:"Remonter progressivement le volume avec davantage de marge et un deload doux.",weeks:[
+    ["Reprise",.75,.90,.85,4,false,false],["Reprise",.85,.95,.90,4,true,false],["Construction",.95,1.00,.95,3,true,false],["Consolidation",.80,.92,.85,4,false,false],
+    ["Construction",1.00,1.00,1.00,3,true,false],["Progression",1.00,1.04,1.00,2,true,false],["Progression",1.05,1.06,1.00,2,true,false],["Deload + tests",.65,.90,.75,4,false,true]
+  ]},
+  strength:{name:"Force",goal:"Force",description:"Moins de volume, davantage d'intensité et des semaines hautes plus ciblées.",weeks:[
+    ["Base force",.90,1.00,.90,3,true,false],["Base force",.95,1.04,.90,3,true,false],["Force",1.00,1.08,.90,2,true,false],["Consolidation",.75,.95,.80,4,false,false],
+    ["Intensification",.90,1.08,.90,2,true,false],["Intensification",.95,1.12,.90,1,true,false],["Pic force",.90,1.15,.85,1,true,false],["Deload + tests",.60,.88,.70,4,false,true]
+  ]},
+  volume:{name:"Volume",goal:"Muscle / volume",description:"Accumuler davantage de séries et répétitions tout en gardant une semaine de consolidation.",weeks:[
+    ["Volume",1.00,1.00,1.00,3,true,false],["Volume",1.05,1.03,1.00,3,true,false],["Volume",1.10,1.05,1.00,2,true,false],["Consolidation",.85,.95,.90,4,false,false],
+    ["Volume",1.08,1.04,1.00,2,true,false],["Volume +",1.12,1.06,1.00,2,true,false],["Surcharge",1.15,1.08,.95,1,true,false],["Deload + tests",.65,.90,.75,4,false,true]
+  ]},
+  skills:{name:"Skills",goal:"Skills",description:"Priorité à la qualité technique, aux holds et aux progressions de mouvements.",weeks:[
+    ["Technique",.90,1.00,.90,4,true,false],["Technique",.95,1.03,.90,3,true,false],["Construction skill",1.00,1.05,.90,3,true,false],["Consolidation",.80,.95,.85,4,false,false],
+    ["Intensification skill",.95,1.06,.90,2,true,false],["Intensification skill",1.00,1.08,.90,2,true,false],["Tentatives propres",1.00,1.10,.85,1,true,false],["Deload + tests",.60,.88,.70,4,false,true]
+  ]}
+};
+function progressionPhaseId(name=""){
+  const n=String(name).toLowerCase();
+  if(/deload|test/.test(n))return 'deload';if(/consolid/.test(n))return 'consolidate';if(/intens|pic|surcharge|force/.test(n))return 'intensify';if(/reprise/.test(n))return 'restart';return 'build';
+}
+function normalizeProgressionWeek(row,i){
+  if(Array.isArray(row))return {week:i+1,name:row[0],phaseId:progressionPhaseId(row[0]),volumeFactor:Number(row[1]??1),targetFactor:Number(row[2]??1),cardioFactor:Number(row[3]??1),rir:Number(row[4]??3),allowProgress:row[5]!==false,tests:!!row[6]};
+  const r=row||{};return {week:i+1,name:r.name||`Semaine ${i+1}`,phaseId:r.phaseId||progressionPhaseId(r.name),volumeFactor:Number(r.volumeFactor??1),targetFactor:Number(r.targetFactor??1),cardioFactor:Number(r.cardioFactor??1),rir:Number(r.rir??3),allowProgress:r.allowProgress!==false,tests:!!r.tests};
+}
+function templateProgression(id='standard'){
+  const t=PROGRESSION_TEMPLATE_DEFS[id]||PROGRESSION_TEMPLATE_DEFS.standard;
+  return {mode:'template',templateId:id,goal:t.goal,name:t.name,description:t.description,weeks:t.weeks.map(normalizeProgressionWeek)};
+}
+function automaticProgression(goal='Équilibré'){
+  const map={'Reprise':'restart','Force':'strength','Muscle / volume':'volume','Skills':'skills','Équilibré':'standard'};
+  const id=map[goal]||'standard',p=templateProgression(id);return {...p,mode:'auto',goal,name:`Automatique · ${goal}`,description:'L’application applique une structure cohérente et conserve la progression exercice par exercice selon tes performances.'};
+}
+function defaultProgressionPlan(){return automaticProgression('Équilibré');}
+function getCycleProgressionOverrides(){return parse(STORAGE.cycleProgressions,{});}
+function setCycleProgressionOverrides(v){save(STORAGE.cycleProgressions,v);}
+function progressionPlanForCycle(cycleOrId){
+  const c=typeof cycleOrId==='object'?cycleOrId:trainingCycleById(cycleOrId),over=getCycleProgressionOverrides();
+  const raw=over[String(c?.id)]||c?.progression||defaultProgressionPlan();
+  const p=clone(raw);p.weeks=(p.weeks?.length?p.weeks:defaultProgressionPlan().weeks).map(normalizeProgressionWeek);return p;
+}
+function setProgressionPlanForCycle(id,plan){
+  const c=trainingCycleById(id),clean=clone(plan);clean.weeks=(clean.weeks||[]).map(normalizeProgressionWeek);
+  if(!clean.weeks.length)clean.weeks=defaultProgressionPlan().weeks;
+  if(c.base){const o=getCycleProgressionOverrides();o[String(id)]=clean;setCycleProgressionOverrides(o);}else{c.progression=clean;updateTrainingCycle(c);}
+}
+function getCycleProgressionStates(){return parse(STORAGE.cycleProgressionStates,{});}
+function setCycleProgressionStates(v){save(STORAGE.cycleProgressionStates,v);}
+function ensureCycleProgressionState(id){
+  const states=getCycleProgressionStates(),key=String(id);if(!states[key]){const legacy=key===BASE_TRAINING_CYCLE_ID?getPrefs().cycleStart:null,isActive=String(getActiveTrainingCycleId())===key;states[key]={startedAt:legacy||mondayDate(new Date()).toISOString(),baseBlockNumber:1,pausedAt:isActive?null:new Date().toISOString()};setCycleProgressionStates(states);}return states[key];
+}
+function pauseProgressionState(id){const states=getCycleProgressionStates(),key=String(id),s=states[key]||ensureCycleProgressionState(key);s.pausedAt=new Date().toISOString();states[key]=s;setCycleProgressionStates(states);}
+function resumeProgressionState(id){const states=getCycleProgressionStates(),key=String(id),s=states[key]||ensureCycleProgressionState(key);if(s.pausedAt){const delta=Date.now()-new Date(s.pausedAt).getTime();s.startedAt=new Date(new Date(s.startedAt).getTime()+Math.max(0,delta)).toISOString();s.pausedAt=null;}states[key]=s;setCycleProgressionStates(states);}
+function resetProgressionForCycle(id=getActiveTrainingCycleId()){
+  const states=getCycleProgressionStates(),key=String(id),old=states[key]||{};states[key]={startedAt:mondayDate(new Date()).toISOString(),baseBlockNumber:Number(old.baseBlockNumber||1)+1,pausedAt:null};setCycleProgressionStates(states);render();
+}
+function progressionModeLabel(p){return p.mode==='auto'?'Automatique':p.mode==='custom'?'Personnalisé':'Modèle';}
+function progressionDifficulty(w){const score=Math.max(1,Math.min(5,Math.round(3+(Number(w.targetFactor||1)-1)*10+(3-Number(w.rir||3))*.45)));return '●'.repeat(score)+'○'.repeat(5-score);}
 
 const BASE_TRAINING_CYCLE_ID = "base";
 function baseTrainingCycle(){
@@ -942,6 +1011,7 @@ function setCycleActivationHistory(v){save(STORAGE.cycleActivationHistory,v);}
 function activateTrainingCycle(id){
   const cycle=trainingCycleById(id);if(!cycle||cycle.archived)return;
   if(!cycleHasRest(cycle)){alert("Ajoute au moins un jour de repos avant d’activer ce cycle.");return;}
+  const previous=getActiveTrainingCycleId();if(String(previous)!==String(cycle.id)){pauseProgressionState(previous);resumeProgressionState(cycle.id);}
   const p=getPrefs();p.activeTrainingCycleId=String(cycle.id);setPrefs(p);
   const key=localDateKey(),rows=ensureCycleActivationHistory().filter(r=>r.date!==key);
   rows.push({date:key,at:new Date().toISOString(),cycleId:String(cycle.id)});rows.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.at).localeCompare(String(b.at)));setCycleActivationHistory(rows);
@@ -954,8 +1024,8 @@ function trainingCycleForDate(value){
 function nextTrainingCycleName(){const n=getStoredTrainingCycles().filter(c=>!c.archived).length+2;return `Cycle ${n}`;}
 function createTrainingCycle(sourceId=BASE_TRAINING_CYCLE_ID){
   const source=trainingCycleById(sourceId),list=getStoredTrainingCycles(),now=Date.now();
-  const c={id:String(now),name:nextTrainingCycleName(),description:`Basé sur ${source.name}`,base:false,days:clone(source.days),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-  list.push(c);setStoredTrainingCycles(list);render();
+  const c={id:String(now),name:nextTrainingCycleName(),description:`Basé sur ${source.name}`,base:false,days:clone(source.days),progression:clone(progressionPlanForCycle(source)),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  list.push(c);setStoredTrainingCycles(list);ensureCycleProgressionState(c.id);render();
 }
 function updateTrainingCycle(cycle){
   if(!cycle||cycle.base)return;const list=getStoredTrainingCycles(),i=list.findIndex(c=>String(c.id)===String(cycle.id));
@@ -963,7 +1033,7 @@ function updateTrainingCycle(cycle){
 }
 function duplicateTrainingCycle(id){
   const source=trainingCycleById(id),list=getStoredTrainingCycles(),now=Date.now();
-  list.push({...clone(source),id:String(now),name:`${source.name} · copie`,base:false,archived:false,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});setStoredTrainingCycles(list);render();
+  const copy={...clone(source),id:String(now),name:`${source.name} · copie`,base:false,archived:false,progression:clone(progressionPlanForCycle(source)),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};list.push(copy);setStoredTrainingCycles(list);ensureCycleProgressionState(copy.id);render();
 }
 function renameTrainingCycle(id){
   const c=trainingCycleById(id);if(!c||c.base)return;const name=prompt("Nom du cycle",c.name);if(!name?.trim())return;c.name=name.trim();updateTrainingCycle(c);render();
@@ -1157,7 +1227,7 @@ async function exportBackup(){
     if(!row.photoId||photos[row.photoId])continue;
     try{const blob=await getPhoto(row.photoId);if(blob)photos[row.photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',row.photoId,e);}
   }
-  const backup={app:'Calisthenie Coach',schema:1,version:'9.4.1',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'Calisthenie Coach',schema:1,version:'9.5',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1291,23 +1361,14 @@ function mondayDate(date=new Date()){
   const d=new Date(date.getFullYear(),date.getMonth(),date.getDate());
   d.setDate(d.getDate()-((d.getDay()+6)%7)); d.setHours(0,0,0,0); return d;
 }
-function getCycleState(date=new Date()){
-  const prefs=getPrefs();
-  if(!prefs.cycleStart){prefs.cycleStart=mondayDate(date).toISOString();setPrefs(prefs);}
-  const start=mondayDate(new Date(prefs.cycleStart));
-  const current=mondayDate(date);
-  let weeks=Math.floor((current-start)/604800000);
-  if(weeks<0)weeks=0;
-  const cycleNumber=Math.floor(weeks/8)+1, week=(weeks%8)+1;
-  let name="Construction", setFactor=1, targetFactor=1, allowProgress=true, note="Construis des répétitions propres avec 2–3 reps en réserve. La progression reste graduelle, sans échec.";
-  if(week===3) note="Dernière semaine de construction : consolide les cibles avant la semaine allégée.";
-  if(week===4){name="Consolidation";setFactor=.85;allowProgress=false;note="Volume réduit d’environ 15 % : garde la technique propre et laisse la fatigue redescendre.";}
-  if(week>=5&&week<=7){name="Intensification";note="Progression active avec un peu plus de cardio. Cherche des performances propres sans aller à l’échec.";}
-  if(week===7) note="Dernière semaine haute du bloc : progresse seulement si la récupération reste bonne avant le deload.";
-  if(week===8){name="Deload + tests";setFactor=.65;targetFactor=.9;allowProgress=false;note="Volume réduit d’environ un tiers. Consolide, récupère et réalise les tests seulement si tu te sens frais.";}
-  return {start:start.toISOString(),cycleNumber,week,name,setFactor,targetFactor,allowProgress,note};
+function getCycleState(date=new Date(),cycleId=getActiveTrainingCycleId()){
+  const cycle=trainingCycleById(cycleId),plan=progressionPlanForCycle(cycle),st=ensureCycleProgressionState(cycle.id),start=mondayDate(new Date(st.startedAt)),current=mondayDate(st.pausedAt?new Date(st.pausedAt):date);
+  let elapsed=Math.floor((current-start)/604800000);if(elapsed<0)elapsed=0;
+  const len=Math.max(1,plan.weeks.length),cycleNumber=Number(st.baseBlockNumber||1)+Math.floor(elapsed/len),week=(elapsed%len)+1,w=normalizeProgressionWeek(plan.weeks[week-1],week-1);
+  const note=w.tests?'Réduis la charge, récupère puis teste seulement les mouvements pour lesquels tu te sens frais.':w.allowProgress?`Travaille autour de ${w.rir} RIR. La progression automatique reste autorisée si la technique et la récupération sont bonnes.`:`Semaine volontairement allégée : garde environ ${w.rir} RIR et n’ajoute pas de difficulté.`;
+  return {start:start.toISOString(),cycleNumber,week,weekCount:len,name:w.name,phaseId:w.phaseId,setFactor:w.volumeFactor,targetFactor:w.targetFactor,cardioFactor:w.cardioFactor,rir:w.rir,allowProgress:w.allowProgress,tests:w.tests,note,planMode:plan.mode,planName:plan.name,goal:plan.goal||'',plan};
 }
-function resetCycle(){const p=getPrefs();p.cycleStart=mondayDate(new Date()).toISOString();setPrefs(p);render();}
+function resetCycle(){resetProgressionForCycle(getActiveTrainingCycleId());}
 
 function applyExerciseChoice(e){
   const baseName=e.sourceExercise||e.name;
@@ -1317,7 +1378,10 @@ function applyExerciseChoice(e){
   return {...changed,sourceExercise:baseName};
 }
 function scaleSets(sets,factor){
-  if(factor>=1)return sets;
+  sets=Math.max(1,Number(sets||1));factor=Number(factor||1);
+  if(factor>=1.14)return sets+1;
+  if(factor>=1.07&&sets>=4)return sets+1;
+  if(factor>=.98)return sets;
   if(factor>=.75)return sets>=3?sets-1:sets;
   return Math.max(1,Math.round(sets*factor));
 }
@@ -1330,11 +1394,7 @@ function scaleTarget(target,type,factor){
 function applyCycleToExercise(e,cycle){
   const out={...e,cycleWeek:cycle.week,progressionTarget:e.target};
   if(e.type==='timer'){
-    if(/Cardio/i.test(e.name)){
-      if(cycle.week===4) out.target=Math.round(e.target*.9);
-      if(cycle.week>=5 && cycle.week<=7) out.target=Math.round(e.target*1.1);
-      if(cycle.week===8) out.target=Math.round(e.target*.75);
-    }
+    if(/Cardio/i.test(e.name)) out.target=Math.max(300,Math.round(e.target*Number(cycle.cardioFactor||1)));
     return out;
   }
   out.sets=scaleSets(e.sets,cycle.setFactor);
@@ -1406,20 +1466,13 @@ function warmupForWorkout(w){
   if(/Full Body/i.test(name))return ["Poignets + épaules","Hanches + chevilles","Scapulas","1 série facile de chaque pattern"];
   return ["Mobilité articulaire douce","Montée progressive en température","Première série facile"];
 }
-function progressionPhaseForWeek(week){
-  if(week<=3)return {id:'build',name:'Construction',range:'S1–3',short:'Base + technique',volume:'100 %',progression:true};
-  if(week===4)return {id:'consolidate',name:'Consolidation',range:'S4',short:'Fatigue ↓',volume:'≈ 85 %',progression:false};
-  if(week<=7)return {id:'intensify',name:'Intensification',range:'S5–7',short:'Performance +',volume:'100 %',progression:true};
-  return {id:'deload',name:'Deload + tests',range:'S8',short:'Récupérer + mesurer',volume:'≈ 65 %',progression:false};
+function progressionPhaseForWeek(week,cycleId=getActiveTrainingCycleId()){
+  const p=progressionPlanForCycle(cycleId),w=normalizeProgressionWeek(p.weeks[Math.max(0,Math.min(p.weeks.length-1,Number(week)-1))],Number(week)-1);
+  return {id:w.phaseId,name:w.name,range:`S${week}`,short:`${progressionDifficulty(w)} · ${w.rir} RIR`,volume:`${Math.round(w.volumeFactor*100)} %`,progression:w.allowProgress,week:w};
 }
 function progressionNextStep(c){
-  const w=c.week;
-  if(w<3)return `S${w+1} · Construction — même structure, progression si les cibles restent propres.`;
-  if(w===3)return 'S4 · Consolidation — environ 15 % de volume en moins, progression gelée.';
-  if(w===4)return 'S5 · Intensification — progression réactivée et cardio légèrement augmenté.';
-  if(w<7)return `S${w+1} · Intensification — continue à progresser seulement si la récupération suit.`;
-  if(w===7)return 'S8 · Deload + tests — environ 35 % de volume en moins puis bilan si tu es frais.';
-  return `Bloc ${c.cycleNumber+1} · S1 — nouveau départ sur 8 semaines avec tes niveaux actualisés.`;
+  if(c.week<c.weekCount){const n=normalizeProgressionWeek(c.plan.weeks[c.week],c.week);return `S${c.week+1} · ${n.name} — volume ${Math.round(n.volumeFactor*100)} %, cible ${Math.round(n.targetFactor*100)} %, ${n.rir} RIR.`;}
+  return `Bloc ${c.cycleNumber+1} · S1 — le même plan recommence avec tes niveaux et variantes actualisés.`;
 }
 function progressionWeekSnapshot(){
   const monday=mondayDate(new Date()),days=[];let planned=0,done=0,restPlanned=0,restOk=0,missed=0;
@@ -1427,33 +1480,26 @@ function progressionWeekSnapshot(){
   return {planned,done,restPlanned,restOk,missed,days};
 }
 function progressionWeekGoal(c){
-  if(c.week<=3)return 'Valide le volume prévu avec une technique propre et garde généralement 2–3 reps en réserve. Deux séances maîtrisées à la même cible peuvent déclencher +1 rep.';
-  if(c.week===4)return 'Ne cherche pas de record. Réduis la fatigue, conserve les amplitudes et termine les séances en ayant clairement de la marge.';
-  if(c.week<=7)return 'Transforme la base construite en performance : progression autorisée, mais seulement si les dernières séances sont maîtrisées et la récupération correcte.';
-  return 'Réduis volontairement la charge, récupère et utilise les tests comme mesure de progression — pas comme obligation d’aller à l’échec.';
+  const w=normalizeProgressionWeek(c.plan.weeks[c.week-1],c.week-1);
+  if(w.tests)return `Semaine de tests : environ ${Math.round(w.volumeFactor*100)} % du volume, ${w.rir} RIR sur le travail courant et tests seulement si tu es frais.`;
+  if(!w.allowProgress)return `Semaine de consolidation : environ ${Math.round(w.volumeFactor*100)} % du volume habituel. Pas de progression forcée et environ ${w.rir} reps en réserve.`;
+  return `${w.name} : vise environ ${w.rir} reps en réserve. Les exercices peuvent progresser si tes séries précédentes sont maîtrisées ; volume prévu ${Math.round(w.volumeFactor*100)} %.`;
+}
+function progressionPhases(plan){
+  const out=[];(plan.weeks||[]).forEach((raw,i)=>{const w=normalizeProgressionWeek(raw,i),last=out[out.length-1];if(last&&last.id===w.phaseId&&last.name===w.name){last.end=i+1;}else out.push({id:w.phaseId,name:w.name,start:i+1,end:i+1});});return out;
 }
 function renderCycleMini(){
-  const c=getCycleState(),phase=progressionPhaseForWeek(c.week),snap=progressionWeekSnapshot(),activeCycle=getActiveTrainingCycle();
-  const phases=[progressionPhaseForWeek(1),progressionPhaseForWeek(4),progressionPhaseForWeek(5),progressionPhaseForWeek(8)];
-  const currentIndex=phases.findIndex(p=>p.id===phase.id);
-  const progressionLabel=c.allowProgress?'Active':'Gelée';
-  const targetLabel=c.targetFactor===1?'100 %':`${Math.round(c.targetFactor*100)} %`;
+  const c=getCycleState(),phase=progressionPhaseForWeek(c.week),snap=progressionWeekSnapshot(),activeCycle=getActiveTrainingCycle(),phases=progressionPhases(c.plan),currentPhaseIndex=phases.findIndex(p=>c.week>=p.start&&c.week<=p.end);
+  const progressionLabel=c.allowProgress?'Active':'Gelée',targetLabel=`${Math.round(c.targetFactor*100)} %`,mode=progressionModeLabel(c.plan);
   return `<section class="card cycle-mini progression-cycle-card">
-    <div class="progression-cycle-head">
-      <div class="grow"><div class="kicker">Bloc de progression ${c.cycleNumber} · ${esc(activeCycle.name)}</div><h2>${c.name}</h2><p class="muted">${c.note}</p></div>
-      <div class="progression-week-badge" aria-label="Semaine ${c.week} sur 8"><strong>${c.week}</strong><span>/8</span><small>semaine</small></div>
-    </div>
-    <div class="progression-phase-rail" aria-label="Phases du bloc de progression">${phases.map((p,i)=>`<div class="progression-phase ${i<currentIndex?'done':i===currentIndex?'current':''} phase-${p.id}" style="--phase-flex:${p.id==='build'||p.id==='intensify'?3:1}"><span>${p.name}</span><small>${p.range}</small></div>`).join('')}</div>
-    <div class="cycle-track progression-week-track">${Array.from({length:8},(_,i)=>`<span class="${i+1<c.week?'done':i+1===c.week?'current':''}" title="Semaine ${i+1}">${i+1}</span>`).join('')}</div>
-    <div class="progression-metrics">
-      <div><span>Charge prévue</span><strong>${phase.volume}</strong><small>${c.week===4?'consolidation':c.week===8?'deload':'volume normal'}</small></div>
-      <div><span>Cible reps / holds</span><strong>${targetLabel}</strong><small>vs prescription</small></div>
-      <div><span>Progression auto</span><strong>${progressionLabel}</strong><small>${c.allowProgress?'si maîtrise confirmée':'volontairement'}</small></div>
-      <div><span>Semaine en cours</span><strong>${snap.done} / ${snap.planned}</strong><small>séances terminées</small></div>
-    </div>
+    <div class="progression-cycle-head"><div class="grow"><div class="kicker">Bloc de progression ${c.cycleNumber} · ${esc(activeCycle.name)}</div><h2>${esc(c.name)}</h2><p class="muted">${esc(c.note)}</p><div class="progression-plan-chip">${mode}${c.goal?` · ${esc(c.goal)}`:''}</div></div><div class="progression-week-badge"><strong>${c.week}</strong><span>/${c.weekCount}</span><small>semaine</small></div></div>
+    <div class="progression-phase-rail">${phases.map((p,i)=>`<div class="progression-phase ${i<currentPhaseIndex?'done':i===currentPhaseIndex?'current':''} phase-${p.id}" style="--phase-flex:${p.end-p.start+1}"><span>${esc(p.name)}</span><small>${p.start===p.end?'S'+p.start:`S${p.start}–${p.end}`}</small></div>`).join('')}</div>
+    <div class="cycle-track progression-week-track">${Array.from({length:c.weekCount},(_,i)=>`<span class="${i+1<c.week?'done':i+1===c.week?'current':''}" title="Semaine ${i+1}">${i+1}</span>`).join('')}</div>
+    <div class="progression-metrics"><div><span>Volume prévu</span><strong>${Math.round(c.setFactor*100)} %</strong><small>ajuste surtout les séries</small></div><div><span>Reps / holds</span><strong>${targetLabel}</strong><small>vs prescription de base</small></div><div><span>Effort cible</span><strong>${c.rir} RIR</strong><small>${progressionDifficulty(c.plan.weeks[c.week-1])}</small></div><div><span>Cardio</span><strong>${Math.round(c.cardioFactor*100)} %</strong><small>vs durée du cycle</small></div><div><span>Progression auto</span><strong>${progressionLabel}</strong><small>${c.allowProgress?'si maîtrise confirmée':'volontairement'}</small></div><div><span>Semaine</span><strong>${snap.done} / ${snap.planned}</strong><small>séances terminées</small></div></div>
     <div class="progression-focus"><div class="progression-focus-icon">◎</div><div><div class="kicker">Objectif de la semaine</div><strong>${progressionWeekGoal(c)}</strong></div></div>
     <div class="progression-next"><span>Ensuite</span><strong>${progressionNextStep(c)}</strong></div>
-    <details class="progression-explainer"><summary>Comprendre le bloc de 8 semaines <span>⌄</span></summary><div><p><strong>S1–3 · Construction</strong> — accumuler des répétitions propres et stabiliser la technique.</p><p><strong>S4 · Consolidation</strong> — réduire le volume pour absorber le travail des trois premières semaines.</p><p><strong>S5–7 · Intensification</strong> — reprendre la progression et convertir la base en meilleures performances.</p><p><strong>S8 · Deload + tests</strong> — réduire nettement la charge, récupérer puis mesurer les progrès si les sensations sont bonnes.</p><p class="muted small">Ce bloc de progression est indépendant de ton cycle d’entraînement hebdomadaire. Le cycle choisit les séances ; ce bloc adapte leur charge au fil des 8 semaines.</p></div></details>
+    <div class="progression-card-actions"><button class="btn btn-secondary compact edit-cycle-progression" data-cycle-id="${activeCycle.id}">Configurer la progression</button><button class="btn btn-outline compact" id="resetCycle">Nouveau bloc</button></div>
+    <details class="progression-explainer"><summary>Comment l'intensité est gérée <span>⌄</span></summary><div><p><strong>RIR</strong> = répétitions encore possibles à la fin d'une série. 3 RIR est confortable ; 1 RIR est une semaine nettement plus exigeante.</p><p><strong>Volume</strong> agit surtout sur le nombre de séries. <strong>Reps / holds</strong> ajuste les cibles. <strong>Cardio</strong> ajuste la durée des blocs cardio.</p><p><strong>Progression auto</strong> décide si l'app peut augmenter une cible ou proposer une variante après des performances maîtrisées.</p><p class="muted small">Chaque cycle d'entraînement possède maintenant son propre bloc de progression. Changer de cycle met sa progression en pause ; revenir dessus reprend là où tu l'avais laissée.</p></div></details>
   </section>`;
 }
 function renderSessionModePicker(){
@@ -1668,7 +1714,7 @@ function selectQuickExerciseCard(card){
 function renderExerciseLibrary(){
   const visible=visibleExerciseLibrary();
   const cats=['Tous',...new Set(visible.map(x=>x.category))];
-  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.4.1 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
+  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.5 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
 }
 function filterLibraryDom(){const q=(document.getElementById('librarySearch')?.value||'').trim().toLowerCase(),cat=state.libraryCategory;document.querySelectorAll('.library-item').forEach(el=>{const okCat=cat==='Tous'||el.dataset.libCategory===cat,okQ=!q||(el.dataset.libText||'').includes(q);el.style.display=okCat&&okQ?'':'none';});}
 
@@ -1713,11 +1759,41 @@ function cycleStats(c){
   const activeDays=[0,1,2,3,4,5,6].filter(d=>(cycleDayTemplate(c,d).exercises||[]).length),rest=7-activeDays.length,cardio=activeDays.reduce((n,d)=>n+Math.round(cardioTargetSeconds(cycleDayTemplate(c,d))/60),0);
   return {activeDays:activeDays.length,rest,cardio};
 }
+
+function openCycleProgressionEditor(id){const c=trainingCycleById(id);state.cycleProgressionEditor=String(c.id);state.cycleProgressionDraft=clone(progressionPlanForCycle(c));state.view='custom';render();}
+function progressionDraftApplyMode(mode){
+  const d=state.cycleProgressionDraft||defaultProgressionPlan();
+  if(mode==='auto')state.cycleProgressionDraft=automaticProgression(d.goal||'Équilibré');
+  else if(mode==='template')state.cycleProgressionDraft=templateProgression(d.templateId||'standard');
+  else state.cycleProgressionDraft={...clone(d),mode:'custom',name:'Plan personnalisé',description:'Réglages semaine par semaine.',weeks:(d.weeks||defaultProgressionPlan().weeks).map(normalizeProgressionWeek)};
+  render();
+}
+function syncProgressionDraftFromDom(){
+  const d=state.cycleProgressionDraft;if(!d)return;
+  const goal=document.getElementById('progressionGoal');if(goal&&d.mode==='auto'){const fresh=automaticProgression(goal.value);state.cycleProgressionDraft=fresh;return;}
+  const tmpl=document.getElementById('progressionTemplate');if(tmpl&&d.mode==='template'){state.cycleProgressionDraft=templateProgression(tmpl.value);return;}
+  document.querySelectorAll('.progression-week-field').forEach(el=>{const i=Number(el.dataset.weekIndex),key=el.dataset.key,w=d.weeks[i];if(!w)return;if(['volumeFactor','targetFactor','cardioFactor'].includes(key))w[key]=Math.max(.4,Math.min(1.5,Number(el.value||100)/100));else if(key==='rir')w[key]=Math.max(0,Math.min(5,Number(el.value||3)));else if(key==='name'){w.name=el.value||`Semaine ${i+1}`;w.phaseId=progressionPhaseId(w.name);}});
+  document.querySelectorAll('.progression-week-bool').forEach(el=>{const i=Number(el.dataset.weekIndex),key=el.dataset.key;if(d.weeks[i])d.weeks[i][key]=!!el.checked;});
+}
+function renderProgressionWeekEditor(w,i){w=normalizeProgressionWeek(w,i);return `<article class="progression-week-editor"><div class="progression-week-editor-head"><span>S${i+1}</span><input class="progression-week-field" data-week-index="${i}" data-key="name" value="${esc(w.name)}"></div><div class="progression-week-editor-grid"><label><span>Volume</span><input class="progression-week-field" data-week-index="${i}" data-key="volumeFactor" type="number" min="40" max="150" step="5" value="${Math.round(w.volumeFactor*100)}"><small>%</small></label><label><span>Reps / holds</span><input class="progression-week-field" data-week-index="${i}" data-key="targetFactor" type="number" min="60" max="140" step="2" value="${Math.round(w.targetFactor*100)}"><small>%</small></label><label><span>Cardio</span><input class="progression-week-field" data-week-index="${i}" data-key="cardioFactor" type="number" min="50" max="150" step="5" value="${Math.round(w.cardioFactor*100)}"><small>%</small></label><label><span>RIR</span><input class="progression-week-field" data-week-index="${i}" data-key="rir" type="number" min="0" max="5" step="1" value="${w.rir}"><small>reps</small></label></div><div class="progression-week-toggles"><label><input class="progression-week-bool" data-week-index="${i}" data-key="allowProgress" type="checkbox" ${w.allowProgress?'checked':''}> Progression auto autorisée</label><label><input class="progression-week-bool" data-week-index="${i}" data-key="tests" type="checkbox" ${w.tests?'checked':''}> Semaine de tests</label></div></article>`;}
+function renderCycleProgressionEditor(){
+  const id=state.cycleProgressionEditor,c=trainingCycleById(id),d=state.cycleProgressionDraft||progressionPlanForCycle(c),templates=Object.entries(PROGRESSION_TEMPLATE_DEFS),goals=['Équilibré','Reprise','Force','Muscle / volume','Skills'];
+  return `<main class="shell progression-builder-shell"><section class="card progression-builder-head"><button class="back-btn" id="closeProgressionEditor">← Mes séances</button><div class="kicker">${esc(c.name)} · Progression</div><h1>Comment ce cycle doit-il progresser ?</h1><p class="muted">Choisis le niveau de contrôle qui te convient. Le planning des exercices reste dans le cycle ; cette page décide comment sa difficulté évolue.</p><div class="progression-mode-grid"><button class="progression-mode ${d.mode==='auto'?'active':''}" data-progression-mode="auto"><span>🤖</span><strong>Automatique</strong><small>Recommandé · l'app gère les 8 semaines</small></button><button class="progression-mode ${d.mode==='template'?'active':''}" data-progression-mode="template"><span>▤</span><strong>Modèle</strong><small>Force, volume, reprise, skills…</small></button><button class="progression-mode ${d.mode==='custom'?'active':''}" data-progression-mode="custom"><span>⚙</span><strong>Personnalisé</strong><small>Tu règles chaque semaine</small></button></div></section>
+  ${d.mode==='auto'?`<section class="card progression-builder-section"><div class="kicker">Objectif principal</div><h2>L'application choisit la courbe</h2><select class="select" id="progressionGoal">${goals.map(g=>`<option ${g===(d.goal||'Équilibré')?'selected':''}>${g}</option>`).join('')}</select><p class="muted small">Le moteur continue d'utiliser tes performances réelles pour faire progresser les exercices. Le bloc règle surtout la fatigue, la marge RIR, le cardio et les semaines allégées.</p></section>`:''}
+  ${d.mode==='template'?`<section class="card progression-builder-section"><div class="kicker">Modèle</div><h2>Choisir une structure</h2><select class="select" id="progressionTemplate">${templates.map(([id,t])=>`<option value="${id}" ${id===(d.templateId||'standard')?'selected':''}>${t.name} · ${t.goal}</option>`).join('')}</select><p class="muted small">${esc((PROGRESSION_TEMPLATE_DEFS[d.templateId||'standard']||PROGRESSION_TEMPLATE_DEFS.standard).description)}</p></section>`:''}
+  <section class="card progression-preview"><div class="section-head"><div><div class="kicker">Aperçu</div><h2>${esc(d.name||'Plan de progression')}</h2></div><span class="pill">8 semaines</span></div><div class="progression-preview-weeks">${(d.weeks||[]).map((w,i)=>{w=normalizeProgressionWeek(w,i);return `<div class="progression-preview-week"><span>S${i+1}</span><strong>${esc(w.name)}</strong><small>${Math.round(w.volumeFactor*100)} % vol · ${Math.round(w.targetFactor*100)} % cible · ${w.rir} RIR</small><em>${progressionDifficulty(w)}</em></div>`;}).join('')}</div></section>
+  ${d.mode==='custom'?`<section class="progression-week-editors">${d.weeks.map(renderProgressionWeekEditor).join('')}</section>`:''}
+  <section class="card progression-builder-save"><div><strong>${d.mode==='custom'?'Plan entièrement paramétrique':d.mode==='auto'?'Laisse le moteur travailler':'Modèle prêt à l’emploi'}</strong><p class="muted small">Tu pourras changer ce plan plus tard sans modifier les séances du cycle.</p></div><button class="btn btn-primary" id="saveCycleProgression">Enregistrer la progression</button></section></main>`;
+}
+function saveCycleProgression(){syncProgressionDraftFromDom();const id=state.cycleProgressionEditor,d=state.cycleProgressionDraft;if(!id||!d)return;setProgressionPlanForCycle(id,d);ensureCycleProgressionState(id);state.cycleProgressionEditor=null;state.cycleProgressionDraft=null;render();}
+
 function renderTrainingCycleCard(c){
   const active=String(c.id)===String(getActiveTrainingCycleId()),st=cycleStats(c),days=[1,2,3,4,5,6,0];
-  return `<article class="card training-cycle-card ${active?'active-cycle':''}"><div class="training-cycle-head"><div><div class="kicker">${c.base?'Programme de référence':'Cycle personnalisé'}</div><h2>${esc(c.name)}</h2><p class="muted small">${esc(c.description||'Cycle personnalisé')}</p></div>${active?'<span class="cycle-active-badge">● ACTIF</span>':'<button class="btn btn-primary compact activate-cycle" data-cycle-id="'+c.id+'">Utiliser ce cycle</button>'}</div><div class="cycle-stat-line"><span>${st.activeDays} jours actifs</span><span>${st.rest} repos</span><span>${st.cardio} min cardio</span></div><div class="cycle-day-list">${days.map(day=>{const w=cycleDayTemplate(c,day),rest=!(w.exercises||[]).length;return `<div class="cycle-day-item ${rest?'is-rest':''}"><span class="cycle-day-code">${DAY_NAMES[day].slice(0,3).toUpperCase()}</span><div class="grow"><strong>${rest?'Repos':esc(w.name)}</strong><small>${rest?'Récupération complète':`${w.duration||estimateWorkoutMinutes(w)} min · Express ${w.shortDuration||Math.max(20,Math.round((w.duration||45)*.48))}`}</small></div>${!c.base?`<div class="cycle-day-actions">${rest?`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Ajouter une séance</button>${(cycleDayTemplate(baseTrainingCycle(),day).exercises||[]).length?`<button class="mini-action restore-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Copier le jour de base</button>`:''}`:`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Modifier</button><button class="mini-action rest-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Repos</button>`}</div>`:''}</div>`}).join('')}</div><div class="training-cycle-actions">${c.base?`<button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer pour personnaliser</button><span class="muted small">Le cycle de base reste protégé.</span>`:`<button class="btn btn-outline rename-cycle" data-cycle-id="${c.id}">Renommer</button><button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer</button><button class="btn btn-outline danger archive-cycle" data-cycle-id="${c.id}">Archiver</button>`}</div></article>`;
+  const pp=progressionPlanForCycle(c),ps=getCycleState(new Date(),c.id);
+  return `<article class="card training-cycle-card ${active?'active-cycle':''}"><div class="training-cycle-head"><div><div class="kicker">${c.base?'Programme de référence':'Cycle personnalisé'}</div><h2>${esc(c.name)}</h2><p class="muted small">${esc(c.description||'Cycle personnalisé')}</p></div>${active?'<span class="cycle-active-badge">● ACTIF</span>':'<button class="btn btn-primary compact activate-cycle" data-cycle-id="'+c.id+'">Utiliser ce cycle</button>'}</div><div class="cycle-stat-line"><span>${st.activeDays} jours actifs</span><span>${st.rest} repos</span><span>${st.cardio} min cardio</span><span>${progressionModeLabel(pp)} · S${ps.week}/${ps.weekCount}</span></div><div class="cycle-day-list">${days.map(day=>{const w=cycleDayTemplate(c,day),rest=!(w.exercises||[]).length;return `<div class="cycle-day-item ${rest?'is-rest':''}"><span class="cycle-day-code">${DAY_NAMES[day].slice(0,3).toUpperCase()}</span><div class="grow"><strong>${rest?'Repos':esc(w.name)}</strong><small>${rest?'Récupération complète':`${w.duration||estimateWorkoutMinutes(w)} min · Express ${w.shortDuration||Math.max(20,Math.round((w.duration||45)*.48))}`}</small></div>${!c.base?`<div class="cycle-day-actions">${rest?`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Ajouter une séance</button>${(cycleDayTemplate(baseTrainingCycle(),day).exercises||[]).length?`<button class="mini-action restore-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Copier le jour de base</button>`:''}`:`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Modifier</button><button class="mini-action rest-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Repos</button>`}</div>`:''}</div>`}).join('')}</div><div class="training-cycle-actions"><button class="btn btn-secondary edit-cycle-progression" data-cycle-id="${c.id}">Progression</button>${c.base?`<button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer pour personnaliser</button><span class="muted small">Le planning de base reste protégé ; sa progression peut être personnalisée.</span>`:`<button class="btn btn-outline rename-cycle" data-cycle-id="${c.id}">Renommer</button><button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer</button><button class="btn btn-outline danger archive-cycle" data-cycle-id="${c.id}">Archiver</button>`}</div></article>`;
 }
 function renderCustomSessions(){
+  if(state.cycleProgressionEditor)return renderCycleProgressionEditor();
   if(state.customSessionEditor)return renderCustomSessionEditor();
   const list=getCustomWorkouts(),cycles=allTrainingCycles(false),active=getActiveTrainingCycle();
   return shell(`<header class="topbar"><div><div class="brand">Mes séances</div><div class="daylabel">Cycles hebdomadaires et séances libres</div></div><div class="topbar-actions"><button class="btn btn-secondary compact" id="newCustomSession">＋ Séance</button><button class="btn btn-primary compact" id="newTrainingCycle">＋ Cycle</button></div></header>
@@ -1802,7 +1878,7 @@ function shell(content, activeTab=state.view) {
 
 function renderMore(){
   const logs=getBodyLogs(),latest=logs[0];
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.4.1</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.5</div></div></header>
     <section class="more-grid more-grid-six">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -2036,7 +2112,7 @@ function renderCoach() {
     if (usesBackpack(e.name)) input+=renderBackpackLoadInput(a.currentLoadKg||0,'workoutLoadKg');
   }
   return `<main class="shell coach-shell"><div class="progress-wrap"><div class="progress-label"><span>${a.workout.name}</span><span>${step}/${total}</span></div><div class="progress-track"><div class="progress-bar" style="width:${progress}%"></div></div></div>
-    <section class="card coach-card"><div><div class="kicker">${phaseLabel(e.phase)} · ${setLabel}</div>${exerciseImage(e.name,'hero')}<div class="exercise-title">${e.name}</div><div class="target">${describe(e)}</div>
+    <section class="card coach-card"><div><div class="kicker">${phaseLabel(e.phase)} · ${setLabel}</div>${exerciseImage(e.name,'hero')}<div class="exercise-title">${e.name}</div><div class="target">${describe(e)}</div>${e.phase==='main'&&a.cycle?.rir!=null?`<div class="coach-rir">Effort cible · <strong>${a.cycle.rir} RIR</strong><span>${a.cycle.rir<=1?'très exigeant':a.cycle.rir===2?'soutenu':'marge volontaire'}</span></div>`:''}
       ${e.prescriptionNote?`<div class="coach-note ${e.prescriptionStatus}">${e.prescriptionNote}</div>`:''}<p class="tip">${e.tip}</p>${e.guide?.length?`<div class="guided-block"><strong>Guide étape par étape</strong>${e.guide.map(x=>`<span>• ${esc(x)}</span>`).join('')}</div>`:''}${equipmentUseNote(e.name)?`<div class="coach-equipment-tip">🧰 ${equipmentUseNote(e.name)}</div>`:''}${e.name==='Cardio Zone 2'?renderStravaToday({exercises:[e]}):''}${tutorialLink(e.name)}${(a.kind==='workout'||a.kind==='custom')&&substitutionOptions(e).length?'<button class="btn btn-outline substitute-btn" id="openSubstitute">Changer cet exercice</button>':''}${input}</div>
       <div class="stack"><button class="btn btn-primary" id="completeSet">${a.setIndex===e.sets-1?'Terminer cette étape':'Série terminée'}</button>${state.undoSetSnapshot?'<button class="btn btn-secondary" id="undoGuidedSet">↶ Annuler la dernière série</button>':''}<button class="btn btn-outline" id="pauseWorkout">Pause séance</button><button class="btn btn-outline" id="quitWorkout">Quitter</button></div></section></main>`;
 }
@@ -2481,7 +2557,7 @@ function renderProfile(){const p=getPrefs();return shell(`<header class="topbar"
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + barres parallèles + poignées + bandes + tapis</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les barres parallèles et poignées de pompes sont intégrées aux recommandations. Pour le moment, les séances utilisent les bandes à la place du sac à dos pour ajouter de la résistance.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.4.1</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Phase de progression · 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.5</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Progression du cycle actif</strong><div class="small muted">${progressionModeLabel(getCycleState().plan)} · Semaine ${getCycleState().week}/${getCycleState().weekCount} · ${getCycleState().name}</div></div><div class="profile-progression-actions"><button class="btn btn-secondary compact edit-cycle-progression" data-cycle-id="${getActiveTrainingCycleId()}">Configurer</button><button class="btn btn-outline compact" id="resetCycle">Nouveau bloc</button></div></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`,'profile');}
 
 
@@ -2531,6 +2607,13 @@ function bindEvents(){
   const newCustom=document.getElementById('newCustomSession'),newCustom2=document.getElementById('newCustomSession2');if(newCustom)newCustom.onclick=()=>openCustomSessionEditor();if(newCustom2)newCustom2.onclick=()=>openCustomSessionEditor();
   const newCycle=document.getElementById('newTrainingCycle');if(newCycle)newCycle.onclick=()=>createTrainingCycle();
   document.querySelectorAll('.activate-cycle').forEach(b=>b.onclick=()=>activateTrainingCycle(b.dataset.cycleId));
+  document.querySelectorAll('.edit-cycle-progression').forEach(b=>b.onclick=()=>openCycleProgressionEditor(b.dataset.cycleId));
+  document.querySelectorAll('[data-progression-mode]').forEach(b=>b.onclick=()=>progressionDraftApplyMode(b.dataset.progressionMode));
+  const closeProg=document.getElementById('closeProgressionEditor');if(closeProg)closeProg.onclick=()=>{state.cycleProgressionEditor=null;state.cycleProgressionDraft=null;render();};
+  const progGoal=document.getElementById('progressionGoal');if(progGoal)progGoal.onchange=()=>{state.cycleProgressionDraft=automaticProgression(progGoal.value);render();};
+  const progTemplate=document.getElementById('progressionTemplate');if(progTemplate)progTemplate.onchange=()=>{state.cycleProgressionDraft=templateProgression(progTemplate.value);render();};
+  document.querySelectorAll('.progression-week-field,.progression-week-bool').forEach(el=>el.onchange=syncProgressionDraftFromDom);
+  const saveProg=document.getElementById('saveCycleProgression');if(saveProg)saveProg.onclick=saveCycleProgression;
   document.querySelectorAll('.duplicate-cycle').forEach(b=>b.onclick=()=>duplicateTrainingCycle(b.dataset.cycleId));
   document.querySelectorAll('.rename-cycle').forEach(b=>b.onclick=()=>renameTrainingCycle(b.dataset.cycleId));
   document.querySelectorAll('.archive-cycle').forEach(b=>b.onclick=()=>archiveTrainingCycle(b.dataset.cycleId));
@@ -2552,7 +2635,7 @@ function bindEvents(){
   document.querySelectorAll('.move-custom-down').forEach(b=>b.onclick=()=>{syncCustomDraftFromDom();const i=Number(b.dataset.customIndex),arr=state.customSessionDraft.exercises;if(i>=arr.length-1)return;[arr[i+1],arr[i]]=[arr[i],arr[i+1]];render();});
   document.querySelectorAll('.remove-custom-ex').forEach(b=>b.onclick=()=>{syncCustomDraftFromDom();state.customSessionDraft.exercises.splice(Number(b.dataset.customIndex),1);render();});
   const saveCustom=document.getElementById('saveCustomSession');if(saveCustom)saveCustom.onclick=saveCustomSession;
-  const resetC=document.getElementById('resetCycle');if(resetC)resetC.onclick=()=>{if(confirm('Recommencer la progression de 8 semaines à partir de cette semaine ?'))resetCycle();};
+  const resetC=document.getElementById('resetCycle');if(resetC)resetC.onclick=()=>{if(confirm('Démarrer un nouveau bloc de progression pour le cycle actif à partir de cette semaine ?'))resetCycle();};
   const dismissPR=document.getElementById('dismissPR');if(dismissPR)dismissPR.onclick=()=>{state.prNotice=null;render();};
   document.querySelectorAll('[data-flex-toggle]').forEach(b=>b.onclick=()=>{const id=b.dataset.flexToggle;state.expandedFlexRoutine=state.expandedFlexRoutine===id?null:id;render();});
   document.querySelectorAll('.start-flex').forEach(b=>b.onclick=()=>startFlexRoutine(b.dataset.flex));
