@@ -1,4 +1,15 @@
-# Calisthénie Coach · V9.3 — Cycles d’entraînement
+# Calisthénie Coach · V9.3.1 — UI Cleanup
+
+## Changements
+
+- Calendrier de régularité type GitHub visible directement dans **Semaine**.
+- Accueil simplifié : suppression du bouton `+ Ajouter` dans Volume journalier.
+- `Quick Log` renommé **Ajouter** et bouton flottant violet harmonisé en **+ Ajouter**.
+- **Mesures** devient une page dédiée accessible depuis Plus ; le menu Plus contient maintenant 6 tuiles.
+- Page Mesures enrichie : dernier relevé, tendances, deltas, graphiques, photo et historique.
+- Profil recentré sur réglages, sauvegarde, tutoriels, matériel et moteur d'entraînement.
+- Cache PWA versionné `v9-3-1-ui-cleanup`.
+
 
 ## Nouveautés V9.3
 - **Cycle de base** conservé comme programme de référence protégé.

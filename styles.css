@@ -1099,3 +1099,57 @@ summary>*,.section-head>*,.history-top>*,.metric-title>*,.choice-row>*,.rank-hea
 .cycle-express-toggle small{font-size:10px;color:#94a3b8;line-height:1.2}
 
 .cycle-heat-summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.cycle-heat-summary span{display:flex;align-items:baseline;gap:5px;padding:7px 9px;border-radius:10px;background:#f8fafc;color:#7b8798;font-size:11px;font-weight:700}.cycle-heat-summary strong{color:#1f2937;font-size:14px}
+
+
+/* V9.3.1 · UI cleanup: Week heatmap, unified Add action, dedicated Measurements */
+.week-heatmap{margin:4px 0 18px}
+.week-heatmap .cycle-heat-card{margin-top:0;border-color:rgba(148,163,184,.14);box-shadow:0 8px 26px rgba(15,23,42,.035)}
+.week-heatmap .cycle-heat-card .pill{background:rgba(99,102,241,.07);color:#5b5bd6;border-color:rgba(99,102,241,.12)}
+
+.quick-fab.quick-fab-add{height:52px;padding:0 18px 0 14px;gap:7px;font-size:.84rem;letter-spacing:0;box-shadow:0 12px 28px rgba(79,70,229,.28)}
+.quick-fab.quick-fab-add .quick-fab-plus{font-size:1.2rem;line-height:1}
+.quick-fab.quick-fab-add>span:last-child{font-size:.78rem;font-weight:900;letter-spacing:.01em}
+.daily-volume-card .section-head{align-items:flex-start}
+
+.more-grid-six{grid-template-columns:repeat(2,minmax(0,1fr))}
+.more-grid-six .more-tile{min-height:94px}
+
+.measurement-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;background:linear-gradient(145deg,#fff,#f8faff);border-color:rgba(99,102,241,.13)}
+.measurement-hero h1{margin:3px 0 5px;font-size:clamp(26px,5vw,36px);letter-spacing:-.035em}
+.measurement-hero-value{text-align:right;display:grid;gap:3px;flex:0 0 auto}
+.measurement-hero-value strong{font-size:clamp(25px,5vw,34px);letter-spacing:-.04em;color:#172033}
+.measurement-hero-value span{font-size:12px;color:#78869a;font-weight:700}
+.measurement-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.measurement-kpi{margin:0;display:grid;gap:4px;min-height:120px;align-content:center}
+.measurement-kpi>span{font-size:12px;font-weight:800;color:#7b8798}
+.measurement-kpi>strong{font-size:28px;letter-spacing:-.035em;color:#172033}
+.measurement-kpi>small{font-size:11px;line-height:1.35;color:#8b96a7}
+.measurement-charts .mini-chart{padding:12px 0;border-bottom:1px solid #eef2f7;margin:0}
+.measurement-charts .mini-chart:last-child{border-bottom:0;padding-bottom:0}
+.measurement-photo{display:grid;gap:10px}
+.measurement-photo img{width:100%;max-height:440px;object-fit:cover;border-radius:18px;background:#f3f5f8}
+.measurement-photo small{color:#8a95a6}
+.measurement-history-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #eef2f7}
+.measurement-history-row:last-child{border-bottom:0}
+.measurement-history-row>div{display:grid;gap:2px;min-width:0}
+.measurement-history-row strong{font-size:13px;color:#273247}
+.measurement-history-row small{font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+.measurement-history-row>span{font-size:12px;color:#5f6d81;font-weight:750;text-align:right}
+.measurement-empty{text-align:center;padding:34px 22px}
+.measurement-empty-icon{width:58px;height:58px;border-radius:18px;margin:0 auto 12px;display:grid;place-items:center;background:#eef2ff;color:#5b5bd6;font-size:24px;font-weight:900}
+.measurement-empty h2{margin:0 0 6px}
+.measurement-empty .btn{margin-top:10px}
+
+@media(max-width:520px){
+  .week-heatmap .cycle-heat-card{padding:14px 13px}
+  .week-heatmap .cycle-heat-card .section-head{align-items:flex-start}
+  .week-heatmap .cycle-heat-card .section-head>.pill{font-size:9px;padding:5px 7px}
+  .measurement-hero{align-items:flex-start;flex-direction:column}
+  .measurement-hero-value{text-align:left}
+  .measurement-kpis{grid-template-columns:1fr 1fr}
+  .measurement-kpi{min-height:108px;padding:13px}
+  .measurement-kpi>strong{font-size:23px}
+  .measurement-history-row{align-items:flex-start;flex-direction:column;gap:5px}
+  .measurement-history-row>span{text-align:left}
+}
+@media(max-width:360px){.measurement-kpis,.more-grid-six{grid-template-columns:1fr}}
