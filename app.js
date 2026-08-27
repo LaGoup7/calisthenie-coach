@@ -13,6 +13,8 @@ const STORAGE = {
   stravaActivities: "cc_strava_activities",
   stravaMeta: "cc_strava_meta",
   customWorkouts: "cc_custom_workouts",
+  trainingConfig: "cc_training_config_v1",
+  flexConfig: "cc_flex_config_v1",
 };
 
 function ex(name, type, sets, target, rest, tip, opts={}) {
@@ -26,7 +28,7 @@ function ex(name, type, sets, target, rest, tip, opts={}) {
   };
 }
 
-// V9.1.2 · programme intermédiaire 6 j/7.
+// V9.2 · programme intermédiaire 6 j/7 + paramètres de charge/flexibilité.
 // Chaque journée conserve échauffement + travail principal + cardio + retour au calme,
 // y compris en mode Express. Lundi reste le jour de récupération complète.
 const workouts = {
@@ -461,7 +463,7 @@ const FLEX_ROUTINES = [
       ex("Adductor rock-back","reps_side",2,8,25,"Recule les hanches lentement, dos neutre."),
       ex("Frog stretch","hold",2,40,30,"Tension progressive dans les adducteurs, jamais de douleur vive."),
       ex("Ischios","hold_side",2,45,20,"Respiration lente, amplitude progressive."),
-      ex("Mollets","hold_side",1,45,0,"Talons lourds au sol, genou aligné.")
+      ex("Étirement mollets","hold_side",1,45,0,"Talons lourds au sol, genou aligné.")
     ]
   },
   {
@@ -477,7 +479,7 @@ const FLEX_ROUTINES = [
     ]
   },
   {
-    id:"full-25", name:"Full Body souplesse", subtitle:"Routine complète pour construire de l'amplitude durable", duration:25, intensity:"Modérée", focus:"Tout le corps",
+    id:"full-25", name:"Full Body souplesse", subtitle:"Routine complète pour construire de l'amplitude durable", duration:26, intensity:"Modérée", focus:"Tout le corps",
     exercises:[
       ex("Respiration diaphragmatique","timer",1,60,0,"Commence par relâcher le tonus inutile."),
       ex("Knee-to-wall chevilles","reps_side",2,10,20,"Cherche une amplitude symétrique."),
@@ -488,6 +490,7 @@ const FLEX_ROUTINES = [
       ex("Flexion avant ischios","hold",2,45,25,"Pense longueur plutôt que toucher le sol à tout prix."),
       ex("Rotation thoracique","reps_side",2,8,20,"Rotation douce et contrôlée."),
       ex("Pass-through avec bande","reps",2,10,20,"Amplitude sans pincement."),
+      ex("Poignets flexion / extension","timer",1,60,15,"Mobilise doucement flexion et extension pour les appuis de handstand et pompes."),
       ex("Étirement pectoral encadrement","hold_side",1,40,20,"Respire profondément."),
       ex("Étirement grand dorsal","hold_side",1,40,0,"Finis sans forcer.")
     ]
@@ -640,6 +643,82 @@ function exerciseFromLibrary(name, fallback={}){
 }
 
 const VOLUME_GROUPS = ["Pectoraux","Dos","Épaules","Biceps","Triceps","Core","Quadriceps","Ischios","Fessiers","Mollets","Grip"];
+
+// V9.2 · Paramètres d'équilibre. Les fourchettes sont des cibles de coaching
+// modifiables, pas des limites médicales. Elles permettent de comparer la charge
+// réelle (séances + Express + perso + Quick Logs) au programme et aux priorités.
+const DEFAULT_TRAINING_CONFIG = {
+  cardioMin: 150,
+  cardioMax: 300,
+  primaryThreshold: .75,
+  secondaryThreshold: .30,
+  volumeTargets: {
+    "Pectoraux": {min:8,max:14}, "Dos": {min:12,max:18}, "Épaules": {min:8,max:16},
+    "Biceps": {min:6,max:12}, "Triceps": {min:8,max:14}, "Core": {min:10,max:18},
+    "Quadriceps": {min:8,max:14}, "Ischios": {min:6,max:12}, "Fessiers": {min:8,max:14},
+    "Mollets": {min:4,max:10}, "Grip": {min:6,max:12}
+  }
+};
+function getTrainingConfig(){
+  const saved=parse(STORAGE.trainingConfig,{}), base=clone(DEFAULT_TRAINING_CONFIG);
+  base.cardioMin=Number(saved.cardioMin??base.cardioMin);base.cardioMax=Number(saved.cardioMax??base.cardioMax);
+  base.primaryThreshold=Number(saved.primaryThreshold??base.primaryThreshold);base.secondaryThreshold=Number(saved.secondaryThreshold??base.secondaryThreshold);
+  VOLUME_GROUPS.forEach(g=>{const v=saved.volumeTargets?.[g];if(v){base.volumeTargets[g]={min:Number(v.min??base.volumeTargets[g].min),max:Number(v.max??base.volumeTargets[g].max)};}});
+  return base;
+}
+function setTrainingConfig(v){save(STORAGE.trainingConfig,v);}
+
+const FLEX_ZONES = ["Chevilles","Hanches","Fléchisseurs hanche","Adducteurs","Ischios","Épaules","Pectoraux","Thorax","Poignets"];
+const DEFAULT_FLEX_CONFIG = {
+  weeklyMinutesTarget: 30,
+  sessionsTarget: 3,
+  intensityMin: 3,
+  intensityMax: 6,
+  zoneTargets: {
+    "Chevilles":{min:3,max:7,sessions:2}, "Hanches":{min:4,max:8,sessions:2},
+    "Fléchisseurs hanche":{min:3,max:7,sessions:2}, "Adducteurs":{min:3,max:7,sessions:2},
+    "Ischios":{min:4,max:8,sessions:2}, "Épaules":{min:4,max:8,sessions:2},
+    "Pectoraux":{min:2,max:6,sessions:2}, "Thorax":{min:2,max:6,sessions:2}, "Poignets":{min:3,max:7,sessions:3}
+  },
+  testTargets:{ankle_left:10,ankle_right:10,forward_fold:0,deep_squat:60},
+  ankleSymmetryMax:1.5
+};
+function getFlexConfig(){
+  const saved=parse(STORAGE.flexConfig,{}),base=clone(DEFAULT_FLEX_CONFIG);
+  for(const k of ['weeklyMinutesTarget','sessionsTarget','intensityMin','intensityMax','ankleSymmetryMax'])if(saved[k]!=null)base[k]=Number(saved[k]);
+  FLEX_ZONES.forEach(z=>{const v=saved.zoneTargets?.[z];if(v)base.zoneTargets[z]={min:Number(v.min??base.zoneTargets[z].min),max:Number(v.max??base.zoneTargets[z].max),sessions:Number(v.sessions??base.zoneTargets[z].sessions)};});
+  Object.keys(base.testTargets).forEach(k=>{if(saved.testTargets?.[k]!=null)base.testTargets[k]=Number(saved.testTargets[k]);});
+  return base;
+}
+function setFlexConfig(v){save(STORAGE.flexConfig,v);}
+
+// Répartition des exercices de mobilité vers les amplitudes utiles à la calisthénie.
+// Les coefficients répartissent un exercice multi-zone sans prétendre mesurer une adaptation biologique exacte.
+const FLEX_EXERCISE_ZONES = {
+  "Knee-to-wall chevilles":{"Chevilles":1},
+  "Deep squat hold":{"Chevilles":.45,"Hanches":.60,"Adducteurs":.30},
+  "90/90 hanches":{"Hanches":1},
+  "Couch stretch":{"Fléchisseurs hanche":1,"Hanches":.25},
+  "Fléchisseurs de hanche":{"Fléchisseurs hanche":1},
+  "Frog stretch":{"Adducteurs":1,"Hanches":.35},
+  "Adductor rock-back":{"Adducteurs":1,"Hanches":.35},
+  "Ischios":{"Ischios":1},
+  "Flexion avant ischios":{"Ischios":1},
+  "Étirement ischios":{"Ischios":1},
+  "Étirement mollets":{"Chevilles":1},
+  "Rotation thoracique":{"Thorax":1},
+  "Cat-cow":{"Thorax":.55},
+  "Pass-through avec bande":{"Épaules":1,"Pectoraux":.40},
+  "Étirement grand dorsal":{"Épaules":.70,"Thorax":.25},
+  "Child's pose latéral":{"Épaules":.55,"Thorax":.35},
+  "Étirement pectoral encadrement":{"Pectoraux":1,"Épaules":.25},
+  "Épaules / grand dorsal / pectoraux":{"Épaules":.60,"Pectoraux":.45,"Thorax":.20},
+  "Poignets flexion / extension":{"Poignets":1},
+  "Mobilité épaules / pectoraux / poignets":{"Épaules":.55,"Pectoraux":.35,"Poignets":.55},
+  "Mobilité dos / avant-bras / épaules":{"Épaules":.35,"Thorax":.35,"Poignets":.25},
+  "Mobilité jambes":{"Chevilles":.30,"Hanches":.35,"Fléchisseurs hanche":.25,"Ischios":.30},
+  "Mobilité complète":{"Chevilles":.15,"Hanches":.25,"Fléchisseurs hanche":.15,"Adducteurs":.15,"Ischios":.20,"Épaules":.20,"Pectoraux":.12,"Thorax":.20,"Poignets":.12}
+};
 
 
 const TEST_DEFS = [
@@ -891,7 +970,7 @@ async function exportBackup(){
     if(!row.photoId||photos[row.photoId])continue;
     try{const blob=await getPhoto(row.photoId);if(blob)photos[row.photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',row.photoId,e);}
   }
-  const backup={app:'Calisthenie Coach',schema:1,version:'9.1',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'Calisthenie Coach',schema:1,version:'9.2',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1204,17 +1283,40 @@ function chooseSubstitution(name){
 }
 
 function volumeAdd(total,volume,sets){Object.entries(volume||{}).forEach(([g,w])=>total[g]=(total[g]||0)+Number(w)*sets);return total;}
-function volumeForWorkout(w){const total={};(w.exercises||[]).forEach(e=>{const info=exerciseInfo(e.name);if(info&&e.type!=='timer')volumeAdd(total,info.volume,e.sets||1);});return total;}
-function weeklyVolume(){
-  const start=mondayDate(new Date()).getTime(),actual={};
-  getHistory().filter(s=>new Date(s.date).getTime()>=start).forEach(s=>(s.entries||[]).forEach(entry=>{if(entry.type==='timer')return;const info=exerciseInfo(entry.exercise);if(info)volumeAdd(actual,info.volume,1);}));
-  const planned={};[2,3,4,5,6,0].forEach(day=>{const v=volumeForWorkout(preparedWorkout(day));Object.entries(v).forEach(([g,n])=>planned[g]=(planned[g]||0)+n);});
-  return {actual,planned};
+function emptyVolumeBreakdown(){return Object.fromEntries(VOLUME_GROUPS.map(g=>[g,{primary:0,secondary:0,technical:0,total:0}]));}
+function volumeBreakdownAdd(out,volume,sets=1,config=getTrainingConfig()){
+  Object.entries(volume||{}).forEach(([g,wRaw])=>{
+    const w=Number(wRaw||0),n=w*Number(sets||1);if(!out[g])out[g]={primary:0,secondary:0,technical:0,total:0};
+    const bucket=w>=config.primaryThreshold?'primary':w>=config.secondaryThreshold?'secondary':'technical';out[g][bucket]+=n;out[g].total+=n;
+  });return out;
 }
+function volumeForWorkout(w){const total={};(w.exercises||[]).forEach(e=>{const info=exerciseInfo(e.name);if(info&&e.type!=='timer')volumeAdd(total,info.volume,e.sets||1);});return total;}
+function volumeBreakdownForWorkout(w){const out=emptyVolumeBreakdown(),cfg=getTrainingConfig();(w.exercises||[]).forEach(e=>{const info=exerciseInfo(e.name);if(info&&e.type!=='timer')volumeBreakdownAdd(out,info.volume,e.sets||1,cfg);});return out;}
+function weeklyVolume(){
+  const start=mondayDate(new Date()).getTime(),actual={},actualBreakdown=emptyVolumeBreakdown(),cfg=getTrainingConfig();
+  // Séances guidées, Express et personnelles : chaque entrée enregistrée correspond à une série réellement faite.
+  getHistory().filter(s=>new Date(s.date).getTime()>=start).forEach(s=>(s.entries||[]).forEach(entry=>{if(entry.type==='timer')return;const info=exerciseInfo(entry.exercise);if(info){volumeAdd(actual,info.volume,1);volumeBreakdownAdd(actualBreakdown,info.volume,1,cfg);}}));
+  // Les micro-séries Quick Log font partie de la charge réelle, même si elles restent hors XP / PR / progression automatique.
+  getQuickLogs().filter(x=>new Date(x.date).getTime()>=start).forEach(entry=>{if(entry.type==='timer')return;const info=exerciseInfo(entry.exercise);if(info){volumeAdd(actual,info.volume,1);volumeBreakdownAdd(actualBreakdown,info.volume,1,cfg);}});
+  const planned={},plannedBreakdown=emptyVolumeBreakdown();[2,3,4,5,6,0].forEach(day=>{const w=preparedWorkout(day,null,'full'),v=volumeForWorkout(w),b=volumeBreakdownForWorkout(w);Object.entries(v).forEach(([g,n])=>planned[g]=(planned[g]||0)+n);VOLUME_GROUPS.forEach(g=>{for(const k of ['primary','secondary','technical','total'])plannedBreakdown[g][k]+=b[g]?.[k]||0;});});
+  return {actual,planned,actualBreakdown,plannedBreakdown};
+}
+function volumeStatus(value,target){if(value<target.min)return {label:'Sous cible',cls:'warn'};if(value>target.max)return {label:'Au-dessus',cls:'high'};return {label:'Dans la cible',cls:'good'};}
 function renderVolumePanel(){
-  const {actual,planned}=weeklyVolume();
-  const groups=VOLUME_GROUPS.filter(g=>(planned[g]||actual[g]||0)>0);
-  return `<section class="card"><div class="section-head"><div><div class="kicker">Équilibre hebdomadaire</div><h2>Volume musculaire</h2></div><span class="pill">séries pondérées</span></div><p class="muted small">Repère interne : les exercices polyarticulaires comptent aussi partiellement pour leurs muscles secondaires. Le but est de voir les déséquilibres, pas de poursuivre un chiffre à tout prix.</p><div class="volume-list">${groups.map(g=>{const a=actual[g]||0,p=Math.max(.1,planned[g]||0),pct=clamp(a/p,0,1.25)*100;return `<div class="volume-row"><div><strong>${g}</strong><span>${a.toFixed(1)} / ${p.toFixed(1)}</span></div><div class="volume-track"><i style="width:${Math.min(100,pct)}%"></i></div></div>`}).join('')}</div></section>`;
+  const {actual,planned,actualBreakdown,plannedBreakdown}=weeklyVolume(),cfg=getTrainingConfig();
+  const groups=VOLUME_GROUPS.filter(g=>(planned[g]||actual[g]||0)>0),quickCount=getQuickLogs().filter(x=>new Date(x.date).getTime()>=mondayDate(new Date()).getTime()).length;
+  return `<section class="card param-volume-card"><div class="section-head"><div><div class="kicker">Équilibre hebdomadaire</div><h2>Volume musculaire</h2></div><span class="pill">séries pondérées</span></div>
+    <p class="muted small">Charge réelle = séances complètes, Express, séances personnelles et Quick Logs. Le plan officiel reste affiché séparément. Les fourchettes cibles ci-dessous sont modifiables.</p>
+    <div class="volume-legend"><span><i class="dot primary"></i>Principal ≥ ${cfg.primaryThreshold.toFixed(2)}</span><span><i class="dot secondary"></i>Secondaire ≥ ${cfg.secondaryThreshold.toFixed(2)}</span><span><i class="dot technical"></i>Technique / support</span></div>
+    <div class="volume-list param-volume-list">${groups.map(g=>{const a=actual[g]||0,p=planned[g]||0,t=cfg.volumeTargets[g]||{min:0,max:99},st=volumeStatus(a,t),pct=clamp(a/Math.max(1,t.max),0,1.25)*100,b=actualBreakdown[g]||{primary:0,secondary:0,technical:0},pb=plannedBreakdown[g]||{};return `<div class="param-volume-row"><div class="param-volume-head"><div><strong>${g}</strong><span>${a.toFixed(1)} réel · ${p.toFixed(1)} planifié · cible ${t.min}–${t.max}</span></div><span class="target-state ${st.cls}">${st.label}</span></div><div class="volume-track target-track"><i style="width:${Math.min(100,pct)}%"></i><em style="left:${Math.min(100,t.min/Math.max(1,t.max)*100)}%"></em></div><div class="volume-breakdown"><span>P <b>${b.primary.toFixed(1)}</b></span><span>S <b>${b.secondary.toFixed(1)}</b></span><span>T <b>${b.technical.toFixed(1)}</b></span><small>plan P/S/T ${Number(pb.primary||0).toFixed(1)} / ${Number(pb.secondary||0).toFixed(1)} / ${Number(pb.technical||0).toFixed(1)}</small></div></div>`}).join('')}</div>
+    <details class="parameter-details"><summary><div><strong>Comment c'est calculé ?</strong><small>${quickCount} Quick Log${quickCount>1?'s':''} inclus cette semaine</small></div><span>⌄</span></summary><div class="parameter-body"><p>Une série applique les coefficients de l'exercice à tous les muscles concernés. Exemple : une série de pompes peut compter 1,00 pectoraux + 0,60 triceps + 0,35 épaules. Les seuils ci-dessous classent ensuite chaque contribution en travail principal, secondaire ou technique.</p><p>Ce compteur sert au pilotage de la charge. Il ne signifie pas qu'une série technique fatigue autant qu'une série lourde.</p></div></details>
+    <details class="parameter-details"><summary><div><strong>Pourquoi ces valeurs ?</strong><small>Base scientifique + choix de coaching</small></div><span>⌄</span></summary><div class="parameter-body"><p>L'ACSM 2026 recommande surtout la régularité, le travail de tous les grands groupes au moins 2 jours/semaine et l'individualisation. Pour l'hypertrophie, ~10 séries hebdomadaires par groupe est un repère général, pas une obligation.</p><p>Les fourchettes de cette app partent de ce socle puis donnent davantage de marge au dos, au core et au grip car ils soutiennent directement les tractions, L-sit, handstand et futurs skills. Bandes et poids du corps sont considérés comme des outils valides de renforcement.</p><div class="source-links"><a href="https://acsm.org/resistance-training-guidelines-update-2026/" target="_blank" rel="noopener">ACSM 2026</a><a href="https://www.who.int/europe/news-room/fact-sheets/item/everyday-actions-for-better-health-who-recommendations" target="_blank" rel="noopener">OMS · activité physique</a></div></div></details>
+    <details class="parameter-details"><summary><div><strong>Modifier mes cibles</strong><small>Tout est enregistré localement</small></div><span>⌄</span></summary><div class="parameter-body"><div class="parameter-grid threshold-grid"><label><span>Seuil principal</span><input class="mini-input" id="primaryThreshold" type="number" min="0" max="1" step="0.05" value="${cfg.primaryThreshold}"></label><label><span>Seuil secondaire</span><input class="mini-input" id="secondaryThreshold" type="number" min="0" max="1" step="0.05" value="${cfg.secondaryThreshold}"></label><label><span>Cardio min / semaine</span><input class="mini-input" id="cardioMinTarget" type="number" min="0" step="5" value="${cfg.cardioMin}"></label><label><span>Cardio max / semaine</span><input class="mini-input" id="cardioMaxTarget" type="number" min="0" step="5" value="${cfg.cardioMax}"></label></div><div class="target-editor-list">${groups.map(g=>{const t=cfg.volumeTargets[g];return `<div class="target-editor-row"><strong>${g}</strong><label><span>Min</span><input class="mini-input volume-target-input" data-group="${g}" data-bound="min" type="number" min="0" step="0.5" value="${t.min}"></label><label><span>Max</span><input class="mini-input volume-target-input" data-group="${g}" data-bound="max" type="number" min="0" step="0.5" value="${t.max}"></label></div>`}).join('')}</div><div class="parameter-actions"><button class="btn btn-primary" id="saveTrainingConfig">Enregistrer les cibles</button><button class="btn btn-outline" id="resetTrainingConfig">Valeurs par défaut</button></div></div></details>
+  </section>`;
+}
+function saveTrainingConfigFromDom(){
+  const cfg=getTrainingConfig();cfg.primaryThreshold=clamp(Number(document.getElementById('primaryThreshold')?.value||cfg.primaryThreshold),0,1);cfg.secondaryThreshold=clamp(Number(document.getElementById('secondaryThreshold')?.value||cfg.secondaryThreshold),0,cfg.primaryThreshold);cfg.cardioMin=Math.max(0,Number(document.getElementById('cardioMinTarget')?.value||cfg.cardioMin));cfg.cardioMax=Math.max(cfg.cardioMin,Number(document.getElementById('cardioMaxTarget')?.value||cfg.cardioMax));
+  document.querySelectorAll('.volume-target-input').forEach(el=>{const g=el.dataset.group,b=el.dataset.bound;if(cfg.volumeTargets[g])cfg.volumeTargets[g][b]=Math.max(0,Number(el.value||0));});VOLUME_GROUPS.forEach(g=>{if(cfg.volumeTargets[g].max<cfg.volumeTargets[g].min)cfg.volumeTargets[g].max=cfg.volumeTargets[g].min;});setTrainingConfig(cfg);state.quickToast='Cibles de volume enregistrées';render();
 }
 
 function recordKey(entry){return `${entry.exercise}::${entry.type==='reps_band'?(entry.band||'bande'):''}::${entry.loadKg?'load'+entry.loadKg:''}`;}
@@ -1286,7 +1388,7 @@ function renderQuickLogModal(){
 function renderExerciseLibrary(){
   const visible=visibleExerciseLibrary();
   const cats=['Tous',...new Set(visible.map(x=>x.category))];
-  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.1.2 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
+  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.2 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
 }
 function filterLibraryDom(){const q=(document.getElementById('librarySearch')?.value||'').trim().toLowerCase(),cat=state.libraryCategory;document.querySelectorAll('.library-item').forEach(el=>{const okCat=cat==='Tous'||el.dataset.libCategory===cat,okQ=!q||(el.dataset.libText||'').includes(q);el.style.display=okCat&&okQ?'':'none';});}
 
@@ -1359,14 +1461,14 @@ function equipmentForExercise(name){
   return [...new Set(out)];
 }
 function programAudit(){
-  const days=[2,3,4,5,6,0],muscles={},equipment=Object.fromEntries(HOME_EQUIPMENT.map(x=>[x,new Set()]));let cardio=0,expressCardio=0,warmups=0,cooldowns=0;
+  const days=[2,3,4,5,6,0],muscles={},equipment=Object.fromEntries(HOME_EQUIPMENT.map(x=>[x,new Set()]));let cardio=0,expressCardio=0,warmups=0,cooldowns=0;const cfg=getTrainingConfig();
   days.forEach(day=>{const w=preparedWorkout(day,null,'full'),short=preparedWorkout(day,null,'short');cardio+=cardioTargetSeconds(w);expressCardio+=cardioTargetSeconds(short);if(w.exercises.some(e=>e.phase==='warmup'))warmups++;if(w.exercises.some(e=>e.phase==='cooldown'))cooldowns++;const v=volumeForWorkout(w);Object.entries(v).forEach(([g,n])=>muscles[g]=(muscles[g]||0)+n);w.exercises.forEach(e=>equipmentForExercise(e.name).forEach(eq=>equipment[eq]?.add(day)));});
-  const covered=VOLUME_GROUPS.filter(g=>(muscles[g]||0)>=2.5).length;
-  return {days,muscles,equipment,cardioMinutes:Math.round(cardio/60),expressCardioMinutes:Math.round(expressCardio/60),warmups,cooldowns,covered};
+  const covered=VOLUME_GROUPS.filter(g=>(muscles[g]||0)>=(cfg.volumeTargets[g]?.min||0)).length;
+  return {days,muscles,equipment,cardioMinutes:Math.round(cardio/60),expressCardioMinutes:Math.round(expressCardio/60),warmups,cooldowns,covered,cfg};
 }
 function renderProgramAudit(){
-  const a=programAudit();
-  return `<section class="card program-audit"><div class="section-head"><div><div class="kicker">Audit automatique du programme</div><h2>Couverture hebdomadaire</h2></div><span class="pill badge-success">${a.covered}/${VOLUME_GROUPS.length} zones</span></div><div class="audit-hero"><div><strong>6/7</strong><span>jours actifs</span></div><div><strong>${a.cardioMinutes}</strong><span>min cardio · complet</span></div><div><strong>${a.warmups}/6</strong><span>échauffements</span></div><div><strong>${a.cooldowns}/6</strong><span>retours au calme</span></div></div><div class="audit-section"><strong>Muscles / fonctions</strong><div class="audit-chip-grid">${VOLUME_GROUPS.map(g=>`<span class="audit-chip ${(a.muscles[g]||0)>=2.5?'ok':'warn'}">${g} <b>${(a.muscles[g]||0).toFixed(1)}</b></span>`).join('')}</div></div><div class="audit-section"><strong>Matériel utilisé dans la semaine</strong><div class="equipment-audit">${HOME_EQUIPMENT.map(eq=>`<div><span>${eq}</span><strong>${a.equipment[eq]?.size||0} j</strong></div>`).join('')}</div></div><div class="audit-note"><strong>Mode Express</strong><span>${a.expressCardioMinutes} min de cardio si tu faisais les 6 séances en Express. Utilise ce format ponctuellement ; si plusieurs journées sont raccourcies, complète le cardio avec une course/marche enregistrée dans Strava.</span></div><p class="muted small">Les chiffres musculaires sont des séries pondérées internes : ils servent à repérer un oubli ou un déséquilibre, pas à imposer un volume maximal.</p></section>`;
+  const a=programAudit(),cardioOK=a.cardioMinutes>=a.cfg.cardioMin&&a.cardioMinutes<=a.cfg.cardioMax;
+  return `<section class="card program-audit"><div class="section-head"><div><div class="kicker">Audit automatique du programme</div><h2>Couverture hebdomadaire</h2></div><span class="pill ${a.covered===VOLUME_GROUPS.length?'badge-success':'badge-warn'}">${a.covered}/${VOLUME_GROUPS.length} zones dans tes cibles</span></div><div class="audit-hero"><div><strong>6/7</strong><span>jours actifs</span></div><div><strong>${a.cardioMinutes}</strong><span>min cardio · cible ${a.cfg.cardioMin}–${a.cfg.cardioMax}</span></div><div><strong>${a.warmups}/6</strong><span>échauffements</span></div><div><strong>${a.cooldowns}/6</strong><span>retours au calme</span></div></div><div class="audit-section"><strong>Muscles / fonctions · programme complet</strong><div class="audit-chip-grid">${VOLUME_GROUPS.map(g=>{const n=a.muscles[g]||0,t=a.cfg.volumeTargets[g],ok=n>=t.min&&n<=t.max;return `<span class="audit-chip ${ok?'ok':'warn'}">${g} <b>${n.toFixed(1)}</b> <small>${t.min}–${t.max}</small></span>`}).join('')}</div></div><div class="audit-section"><strong>Matériel utilisé dans la semaine</strong><div class="equipment-audit">${HOME_EQUIPMENT.map(eq=>`<div><span>${eq}</span><strong>${a.equipment[eq]?.size||0} j</strong></div>`).join('')}</div></div><div class="audit-note ${cardioOK?'audit-ok':''}"><strong>Mode Express</strong><span>${a.expressCardioMinutes} min de cardio si tu faisais les 6 séances en Express. Les cibles cardio et musculaires sont maintenant les tiennes : modifie-les dans Volume musculaire selon ton objectif et ta récupération.</span></div><p class="muted small">L'audit compare désormais le programme complet à tes propres fourchettes paramétriques, au lieu d'un seuil fixe.</p></section>`;
 }
 
 function render() {
@@ -1403,7 +1505,7 @@ function shell(content, activeTab=state.view) {
 }
 
 function renderMore(){
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.1.2</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.2</div></div></header>
     <section class="more-grid">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1470,6 +1572,36 @@ function renderWeek() {
 }
 
 function flexRoutineById(id){return FLEX_ROUTINES.find(r=>r.id===id);}
+function flexZoneMap(name){return FLEX_EXERCISE_ZONES[name]||{};}
+function flexEntryMinutes(entry){
+  const v=Math.max(0,Number(entry.value??entry.target??0)),sets=Math.max(1,Number(entry.sets||1)),type=entry.type||'hold';
+  // Pour comparer des routines hétérogènes : holds/timers = durée réelle ; mouvements dynamiques = 3 s/repetition.
+  let sec=0;if(type==='hold_side')sec=v*2*sets;else if(type==='hold'||type==='timer')sec=v*sets;else if(type==='reps_side')sec=v*2*3*sets;else if(type?.startsWith('reps'))sec=v*3*sets;return sec/60;
+}
+function addFlexEntryDose(out,entry,sessionKey=null){const map=flexZoneMap(entry.exercise||entry.name);if(!Object.keys(map).length)return;const min=flexEntryMinutes(entry);Object.entries(map).forEach(([z,w])=>{if(!out[z])out[z]={minutes:0,sessions:new Set()};out[z].minutes+=min*Number(w);if(sessionKey)out[z].sessions.add(sessionKey);});}
+function weeklyFlexBalance(){
+  const start=mondayDate(new Date()).getTime(),zones=Object.fromEntries(FLEX_ZONES.map(z=>[z,{minutes:0,sessions:new Set()}]));let dedicatedMinutes=0,dedicatedSessions=0;
+  getFlexLogs().filter(s=>new Date(s.date).getTime()>=start).forEach(s=>{dedicatedMinutes+=Number(s.durationMinutes||0);dedicatedSessions++;(s.entries||[]).forEach(e=>addFlexEntryDose(zones,e,`flex:${s.id}`));});
+  // Les étirements réellement terminés dans les séances de force comptent aussi dans la dose de mobilité.
+  getHistory().filter(s=>new Date(s.date).getTime()>=start).forEach(s=>(s.entries||[]).forEach(e=>addFlexEntryDose(zones,e,`workout:${s.id}`)));
+  return {zones,dedicatedMinutes,dedicatedSessions};
+}
+function flexZoneStatus(row,target){if(row.minutes<target.min||row.sessions.size<target.sessions)return {label:'À compléter',cls:'warn'};if(row.minutes>target.max*1.35)return {label:'Dose haute',cls:'high'};return {label:'Cible atteinte',cls:'good'};}
+function renderFlexBalance(){
+  const cfg=getFlexConfig(),b=weeklyFlexBalance(),hit=FLEX_ZONES.filter(z=>{const r=b.zones[z],t=cfg.zoneTargets[z];return r.minutes>=t.min&&r.sessions.size>=t.sessions;}).length;
+  return `<section class="card flex-balance-card"><div class="section-head"><div><div class="kicker">Équilibre flexibilité · 7 jours</div><h2>${hit}/${FLEX_ZONES.length} zones dans la cible</h2></div><span class="pill">paramétrique</span></div><div class="flex-balance-hero"><div><strong>${b.dedicatedMinutes}</strong><span>min Flex dédiées</span></div><div><strong>${b.dedicatedSessions}</strong><span>routines · cible ${cfg.sessionsTarget}</span></div><div><strong>${cfg.weeklyMinutesTarget}</strong><span>min cible</span></div></div><p class="muted small">Les retours au calme de tes entraînements sont aussi comptés par zone. Les « minutes d'exposition » convertissent les répétitions dynamiques à ~3 s/repetition uniquement pour comparer les doses.</p><div class="flex-zone-list">${FLEX_ZONES.map(z=>{const r=b.zones[z],t=cfg.zoneTargets[z],st=flexZoneStatus(r,t),pct=clamp(r.minutes/Math.max(1,t.max),0,1.25)*100;return `<div class="flex-zone-row"><div class="param-volume-head"><div><strong>${z}</strong><span>${r.minutes.toFixed(1)} min · ${r.sessions.size} séance${r.sessions.size>1?'s':''} · cible ${t.min}–${t.max} min / ${t.sessions}+ séances</span></div><span class="target-state ${st.cls}">${st.label}</span></div><div class="volume-track target-track"><i style="width:${Math.min(100,pct)}%"></i><em style="left:${Math.min(100,t.min/Math.max(1,t.max)*100)}%"></em></div></div>`}).join('')}</div></section>`;
+}
+function mobilityGoalState(def,value,cfg){const goal=cfg.testTargets[def.id];if(value==null)return {label:'À mesurer',cls:''};const done=Number(value)>=Number(goal);return {label:done?'Objectif atteint':`Objectif ${goal} ${def.unit}`,cls:done?'good':'warn'};}
+function renderFlexResearch(){
+  return `<details class="card flex-research"><summary><div><div class="kicker">Base scientifique</div><strong>Comment la page Flex est pilotée</strong><small>Dose, timing, intensité et transfert vers la calisthénie</small></div><span>⌄</span></summary><div class="flex-research-body"><div class="research-rule"><b>1</b><p><strong>Pour gagner de l'amplitude :</strong> l'étirement statique répété fonctionne. Une méta-analyse de 189 études observe un plateau des gains autour de 4 min cumulées par séance et 10 min/semaine, sans avantage clair à multiplier la fréquence si le volume total est comparable.</p></div><div class="research-rule"><b>2</b><p><strong>Avant une séance de force :</strong> privilégie mobilité/dynamique. Les longs étirements statiques sont mieux placés après la séance ou dans une routine dédiée lorsqu'on veut éviter une baisse aiguë de performance.</p></div><div class="research-rule"><b>3</b><p><strong>La force compte aussi :</strong> le renforcement réalisé avec une grande amplitude peut améliorer le ROM. L'app ne sépare donc pas artificiellement « mobilité » et contrôle actif.</p></div><div class="research-rule"><b>4</b><p><strong>Intensité :</strong> recherche une tension tolérable, pas la douleur. La valeur ${getFlexConfig().intensityMin}–${getFlexConfig().intensityMax}/10 est ta zone de coaching actuelle et reste modifiable.</p></div><div class="source-links"><a href="https://pubmed.ncbi.nlm.nih.gov/39614059/" target="_blank" rel="noopener">Méta-analyse dose stretching</a><a href="https://pubmed.ncbi.nlm.nih.gov/39787531/" target="_blank" rel="noopener">Force & flexibilité</a><a href="https://pubmed.ncbi.nlm.nih.gov/42539555/" target="_blank" rel="noopener">Timing chez sportifs</a></div></div></details>`;
+}
+function renderFlexSettings(){
+  const cfg=getFlexConfig();return `<details class="card parameter-details flex-settings"><summary><div><div class="kicker">Réglages</div><strong>Mes cibles de flexibilité</strong><small>Minutes, fréquence, intensité et tests</small></div><span>⌄</span></summary><div class="parameter-body"><div class="parameter-grid"><label><span>Flex dédiée / semaine (min)</span><input class="mini-input" id="flexWeeklyMinutes" type="number" min="0" step="5" value="${cfg.weeklyMinutesTarget}"></label><label><span>Routines / semaine</span><input class="mini-input" id="flexSessionsTarget" type="number" min="0" max="7" value="${cfg.sessionsTarget}"></label><label><span>Tension min /10</span><input class="mini-input" id="flexIntensityMin" type="number" min="0" max="10" value="${cfg.intensityMin}"></label><label><span>Tension max /10</span><input class="mini-input" id="flexIntensityMax" type="number" min="0" max="10" value="${cfg.intensityMax}"></label></div><h3>Cibles par zone</h3><div class="target-editor-list">${FLEX_ZONES.map(z=>{const t=cfg.zoneTargets[z];return `<div class="target-editor-row flex-target-row"><strong>${z}</strong><label><span>Min</span><input class="mini-input flex-zone-input" data-zone="${z}" data-bound="min" type="number" min="0" step="0.5" value="${t.min}"></label><label><span>Max</span><input class="mini-input flex-zone-input" data-zone="${z}" data-bound="max" type="number" min="0" step="0.5" value="${t.max}"></label><label><span>Séances</span><input class="mini-input flex-zone-input" data-zone="${z}" data-bound="sessions" type="number" min="0" max="7" value="${t.sessions}"></label></div>`}).join('')}</div><h3>Objectifs de tests</h3><div class="parameter-grid">${MOBILITY_TESTS.map(t=>`<label><span>${t.name}</span><input class="mini-input flex-test-target" data-test-target="${t.id}" type="number" step="${t.step}" value="${cfg.testTargets[t.id]}"></label>`).join('')}<label><span>Écart cheville max (cm)</span><input class="mini-input" id="ankleSymmetryMax" type="number" min="0" step="0.1" value="${cfg.ankleSymmetryMax}"></label></div><div class="parameter-actions"><button class="btn btn-primary" id="saveFlexConfig">Enregistrer</button><button class="btn btn-outline" id="resetFlexConfig">Valeurs par défaut</button></div></div></details>`;
+}
+function saveFlexConfigFromDom(){
+  const cfg=getFlexConfig();cfg.weeklyMinutesTarget=Math.max(0,Number(document.getElementById('flexWeeklyMinutes')?.value||cfg.weeklyMinutesTarget));cfg.sessionsTarget=clamp(Number(document.getElementById('flexSessionsTarget')?.value||cfg.sessionsTarget),0,7);cfg.intensityMin=clamp(Number(document.getElementById('flexIntensityMin')?.value||cfg.intensityMin),0,10);cfg.intensityMax=clamp(Number(document.getElementById('flexIntensityMax')?.value||cfg.intensityMax),cfg.intensityMin,10);cfg.ankleSymmetryMax=Math.max(0,Number(document.getElementById('ankleSymmetryMax')?.value||cfg.ankleSymmetryMax));document.querySelectorAll('.flex-zone-input').forEach(el=>{const z=el.dataset.zone,b=el.dataset.bound;if(cfg.zoneTargets[z])cfg.zoneTargets[z][b]=Math.max(0,Number(el.value||0));});FLEX_ZONES.forEach(z=>{if(cfg.zoneTargets[z].max<cfg.zoneTargets[z].min)cfg.zoneTargets[z].max=cfg.zoneTargets[z].min;cfg.zoneTargets[z].sessions=clamp(cfg.zoneTargets[z].sessions,0,7);});document.querySelectorAll('.flex-test-target').forEach(el=>{if(el.dataset.testTarget in cfg.testTargets)cfg.testTargets[el.dataset.testTarget]=Number(el.value||0);});setFlexConfig(cfg);state.quickToast='Cibles Flex enregistrées';render();
+}
+
 function startFlexRoutine(id){
   const routine=clone(flexRoutineById(id)); if(!routine)return;
   state.active={kind:"flexibility",day:"flex",workout:routine,startedAt:Date.now(),exerciseIndex:0,setIndex:0,phase:"work",entries:[],currentValue:routine.exercises[0].target,currentBand:"Aucune",timerRemaining:null,timerRunning:false,reviewComfort:3,reviewDiscomfort:false,reviewNote:""};
@@ -1485,11 +1617,19 @@ function targetedFlexRoutine(day=todayDay()){
   if(day===0) return flexRoutineById("full-25");
   return flexRoutineById("reset-10");
 }
+function flexPriority(){
+  const cfg=getFlexConfig(),b=weeklyFlexBalance(),lower=["Chevilles","Hanches","Fléchisseurs hanche","Adducteurs","Ischios"],upper=["Épaules","Pectoraux","Thorax","Poignets"];
+  const deficit=z=>{const r=b.zones[z],t=cfg.zoneTargets[z];return Math.max(0,(t.min-r.minutes)/Math.max(1,t.min))+Math.max(0,(t.sessions-r.sessions.size)/Math.max(1,t.sessions));};
+  let lowerScore=lower.reduce((n,z)=>n+deficit(z),0),upperScore=upper.reduce((n,z)=>n+deficit(z),0);
+  // Les tests personnels renforcent la priorité de la zone réellement limitée.
+  const al=latestMobilityValue('ankle_left'),ar=latestMobilityValue('ankle_right'),ff=latestMobilityValue('forward_fold'),ds=latestMobilityValue('deep_squat');
+  if(al!=null&&al<cfg.testTargets.ankle_left)lowerScore+=1;if(ar!=null&&ar<cfg.testTargets.ankle_right)lowerScore+=1;if(ff!=null&&ff<cfg.testTargets.forward_fold)lowerScore+=1;if(ds!=null&&ds<cfg.testTargets.deep_squat)lowerScore+=.75;
+  return {lowerScore,upperScore,label:lowerScore>upperScore*1.15?'Bas du corps':upperScore>lowerScore*1.15?'Haut du corps':'Équilibrée'};
+}
 function recommendedFlexRoutine(day=todayDay()){
   if(day===0) return flexRoutineById("full-25");
-  if(day===4) return flexRoutineById("lower-18");
-  if([2,3].includes(day)) return flexRoutineById("upper-15");
-  return flexRoutineById("reset-10");
+  const p=flexPriority();if(p.label==='Bas du corps')return flexRoutineById("lower-18");if(p.label==='Haut du corps')return flexRoutineById("upper-15");
+  if(day===4) return flexRoutineById("lower-18");if([2,3].includes(day)) return flexRoutineById("upper-15");return flexRoutineById("reset-10");
 }
 function flexChoiceCard(label, icon, routine, description){
   return `<article class="flex-choice-card">
@@ -1500,23 +1640,23 @@ function flexChoiceCard(label, icon, routine, description){
 }
 function renderFlexibility(){
   const logs=getFlexLogs(), weekAgo=Date.now()-7*86400000, recent=logs.filter(x=>new Date(x.date).getTime()>=weekAgo);
-  const recommended=recommendedFlexRoutine(), targeted=targetedFlexRoutine();
-  const last=logs[0];
-  return shell(`<header class="topbar"><div><div class="brand">Flex</div><div class="daylabel">Choisis, lance, respire.</div></div></header>
-    <section class="card flex-simple-hero"><div class="flex-hero-copy"><div class="kicker">Conseillé aujourd’hui</div><h1>${recommended.name}</h1><p>${recommended.subtitle}</p><div class="meta"><span class="pill">≈ ${recommended.duration} min</span><span class="pill">${recommended.focus}</span></div></div><button class="btn btn-primary start-flex flex-hero-start" data-flex="${recommended.id}">Commencer</button></section>
-
+  const recommended=recommendedFlexRoutine(), targeted=targetedFlexRoutine(),last=logs[0],cfg=getFlexConfig(),priority=flexPriority();
+  const left=latestMobilityValue('ankle_left'),right=latestMobilityValue('ankle_right'),sym=(left!=null&&right!=null)?Math.abs(left-right):null;
+  return shell(`<header class="topbar"><div><div class="brand">Flex</div><div class="daylabel">Mobilité mesurée · objectifs paramétriques</div></div></header>
+    <section class="card flex-simple-hero"><div class="flex-hero-copy"><div class="kicker">Conseillé aujourd’hui · priorité ${priority.label.toLowerCase()}</div><h1>${recommended.name}</h1><p>${recommended.subtitle}</p><div class="meta"><span class="pill">≈ ${recommended.duration} min</span><span class="pill">${recommended.focus}</span><span class="pill">tension ${cfg.intensityMin}–${cfg.intensityMax}/10</span></div></div><button class="btn btn-primary start-flex flex-hero-start" data-flex="${recommended.id}">Commencer</button></section>
+    ${renderFlexBalance()}
     <section class="flex-simple-section"><div class="section-head"><div><div class="kicker">Choix rapide</div><h2>De combien de temps disposes-tu ?</h2></div></div><div class="flex-choice-list">
       ${flexChoiceCard('Rapide','⚡',flexRoutineById('reset-10'),'Récupération douce et mobilité générale. Idéale presque tous les jours.')}
       ${flexChoiceCard('Ciblée','◎',targeted, targeted.id==='lower-18'?'Accent sur chevilles, hanches, adducteurs et ischios.':'Accent sur poignets, épaules, pectoraux, dorsaux et thorax.')}
       ${flexChoiceCard('Complète','◇',flexRoutineById('full-25'),'Travail global quand tu veux consacrer une vraie séance à la souplesse.')}
     </div></section>
-
-    <details class="card flex-tracking"><summary><div><div class="kicker">Optionnel</div><strong>Suivi mobilité</strong><small>${recent.length} routine${recent.length>1?'s':''} cette semaine${last?` · dernière : ${formatDate(last.date)}`:''}</small></div><span>⌄</span></summary><div class="flex-tracking-body">
-      <h3>Tests</h3><p class="muted small">À refaire environ toutes les 4 semaines, pas à chaque séance.</p><div class="mobility-grid">${MOBILITY_TESTS.map(t=>{const latest=latestMobilityValue(t.id),best=bestMobilityValue(t.id);return `<div class="mobility-test"><strong>${t.name}</strong><div class="mobility-values"><span>Dernier <b>${latest==null?'—':latest+' '+t.unit}</b></span><span>Meilleur <b>${best==null?'—':best+' '+t.unit}</b></span></div><details><summary class="mobility-measure-toggle">Mesurer</summary><small>${t.note}</small><div class="mobility-entry"><input id="mob_${t.id}" type="number" inputmode="decimal" min="${t.min}" step="${t.step}" placeholder="${t.unit}"><button class="btn btn-secondary save-mobility" data-test="${t.id}">OK</button></div></details></div>`;}).join('')}</div>
+    ${renderFlexResearch()}
+    <details class="card flex-tracking" open><summary><div><div class="kicker">Mesures</div><strong>Tests de mobilité</strong><small>${recent.length} routine${recent.length>1?'s':''} cette semaine${last?` · dernière : ${formatDate(last.date)}`:''}${sym!=null?` · écart chevilles ${sym.toFixed(1)} cm`:''}</small></div><span>⌄</span></summary><div class="flex-tracking-body">
+      <p class="muted small">Refais les tests environ toutes les 4 semaines avec le même protocole. Les objectifs sont personnels et modifiables.</p><div class="mobility-grid">${MOBILITY_TESTS.map(t=>{const latest=latestMobilityValue(t.id),best=bestMobilityValue(t.id),goal=mobilityGoalState(t,latest,cfg);return `<div class="mobility-test"><div class="mobility-test-head"><strong>${t.name}</strong><span class="target-state ${goal.cls}">${goal.label}</span></div><div class="mobility-values"><span>Dernier <b>${latest==null?'—':latest+' '+t.unit}</b></span><span>Meilleur <b>${best==null?'—':best+' '+t.unit}</b></span></div><details><summary class="mobility-measure-toggle">Mesurer</summary><small>${t.note}</small><div class="mobility-entry"><input id="mob_${t.id}" type="number" inputmode="decimal" min="${t.min}" step="${t.step}" placeholder="${t.unit}"><button class="btn btn-secondary save-mobility" data-test="${t.id}">OK</button></div></details></div>`;}).join('')}</div>${sym!=null?`<div class="flex-symmetry ${sym<=cfg.ankleSymmetryMax?'good':'warn'}"><strong>Symétrie chevilles</strong><span>${sym.toFixed(1)} cm d'écart · cible ≤ ${cfg.ankleSymmetryMax} cm</span></div>`:''}
       <div class="divider"></div><h3>Historique récent</h3>${logs.length?logs.slice(0,4).map(l=>`<div class="history-item"><div class="history-top"><div><div class="history-title">${l.name}</div><div class="small muted">${formatDate(l.date)} · ${l.durationMinutes} min</div></div><span class="pill">${l.comfort||'—'}/5</span></div></div>`).join(''):'<div class="empty">Ta première routine apparaîtra ici.</div>'}
     </div></details>
-
-    <div class="flex-safety-line"><span>✓</span><p><strong>Règle simple :</strong> tension confortable 3–6/10. Pas de douleur vive, pincement, engourdissement ou sensation électrique.</p></div>`,"flexibility");
+    ${renderFlexSettings()}
+    <div class="flex-safety-line"><span>✓</span><p><strong>Règle actuelle :</strong> tension ${cfg.intensityMin}–${cfg.intensityMax}/10. Pas de douleur vive, pincement, engourdissement ou sensation électrique.</p></div>`,"flexibility");
 }
 function saveMobilityTest(id){const def=MOBILITY_TESTS.find(x=>x.id===id),el=document.getElementById(`mob_${id}`);if(!def||!el||el.value==='')return;const value=Number(el.value);if(!Number.isFinite(value))return;const arr=getMobilityTests();arr.unshift({id:Date.now(),date:new Date().toISOString(),testId:id,value});setMobilityTests(arr.slice(0,400));render();}
 
@@ -1917,7 +2057,7 @@ function renderProfile(){const logs=getBodyLogs(),p=getPrefs();const latest=logs
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + barres parallèles + poignées + bandes + tapis</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les barres parallèles et poignées de pompes sont intégrées aux recommandations. Pour le moment, les séances utilisent les bandes à la place du sac à dos pour ajouter de la résistance.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.1.2</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.2</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`, "profile");}
 
 function renderBodyChart(logs,key,unit){const pts=logs.filter(x=>Number(x[key])>0).slice(0,12).reverse();if(pts.length<2)return'';const vals=pts.map(x=>Number(x[key])),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.5,max-min);const coords=vals.map((v,i)=>{const x=(i/(vals.length-1))*100,y=88-((v-min)/range)*70;return `${x},${y}`}).join(' ');return `<div class="mini-chart"><div class="chart-head"><strong>${key==='weight'?'Poids':'Tour de taille'}</strong><span>${vals[0]} → ${vals[vals.length-1]} ${unit}</span></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Évolution ${key}"><polyline points="${coords}" fill="none" vector-effect="non-scaling-stroke"/></svg></div>`;}
@@ -1978,6 +2118,10 @@ function bindEvents(){
   document.querySelectorAll('[data-flex-toggle]').forEach(b=>b.onclick=()=>{const id=b.dataset.flexToggle;state.expandedFlexRoutine=state.expandedFlexRoutine===id?null:id;render();});
   document.querySelectorAll('.start-flex').forEach(b=>b.onclick=()=>startFlexRoutine(b.dataset.flex));
   document.querySelectorAll('.save-mobility').forEach(b=>b.onclick=()=>saveMobilityTest(b.dataset.test));
+  const saveTrainCfg=document.getElementById('saveTrainingConfig');if(saveTrainCfg)saveTrainCfg.onclick=saveTrainingConfigFromDom;
+  const resetTrainCfg=document.getElementById('resetTrainingConfig');if(resetTrainCfg)resetTrainCfg.onclick=()=>{if(confirm('Revenir aux cibles de volume par défaut ?')){localStorage.removeItem(STORAGE.trainingConfig);render();}};
+  const saveFlexCfg=document.getElementById('saveFlexConfig');if(saveFlexCfg)saveFlexCfg.onclick=saveFlexConfigFromDom;
+  const resetFlexCfg=document.getElementById('resetFlexConfig');if(resetFlexCfg)resetFlexCfg.onclick=()=>{if(confirm('Revenir aux cibles Flex par défaut ?')){localStorage.removeItem(STORAGE.flexConfig);render();}};
   document.querySelectorAll('.week-toggle').forEach(b=>b.onclick=()=>{const day=Number(b.dataset.day);state.expandedWeekDay=state.expandedWeekDay===day?null:day;render();});
   document.querySelectorAll('.start-day').forEach(b=>b.onclick=e=>{e.stopPropagation();requestWorkoutStart(b.dataset.day);});
   const start=document.getElementById('startWorkout');if(start)start.onclick=()=>requestWorkoutStart(start.dataset.day);

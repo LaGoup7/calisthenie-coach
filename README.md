@@ -1,30 +1,26 @@
-# Calisthénie Coach · V9.1.2
+# Calisthénie Coach · V9.2 — Parametric Training + Flex
 
-## Changements
-- Programme par défaut sans sac à dos.
-- Squat principal remplacé par **Squat avec bande**.
-- Bulgarian split squat et fentes en poids du corps pour le moment.
-- Setup actif : Power Tower, barres parallèles, poignées de pompes, bandes et tapis.
-- Les anciens exercices au sac restent compatibles avec l’historique mais sont masqués des choix courants.
+## Volume musculaire paramétrique
+- Charge réelle = séances complètes, Express, personnelles + Quick Logs.
+- Plan officiel affiché séparément.
+- Décomposition Principal / Secondaire / Technique selon seuils modifiables.
+- Cibles min/max par groupe musculaire modifiables.
+- Cible cardio hebdomadaire modifiable.
+- L’audit hebdomadaire utilise désormais ces paramètres au lieu d’un seuil fixe.
 
-## Strava
-- Callback OAuth fixé sur l’URL de production Vercel lorsque disponible.
-- Validation explicite des 3 variables Vercel.
-- Endpoint OAuth moderne `https://www.strava.com/oauth/token` avec fallback de compatibilité.
-- API activités sur le nouveau domaine `https://api-v3.strava.com` avec fallback.
-- Diagnostic sans secret : `/api/strava/health`.
-- Messages d’erreur plus précis après retour OAuth.
+## Flexibilité paramétrique
+- 9 zones suivies : chevilles, hanches, fléchisseurs de hanche, adducteurs, ischios, épaules, pectoraux, thorax, poignets.
+- Dose hebdomadaire estimée + nombre de séances par zone.
+- Retours au calme des séances de force inclus dans le suivi Flex.
+- Cibles par zone, fréquence, minutes dédiées et tension modifiables.
+- Objectifs des tests de mobilité modifiables + symétrie des chevilles.
+- Base scientifique intégrée à la page Flex avec liens PubMed.
+- Routines Rapide / Ciblée / Complète conservées.
 
-### Variables Vercel
-- `STRAVA_CLIENT_ID`
-- `STRAVA_CLIENT_SECRET`
-- `STRAVA_SESSION_SECRET`
-
-Le callback attendu dans Strava reste `calisthenie-coach.vercel.app`.
-
-
-## V9.1.2 — Strava déplacé dans Plus
-- Suppression des cartes Strava permanentes de la page Aujourd’hui.
-- Connexion, statut, diagnostic, synchronisation, dernières courses et déconnexion regroupés dans Plus.
-- Suppression du doublon Strava dans Profil.
-- Pendant une séance, le bloc Strava reste disponible uniquement lorsqu’un exercice Cardio Zone 2 est réellement en cours.
+## Conservé
+- Programme 6 j/7, formats Complet / Express, éditeur Mes séances.
+- Bandes à la place du sac à dos.
+- Tutoriels vidéo + images.
+- Timer iPhone renforcé.
+- Strava dans Plus.
+- Données existantes compatibles : nouveaux paramètres utilisent de nouvelles clés localStorage.
