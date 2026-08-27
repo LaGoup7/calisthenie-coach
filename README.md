@@ -1,4 +1,4 @@
-# Calisthénie Coach · V9.2.3 — Semaine UI professionnelle
+# Calisthénie Coach · V9.2.4 — Skill Tree sync
 
 ## Volume musculaire paramétrique
 - Charge réelle = séances complètes, Express, personnelles + Quick Logs.
@@ -48,3 +48,11 @@
 - Action Démarrer transformée en action légère.
 - Détails ouverts sur fond très légèrement teinté et exercices moins séparés visuellement.
 - Optimisation mobile iPhone et desktop.
+
+
+## V9.2.4 · Skill Tree sync
+- Les paliers mesurables utilisent le meilleur résultat entre tests périodiques et séries de séances guidées.
+- Tractions strictes, dips, dead hang et handstand au mur synchronisent automatiquement les jalons correspondants.
+- Les missions de rang utilisent la même logique.
+- Les Quick Logs restent exclus des promotions/Skill Tree.
+- Le Skill Tree affiche désormais la valeur courante et sa source (`séance` ou `test`).

@@ -28,7 +28,7 @@ function ex(name, type, sets, target, rest, tip, opts={}) {
   };
 }
 
-// V9.2.3 · Week UI professional refresh + Quick Log visuel.
+// V9.2.4 · Week UI professional refresh + Quick Log visuel.
 // Chaque journée conserve échauffement + travail principal + cardio + retour au calme,
 // y compris en mode Express. Lundi reste le jour de récupération complète.
 const workouts = {
@@ -730,6 +730,16 @@ const TEST_DEFS = [
   { id: "cardio12", name: "Cardio 12 min", unit: "m", input: "number", tip: "Distance en 12 minutes. Facultatif au début : garde une intensité contrôlée." }
 ];
 
+// Les jalons mesurables peuvent être validés par un test dédié OU par une vraie série
+// enregistrée dans une séance guidée. Les Quick Logs restent volontairement exclus.
+const TEST_GUIDED_EXERCISES = {
+  pullups:["Tractions strictes"],
+  dips:["Dips"],
+  dead_hang:["Dead hang"],
+  wall_handstand:["Handstand au mur"],
+  l_sit:["L-sit","Tuck L-sit"]
+};
+
 const SKILL_TREES = [
   { id: "pull", name: "Tirage", levels: [
     { id:"pull-1", name:"1 traction stricte", auto:{ test:"pullups", value:1 } },
@@ -970,7 +980,7 @@ async function exportBackup(){
     if(!row.photoId||photos[row.photoId])continue;
     try{const blob=await getPhoto(row.photoId);if(blob)photos[row.photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',row.photoId,e);}
   }
-  const backup={app:'Calisthenie Coach',schema:1,version:'9.2.3',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'Calisthenie Coach',schema:1,version:'9.2.4',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1432,7 +1442,7 @@ function selectQuickExerciseCard(card){
 function renderExerciseLibrary(){
   const visible=visibleExerciseLibrary();
   const cats=['Tous',...new Set(visible.map(x=>x.category))];
-  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.2.3 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
+  return `<main class="shell"><section class="card library-head"><button class="back-btn" id="closeExerciseLibrary">← Retour</button><div class="kicker">V9.2.4 · bibliothèque structurée</div><h1>${visible.length} exercices</h1><p class="muted">Chaque fiche indique le niveau, le matériel, les muscles, la régression, la progression et les substitutions possibles.</p><input class="library-search" id="librarySearch" type="search" placeholder="Rechercher un exercice, muscle, matériel…"><div class="library-filters">${cats.map(c=>`<button class="library-filter ${state.libraryCategory===c?'active':''}" data-library-category="${c}">${c}</button>`).join('')}</div></section><section class="library-list" id="libraryList">${visible.map(item=>`<details class="card library-item" data-lib-category="${item.category}" data-lib-text="${esc((item.name+' '+item.category+' '+item.level+' '+item.equipment+' '+item.muscles.join(' ')).toLowerCase())}"><summary>${exerciseImage(item.name,'mini')}<div class="grow"><strong>${item.name}</strong><span>${item.category} · ${item.level}</span></div><b>⌄</b></summary><div class="library-body"><div class="meta"><span class="pill">${item.equipment}</span>${item.muscles.map(m=>`<span class="pill">${m}</span>`).join('')}</div>${item.prescription?`<div class="library-prescription"><strong>Repère</strong><span>${item.prescription.type.startsWith('hold')?item.prescription.target+' sec':item.prescription.target+' reps'} · repos ${fmtTime(item.prescription.rest||0)}</span></div>`:''}<div class="library-path"><span>↓ Régression <strong>${item.regression||'—'}</strong></span><span>↑ Progression <strong>${item.progression||'—'}</strong></span></div>${item.substitutes.length?`<p class="small muted">Substitutions : ${item.substitutes.join(' · ')}</p>`:''}${equipmentUseNote(item.name)?`<p class="equipment-tip">🧰 ${equipmentUseNote(item.name)}</p>`:''}${tutorialLink(item.name)}</div></details>`).join('')}</section></main>`;
 }
 function filterLibraryDom(){const q=(document.getElementById('librarySearch')?.value||'').trim().toLowerCase(),cat=state.libraryCategory;document.querySelectorAll('.library-item').forEach(el=>{const okCat=cat==='Tous'||el.dataset.libCategory===cat,okQ=!q||(el.dataset.libText||'').includes(q);el.style.display=okCat&&okQ?'':'none';});}
 
@@ -1549,7 +1559,7 @@ function shell(content, activeTab=state.view) {
 }
 
 function renderMore(){
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.2.3</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V9.2.4</div></div></header>
     <section class="more-grid">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">⌁</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">◆</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1962,13 +1972,27 @@ function signalTimer(){
 }
 
 function bestMetric(history,name){let best=0;history.forEach(h=>(h.entries||[]).forEach(e=>{if(e.exercise===name)best=Math.max(best,Number(e.value||0));}));return best;}
+function bestMetricDetails(history,name){
+  let best=0,date=null;
+  history.forEach(h=>(h.entries||[]).forEach(e=>{const value=Number(e.value||0);if(e.exercise===name&&value>best){best=value;date=h.date||null;}}));
+  return {value:best,date,source:best>0?'séance':null,exercise:name};
+}
 function latestTestValue(id){const t=getTests().filter(x=>x.testId===id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];return t?Number(t.value):0;}
 function bestTestValue(id){return getTests().filter(x=>x.testId===id).reduce((m,x)=>Math.max(m,Number(x.value)||0),0);}
-function metricValueForSkill(auto){
-  if(auto.test) return bestTestValue(auto.test);
-  if(auto.exercise) return bestMetric(getHistory(),auto.exercise);
-  return 0;
+function performanceDetailsForTest(id){
+  const testBest=bestTestValue(id);
+  let guided={value:0,date:null,source:null,exercise:null};
+  for(const name of (TEST_GUIDED_EXERCISES[id]||[])){const d=bestMetricDetails(getHistory(),name);if(d.value>guided.value)guided=d;}
+  if(guided.value>=testBest&&guided.value>0)return guided;
+  return {value:testBest,date:null,source:testBest>0?'test':null,exercise:null};
 }
+function performanceValueForTest(id){return performanceDetailsForTest(id).value;}
+function metricDetailsForSkill(auto){
+  if(auto.test)return performanceDetailsForTest(auto.test);
+  if(auto.exercise)return bestMetricDetails(getHistory(),auto.exercise);
+  return {value:0,date:null,source:null,exercise:null};
+}
+function metricValueForSkill(auto){return metricDetailsForSkill(auto).value;}
 
 function findSkillLevel(id){
   for(const tree of SKILL_TREES){
@@ -2005,7 +2029,7 @@ function xpSummary(){
 function objectiveProgress(obj){
   let current=0;
   if(obj.type==='sessions')current=getHistory().length;
-  else if(obj.type==='test')current=bestTestValue(obj.id);
+  else if(obj.type==='test')current=performanceValueForTest(obj.id);
   else if(obj.type==='exercise')current=bestMetric(getHistory(),obj.name);
   else if(obj.type==='skill')current=skillDoneById(obj.id)?1:0;
   const target=obj.type==='skill'?1:Number(obj.value||1);
@@ -2095,9 +2119,16 @@ function renderTestEditor(){const t=TEST_DEFS.find(x=>x.id===state.testEditor);c
 function saveTest(){const t=TEST_DEFS.find(x=>x.id===state.testEditor),v=Number(document.getElementById('testValue')?.value||0);if(v<=0)return;const beforeRank=getRankState().current.id;const arr=getTests();arr.unshift({id:Date.now(),date:new Date().toISOString(),testId:t.id,value:v,note:document.getElementById('testNote')?.value||''});setTests(arr.slice(0,240));const afterRank=getRankState();if(afterRank.current.id!==beforeRank)state.rankUpNotice=afterRank.current.name;state.testEditor=null;state.view='progress';render();}
 
 function skillDone(level){if(level.auto&&metricValueForSkill(level.auto)>=level.auto.value)return true;return !!getManualSkills()[level.id];}
+function skillAutoLabel(level){
+  if(!level.auto)return 'Validation manuelle';
+  const d=metricDetailsForSkill(level.auto),def=level.auto.test?TEST_DEFS.find(x=>x.id===level.auto.test):null;
+  const unit=def?.unit || ((exerciseInfo(level.auto.exercise)?.prescription?.type||'').startsWith('hold')?'sec':'reps');
+  const current=Number(d.value||0),source=d.source?` · ${d.source}`:'';
+  return `Auto · ${current} / ${level.auto.value} ${unit}${source}`;
+}
 function renderSkills(){const manual=getManualSkills();return shell(`<header class="topbar"><div><div class="brand">Skill tree</div><div class="daylabel">De la base aux mouvements avancés</div></div></header>
-  <section class="card"><p class="muted">Les jalons mesurables se valident automatiquement. Les skills techniques avancés peuvent être cochés manuellement quand tu les maîtrises proprement.</p></section>
-  ${SKILL_TREES.map(tree=>{let previous=true;return `<section class="card skill-card"><div class="section-head"><h2>${tree.name}</h2><span class="pill">${tree.levels.filter(skillDone).length}/${tree.levels.length}</span></div><div class="skill-path">${tree.levels.map((level,i)=>{const done=skillDone(level),unlocked=previous||done;previous=done;return `<div class="skill-node ${done?'done':unlocked?'available':'locked'}"><div class="skill-dot">${done?'✓':i+1}</div><div class="grow"><strong>${level.name}</strong><small>${level.auto?`Auto · objectif ${level.auto.value}`:'Validation manuelle'}</small></div>${level.manual&&unlocked?`<button class="skill-toggle" data-skill="${level.id}">${manual[level.id]?'Retirer':'Valider'}</button>`:''}</div>`}).join('')}</div></section>`}).join('')}`, "skills");}
+  <section class="card"><p class="muted">Les jalons mesurables utilisent maintenant ton meilleur résultat enregistré dans une <strong>séance guidée</strong> ou un <strong>test périodique</strong>. Les Quick Logs restent hors validation pour éviter de débloquer un palier avec du volume libre. Les skills techniques avancés restent validables manuellement.</p></section>
+  ${SKILL_TREES.map(tree=>{let previous=true;return `<section class="card skill-card"><div class="section-head"><h2>${tree.name}</h2><span class="pill">${tree.levels.filter(skillDone).length}/${tree.levels.length}</span></div><div class="skill-path">${tree.levels.map((level,i)=>{const done=skillDone(level),unlocked=previous||done;previous=done;return `<div class="skill-node ${done?'done':unlocked?'available':'locked'}"><div class="skill-dot">${done?'✓':i+1}</div><div class="grow"><strong>${level.name}</strong><small>${skillAutoLabel(level)}</small></div>${level.manual&&unlocked?`<button class="skill-toggle" data-skill="${level.id}">${manual[level.id]?'Retirer':'Valider'}</button>`:''}</div>`}).join('')}</div></section>`}).join('')}`, "skills");}
 
 function renderProfile(){const logs=getBodyLogs(),p=getPrefs();const latest=logs[0];const latestBf=latest?estimateBodyFat(latest.height,latest.waist,latest.neck):null;return shell(`<header class="topbar"><div><div class="brand">Profil</div><div class="daylabel">Journal physique & réglages</div></div></header>
   <section class="card"><div class="section-head"><div><div class="kicker">Journal physique</div><h2>Mesures</h2></div><button class="btn btn-secondary compact" id="addBody">+ Ajouter</button></div>
@@ -2108,7 +2139,7 @@ function renderProfile(){const logs=getBodyLogs(),p=getPrefs();const latest=logs
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
   <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + barres parallèles + poignées + bandes + tapis</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les barres parallèles et poignées de pompes sont intégrées aux recommandations. Pour le moment, les séances utilisent les bandes à la place du sac à dos pour ajouter de la résistance.</p></section>
-  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.2.3</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
+  <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V9.2.4</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Cycle 8 semaines</strong><div class="small muted">Semaine ${getCycleState().week}/8 · ${getCycleState().name}</div></div><button class="btn btn-outline compact" id="resetCycle">Recommencer</button></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`, "profile");}
 
 function renderBodyChart(logs,key,unit){const pts=logs.filter(x=>Number(x[key])>0).slice(0,12).reverse();if(pts.length<2)return'';const vals=pts.map(x=>Number(x[key])),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.5,max-min);const coords=vals.map((v,i)=>{const x=(i/(vals.length-1))*100,y=88-((v-min)/range)*70;return `${x},${y}`}).join(' ');return `<div class="mini-chart"><div class="chart-head"><strong>${key==='weight'?'Poids':'Tour de taille'}</strong><span>${vals[0]} → ${vals[vals.length-1]} ${unit}</span></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Évolution ${key}"><polyline points="${coords}" fill="none" vector-effect="non-scaling-stroke"/></svg></div>`;}
