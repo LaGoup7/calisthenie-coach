@@ -1,4 +1,4 @@
-# Calisthénie Coach · V9.1.1
+# Calisthénie Coach · V9.1.2
 
 ## Changements
 - Programme par défaut sans sac à dos.
@@ -21,3 +21,10 @@
 - `STRAVA_SESSION_SECRET`
 
 Le callback attendu dans Strava reste `calisthenie-coach.vercel.app`.
+
+
+## V9.1.2 — Strava déplacé dans Plus
+- Suppression des cartes Strava permanentes de la page Aujourd’hui.
+- Connexion, statut, diagnostic, synchronisation, dernières courses et déconnexion regroupés dans Plus.
+- Suppression du doublon Strava dans Profil.
+- Pendant une séance, le bloc Strava reste disponible uniquement lorsqu’un exercice Cardio Zone 2 est réellement en cours.
