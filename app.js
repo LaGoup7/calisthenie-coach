@@ -2508,6 +2508,69 @@ function renderMore(){
       <button class="profile-tool-row" data-view="skills"><span>${uiIcon('skills')}</span><div><strong>Skills</strong><small>Niveaux et objectifs techniques</small></div><b>→</b></button>
     </section>`, 'more');
 }
+const ACTIVITY_TYPES=[
+  {id:'running',label:'Course',distance:true,metric:'km'},
+  {id:'cycling',label:'Vélo',distance:true,metric:'km'},
+  {id:'swimming',label:'Piscine',distance:true,metric:'m'},
+  {id:'crossfit',label:'CrossFit',distance:false},
+  {id:'hyrox',label:'HYROX',distance:false},
+  {id:'walking',label:'Marche / randonnée',distance:true,metric:'km'},
+  {id:'rowing',label:'Rameur',distance:true,metric:'km'},
+  {id:'mobility',label:'Mobilité / étirements',distance:false},
+  {id:'sport',label:'Autre sport',distance:false}
+];
+function getActivities(){return parse(STORAGE.activities,[]);}
+function setActivities(v){save(STORAGE.activities,v);}
+function activityType(id){return ACTIVITY_TYPES.find(x=>x.id===id)||{id,label:id||'Activité',unit:'min'};}
+function addActivityLog(type,duration,distance=0,intensity='moderate',note='',rpe=5){
+  const rows=getActivities(),mins=Math.max(1,Number(duration)||0),effort=Math.max(1,Math.min(10,Number(rpe)||5));
+  rows.unshift({id:String(Date.now()),date:new Date().toISOString(),type,duration:mins,distance:Math.max(0,Number(distance)||0),intensity,note:String(note||''),rpe:effort,load:Math.round(mins*effort)});
+  setActivities(rows.slice(0,1500));
+}
+function activityStats(days=7){
+  const cut=Date.now()-days*86400000,manual=getActivities().filter(x=>new Date(x.date).getTime()>=cut);
+  const strava=getStravaActivities().filter(a=>new Date(a.start_date||a.start_date_local||0).getTime()>=cut&&isRunActivity(a));
+  const rows={};let load=0;
+  for(const a of manual){const x=activityType(a.type),mins=Number(a.duration||0);if(!rows[x.label])rows[x.label]={minutes:0,sessions:0,distance:0};rows[x.label].minutes+=mins;rows[x.label].sessions++;rows[x.label].distance+=Number(a.distance||0);load+=Number(a.load||Math.round(mins*(Number(a.rpe)||5)));}
+  const runMin=Math.round(strava.reduce((s,a)=>s+Number(a.moving_time||a.elapsed_time||0),0)/60);
+  if(runMin){if(!rows['Course Strava'])rows['Course Strava']={minutes:0,sessions:0,distance:0};rows['Course Strava'].minutes+=runMin;rows['Course Strava'].sessions+=strava.length;rows['Course Strava'].distance+=strava.reduce((s,a)=>s+Number(a.distance||0)/1000,0);}
+  return {minutes:Object.values(rows).reduce((a,b)=>a+b.minutes,0),sessions:manual.length+strava.length,load,rows,manual};
+}
+function strengthVolumeStats(days=7){
+  const cut=Date.now()-days*86400000,rows=getHistory().filter(h=>new Date(h.date).getTime()>=cut);
+  return {minutes:rows.reduce((s,h)=>s+Number(h.durationMinutes||0),0),sessions:rows.length};
+}
+function totalTrainingStats(days=7){
+  const a=activityStats(days),s=strengthVolumeStats(days);
+  return {minutes:a.minutes+s.minutes,sessions:a.sessions+s.sessions,load:a.load,strength:s,activities:a};
+}
+function renderActivityHub(){
+  const all=totalTrainingStats(7),m=totalTrainingStats(30),s=all.activities;
+  const categories=[['Calisthénie / force',all.strength.minutes],...Object.entries(s.rows).map(([n,v])=>[n,v.minutes])].filter(x=>x[1]>0);
+  const max=Math.max(1,...categories.map(x=>x[1]));
+  return `<section class="card activity-hub"><div class="section-head"><div><div class="kicker">Charge globale · 7 jours</div><h2>${Math.floor(all.minutes/60)} h ${String(all.minutes%60).padStart(2,'0')} d'entraînement</h2><p class="muted small">${all.sessions} sessions · charge interne ${Math.round(all.load)} UA</p></div><button type="button" class="btn btn-secondary compact" id="openActivityLog">＋ Activité</button></div>
+  ${categories.length?`<div class="training-mix">${categories.map(([name,min])=>`<div class="training-mix-row"><div><span>${esc(name)}</span><strong>${Math.round(min)} min</strong></div><div class="training-mix-track"><i style="width:${Math.max(4,Math.round(min/max*100))}%"></i></div></div>`).join('')}</div>`:'<p class="muted small">Tes activités apparaîtront ici pour visualiser la répartition de ton volume.</p>'}
+  <div class="activity-month"><span>30 jours</span><strong>${Math.floor(m.minutes/60)} h ${String(m.minutes%60).padStart(2,'0')} · ${m.sessions} sessions</strong></div></section>`;
+}
+function activityUiIcon(id){
+  const icons={running:'↗',cycling:'◇',swimming:'≈',crossfit:'✦',hyrox:'H',walking:'⌁',rowing:'⇆',mobility:'∿',sport:'＋'};
+  return icons[id]||'＋';
+}
+function renderActivityEditor(){
+  return shell(`<header class="topbar activity-topbar"><div><div class="brand">Nouvelle activité</div><div class="daylabel">Ajoute une session à ton volume global</div></div></header>
+  <section class="activity-editor activity-editor-premium">
+    <div class="activity-editor-intro"><div class="activity-editor-symbol" id="activityEditorSymbol">↗</div><div><div class="kicker">Activité</div><h1 id="activityEditorTitle">Course</h1><p>Enregistre l'essentiel. KINETIK calcule automatiquement ta charge.</p></div></div>
+    <div class="activity-form-section"><label class="activity-field activity-field-main"><span>Type d'activité</span><select id="activityType">${ACTIVITY_TYPES.map(x=>`<option value="${x.id}">${x.label}</option>`).join('')}</select></label></div>
+    <div class="activity-metrics-grid">
+      <label class="activity-metric"><span>Durée</span><div><input id="activityDuration" type="number" min="1" step="1" value="30"><b>min</b></div></label>
+      <label class="activity-metric" id="activityDistanceWrap"><span>Distance <small>optionnel</small></span><div><input id="activityDistance" type="number" min="0" step=".1" placeholder="0"><b id="activityDistanceUnit">km</b></div></label>
+    </div>
+    <div class="activity-form-section activity-rpe-section"><div class="activity-rpe-head"><div><span>Effort perçu</span><small>À quel point la séance était exigeante ?</small></div><strong id="activityRpeValue">5</strong></div><input id="activityRpe" class="activity-rpe-slider" type="range" min="1" max="10" step="1" value="5"><div class="activity-rpe-scale"><span>1<br><small>Très facile</small></span><span>5<br><small>Modéré</small></span><span>8<br><small>Difficile</small></span><span>10<br><small>Maximal</small></span></div></div>
+    <div class="activity-form-section"><label class="activity-field"><span>Note <small>optionnel</small></span><textarea id="activityNote" rows="3" placeholder="Sensations, contenu de séance, terrain…"></textarea></label></div>
+    <div class="activity-load-preview activity-load-premium"><div><span>Charge de la session</span><small>Durée × effort perçu</small></div><strong id="activityLoadPreview">150 <small>UA</small></strong></div>
+    <div class="activity-editor-actions"><button type="button" class="btn activity-cancel" id="cancelActivity">Annuler</button><button type="button" class="btn activity-save" id="saveActivity">Enregistrer l'activité</button></div>
+  </section>`,'today');
+}
 function renderTodayUsefulActions(){
   const x=progressWeekStats(),rank=getRankState(),next=rank.next;
   const count=(x.recs?.length||0)+(x.due?.overdue?1:0)+(next?1:0);
