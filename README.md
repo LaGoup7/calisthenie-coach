@@ -1,4 +1,4 @@
-# KINETIK · V10.21 — Progress & Guided Preview
+# KINETIK · V10.22 — Progress & Guided Preview
 
 Refonte UI globale basée sur V10.1, sans changement du moteur d’entraînement ni des données.
 
