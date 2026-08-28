@@ -1846,19 +1846,187 @@ function syncProgressionDraftFromDom(){
   document.querySelectorAll('.progression-week-bool').forEach(el=>{const i=Number(el.dataset.weekIndex),key=el.dataset.key;if(d.weeks[i])d.weeks[i][key]=!!el.checked;});
 }
 function renderProgressionWeekEditor(w,i){w=normalizeProgressionWeek(w,i);return `<article class="progression-week-editor"><div class="progression-week-editor-head"><span>S${i+1}</span><input class="progression-week-field" data-week-index="${i}" data-key="name" value="${esc(w.name)}"></div><div class="progression-week-editor-grid"><label><span>Volume</span><input class="progression-week-field" data-week-index="${i}" data-key="volumeFactor" type="number" min="40" max="150" step="5" value="${Math.round(w.volumeFactor*100)}"><small>%</small></label><label><span>Reps / holds</span><input class="progression-week-field" data-week-index="${i}" data-key="targetFactor" type="number" min="60" max="140" step="2" value="${Math.round(w.targetFactor*100)}"><small>%</small></label><label><span>Cardio</span><input class="progression-week-field" data-week-index="${i}" data-key="cardioFactor" type="number" min="50" max="150" step="5" value="${Math.round(w.cardioFactor*100)}"><small>%</small></label><label><span>RIR</span><input class="progression-week-field" data-week-index="${i}" data-key="rir" type="number" min="0" max="5" step="1" value="${w.rir}"><small>reps</small></label></div><div class="progression-week-toggles"><label><input class="progression-week-bool" data-week-index="${i}" data-key="allowProgress" type="checkbox" ${w.allowProgress?'checked':''}> Progression auto autorisée</label><label><input class="progression-week-bool" data-week-index="${i}" data-key="tests" type="checkbox" ${w.tests?'checked':''}> Semaine de tests</label></div></article>`;}
+
+function cycleAiMetricCatalog(objective='',target=''){
+  const q=`${objective} ${target}`.toLowerCase();
+  if(/muscle.?up/.test(q))return [
+    {label:'Tractions strictes',kind:'test',id:'pullups',unit:'reps'},
+    {label:'Dips stricts',kind:'test',id:'dips',unit:'reps'},
+    {label:'Chest-to-bar',kind:'exercise',id:'Chest-to-bar',unit:'reps'},
+    {label:'Tractions explosives',kind:'exercise',id:'Tractions explosives',unit:'reps'},
+    {label:'Dead hang',kind:'test',id:'dead_hang',unit:'sec'}
+  ];
+  if(/traction|tirage/.test(q))return [
+    {label:'Tractions strictes',kind:'test',id:'pullups',unit:'reps'},
+    {label:'Tractions assistées',kind:'exercise',id:'Tractions assistées',unit:'reps'},
+    {label:'Dead hang',kind:'test',id:'dead_hang',unit:'sec'}
+  ];
+  if(/dip|poussée|push/.test(q))return [
+    {label:'Dips stricts',kind:'test',id:'dips',unit:'reps'},
+    {label:'Pompes',kind:'exercise',id:'Pompes',unit:'reps'},
+    {label:'Pike push-ups',kind:'exercise',id:'Pike push-ups',unit:'reps'}
+  ];
+  if(/handstand|hspu/.test(q))return [
+    {label:'Handstand au mur',kind:'test',id:'wall_handstand',unit:'sec'},
+    {label:'Handstand libre',kind:'exercise',id:'Handstand libre',unit:'sec'},
+    {label:'Pike push-ups',kind:'exercise',id:'Pike push-ups',unit:'reps'}
+  ];
+  if(/l.?sit|core/.test(q))return [
+    {label:'Tuck L-sit',kind:'exercise',id:'Tuck L-sit',unit:'sec'},
+    {label:'L-sit',kind:'exercise',id:'L-sit',unit:'sec'},
+    {label:'Hanging knee raises',kind:'exercise',id:'Hanging knee raises',unit:'reps'}
+  ];
+  return [
+    {label:'Tractions strictes',kind:'test',id:'pullups',unit:'reps'},
+    {label:'Dips stricts',kind:'test',id:'dips',unit:'reps'},
+    {label:'Dead hang',kind:'test',id:'dead_hang',unit:'sec'}
+  ];
+}
+function cycleAiMetricValue(m){
+  if(m.kind==='test')return performanceDetailsForTest(m.id);
+  const a=bestMetricDetails(getHistory(),m.id),b=bestQuickMetricDetails(m.id);
+  return Number(b.value||0)>Number(a.value||0)?b:a;
+}
+function cycleAiDataSnapshot(objective='',target=''){
+  const metrics=cycleAiMetricCatalog(objective,target).map(m=>({...m,...cycleAiMetricValue(m)}));
+  const found=metrics.filter(m=>Number(m.value||0)>0).length;
+  const sessions=getHistory().length,quick=getQuickLogs().length;
+  return {metrics,found,total:metrics.length,sessions,quick,status:found===metrics.length?'complete':found?'partial':'empty'};
+}
+function cycleAiDataText(objective='',target=''){
+  const s=cycleAiDataSnapshot(objective,target);
+  return s.metrics.map(m=>`- ${m.label}: ${Number(m.value||0)>0?`${m.value} ${m.unit}${m.source?` · ${m.source}`:''}`:'aucune donnée'}`).join('\n');
+}
+function cycleAiWeeklySummary(c){
+  let strictPull=0,assistedPull=0,dips=0,cardioMin=0,trainingDays=0;
+  for(let i=0;i<7;i++){
+    const d=cycleDayTemplate(c,i),ex=d?.exercises||[];
+    if(ex.length)trainingDays++;
+    ex.forEach(x=>{
+      const sets=Number(x.sets||1),target=Number(x.target||0);
+      if(x.name==='Tractions strictes')strictPull+=sets*target;
+      if(x.name==='Tractions assistées')assistedPull+=sets*target;
+      if(x.name==='Dips')dips+=sets*target;
+      if(/Cardio Zone 2/i.test(x.name)&&x.type==='timer')cardioMin+=target/60;
+    });
+  }
+  return `Jours d'entraînement: ${trainingDays}/7\nTractions strictes programmées: ${Math.round(strictPull)} reps/semaine\nTractions assistées programmées: ${Math.round(assistedPull)} reps/semaine\nDips programmés: ${Math.round(dips)} reps/semaine\nCardio Zone 2 programmé: ${Math.round(cardioMin)} min/semaine`;
+}
 function cycleAiPromptText(c,goal,opts={}){
   const cs=getCycleState(),setup=getEquipmentSetup(),history=getHistory(),records=currentRecords();
   const equipment=Object.entries(setup).filter(([k,v])=>v===true).map(([k])=>EQUIPMENT_BY_ID[k]?.name||k).join(', ')||'non renseigné';
   const weeks=(cs.plan.weeks||[]).map((w,i)=>{const n=normalizeProgressionWeek(w,i);return `S${i+1}: ${n.name} | volume ${Math.round(n.volumeFactor*100)}% | cible ${Math.round(n.targetFactor*100)}% | RIR ${n.rir} | cardio ${Math.round(n.cardioFactor*100)}% | progression ${n.allowProgress?'oui':'non'}`}).join('\n');
-  const recText=opts.source==='manual'?`- Niveau déclaré: ${opts.manualLevel||'non renseigné'}`:(records.slice(0,12).map(r=>`- ${r.exercise}: ${recordValueText(r)} (${formatShortDate(r.date)})${r.source?' · '+r.source:''}`).join('\n')||'- Aucun record enregistré');
-  const recent=opts.source==='manual'?'- Historique ignoré : niveau saisi manuellement':(history.slice(-6).reverse().map(s=>{const entries=(s.entries||[]).filter(x=>x.type!=='timer').slice(0,8).map(x=>`${x.exercise}: ${recordValueText(x)}`).join('; ');return `- ${formatShortDate(s.date)}: ${entries||'séance enregistrée'}`}).join('\n')||'- Pas encore de séances exploitables');
+  const autoLevel=cycleAiDataText(opts.objective,opts.target);
+  const recText=opts.source==='manual'?`- Niveau déclaré par l’utilisateur: ${opts.manualLevel||'non renseigné'}`:autoLevel;
+  const recent=opts.source==='manual'?'- Historique non utilisé pour estimer le niveau actuel':(history.slice(-6).reverse().map(s=>{const entries=(s.entries||[]).filter(x=>x.type!=='timer').slice(0,8).map(x=>`${x.exercise}: ${recordValueText(x)}`).join('; ');return `- ${formatShortDate(s.date)}: ${entries||'séance enregistrée'}`}).join('\n')||'- Pas encore de séances exploitables');
   const program=Array.from({length:7},(_,i)=>{const d=cycleDayTemplate(c,i);const ex=(d?.exercises||[]).map(x=>`${x.name} (${describe(x)})`).join('; ');return ex?`J${i+1}: ${ex}`:`J${i+1}: repos`;}).join('\n');
-  return `Tu es un coach spécialisé en calisthénie et en programmation de l’entraînement. Aide-moi à adapter mon cycle sans changer inutilement les exercices. Je veux une progression réaliste, mesurable et prudente.\n\nOBJECTIF\nObjectif principal: ${opts.objective||'non précisé'}\nRésultat visé: ${opts.target||'non précisé'}\nÉchéance: ${opts.horizon||'progression durable'}\nContexte: ${opts.context||'aucun point particulier'}\nPrécision utilisateur: ${goal||'aucune'}\n\nCYCLE ACTUEL\nCycle: ${c.name}\nPhase: ${cs.name}\nSemaine: ${cs.week}/${cs.weekCount}\nMode: ${progressionModeLabel(cs.plan)}\nVolume: ${Math.round(cs.setFactor*100)}% | cible reps/holds: ${Math.round(cs.targetFactor*100)}% | RIR: ${cs.rir} | cardio: ${Math.round(cs.cardioFactor*100)}%\nMatériel: ${equipment}\n\nPERFORMANCES / RECORDS ENREGISTRÉS\n${recText}\n\n6 DERNIÈRES SÉANCES ENREGISTRÉES\n${recent}\n\nPROGRAMME RÉEL DU CYCLE\n${program}\n\nPARAMÈTRES DES 8 SEMAINES\n${weeks}\n\nTA MISSION\n1. Vérifie d’abord si ces données suffisent. S’il manque une information réellement importante pour personnaliser le cycle, pose au maximum 3 questions ciblées avant de finaliser. Sinon réponds directement.\n2. Analyse si le cycle correspond à l’objectif et explique brièvement les changements utiles.\n3. Propose un cycle de ${cs.weekCount} semaines avec pour chaque semaine: phase, volume relatif %, cible reps/holds %, RIR, cardio %, progression automatique oui/non.\n4. Ajoute une section PROGRESSION DES EXERCICES PRIORITAIRES: donne des recommandations concrètes de séries/répétitions/holds ou assistance pour les mouvements directement liés à l’objectif, en utilisant le programme réel ci-dessus.\n5. Prévois consolidation/deload et gestion de fatigue si pertinent. Ne rends pas la progression agressive uniquement pour atteindre l’objectif plus vite.\n6. Si l’objectif ou l’échéance paraît irréaliste, dis-le et propose une cible intermédiaire.\n\nÀ la fin, fournis un tableau compact S1 à S${cs.weekCount} facilement reportable dans Calisthenie Coach.`;
+  const contextParts=[
+    opts.context&&opts.context!=='Aucun point particulier'?opts.context:null,
+    opts.breakDuration?`Durée de l'arrêt: ${opts.breakDuration}`:null,
+    opts.painZone?`Zone de gêne/douleur: ${opts.painZone}`:null,
+    opts.painImpact?`Impact: ${opts.painImpact}`:null,
+    opts.secondary?`Objectif secondaire: ${opts.secondary}`:null,
+    goal?`Précision libre: ${goal}`:null
+  ].filter(Boolean);
+  return `Tu es un coach spécialisé en calisthénie et en programmation de l’entraînement. Aide-moi à adapter mon cycle de façon réaliste, mesurable et prudente.
+
+RÈGLE IMPORTANTE
+Conserve autant que possible le programme actuel, mais autorise l'ajout, le remplacement ou le retrait d'exercices lorsqu'ils sont réellement nécessaires à l'objectif. Justifie chaque modification importante.
+
+OBJECTIF
+Objectif principal: ${opts.objective||'non précisé'}
+Résultat visé: ${opts.target||'non précisé'}
+Échéance: ${opts.horizon||'progression durable'}
+${contextParts.length?contextParts.join('\n'):'Contexte particulier: aucun'}
+
+NIVEAU ACTUEL
+Source: ${opts.source==='manual'?'saisie manuelle':'données Calisthenie Coach'}
+${recText}
+
+CYCLE ACTUEL
+Cycle: ${c.name}
+Phase: ${cs.name}
+Semaine: ${cs.week}/${cs.weekCount}
+Mode: ${progressionModeLabel(cs.plan)}
+Volume: ${Math.round(cs.setFactor*100)}% | cible reps/holds: ${Math.round(cs.targetFactor*100)}% | RIR: ${cs.rir} | cardio: ${Math.round(cs.cardioFactor*100)}%
+Matériel: ${equipment}
+
+RÉSUMÉ HEBDOMADAIRE
+${cycleAiWeeklySummary(c)}
+
+6 DERNIÈRES SÉANCES ENREGISTRÉES
+${recent}
+
+PROGRAMME RÉEL DU CYCLE
+${program}
+
+PARAMÈTRES DES ${cs.weekCount} SEMAINES
+${weeks}
+
+TA MISSION
+1. Vérifie la cohérence entre l'objectif, le niveau actuel, l'échéance et le programme.
+2. Si une information réellement indispensable manque encore, pose au maximum 3 questions très ciblées avant de finaliser. Ne redemande jamais une information déjà présente ci-dessus.
+3. Analyse les points forts et les limites du cycle actuel pour cet objectif.
+4. Propose un cycle de ${cs.weekCount} semaines avec: phase, volume relatif %, cible reps/holds %, RIR, cardio %, progression automatique oui/non.
+5. Ajoute une section PROGRESSION DES EXERCICES PRIORITAIRES avec des recommandations concrètes de séries, répétitions, holds ou assistance.
+6. Identifie les exercices spécifiques à l'objectif absents du programme. N'en ajoute que si cela apporte un bénéfice clair.
+7. Prévois consolidation/deload et gestion de fatigue si pertinent.
+8. Si l'objectif ou l'échéance paraît irréaliste, explique-le et propose une cible intermédiaire mesurable.
+
+À la fin, fournis un tableau compact S1 à S${cs.weekCount} facilement reportable dans Calisthenie Coach.`;
 }
 
 function renderCycleProgressionEditor(){
   const id=state.cycleProgressionEditor,c=trainingCycleById(id),d=state.cycleProgressionDraft||progressionPlanForCycle(c),templates=Object.entries(PROGRESSION_TEMPLATE_DEFS),goals=['Équilibré','Reprise','Force','Muscle / volume','Skills'];
-  return `<main class="shell progression-builder-shell"><section class="card progression-builder-head"><button class="back-btn" id="closeProgressionEditor">← Mes séances</button><div class="kicker">${esc(c.name)} · Progression</div><h1>Comment ce cycle doit-il progresser ?</h1><p class="muted">Choisis le niveau de contrôle qui te convient. Le planning des exercices reste dans le cycle ; cette page décide comment sa difficulté évolue.</p><section class="cycle-ai-helper-v107"><div class="cycle-ai-copy"><div class="cycle-ai-icon">✦</div><div><strong>Construire mon objectif avec ChatGPT</strong><p>Réponds à quelques choix simples. L’app ajoute automatiquement ton cycle, tes records récents, ton programme et ton matériel.</p></div></div><div class="ai-source-choice"><label class="ai-source-option active"><input type="radio" name="cycleAiSource" value="app" checked><span><strong>Utiliser mes données de l’app</strong><small>Recommandé · records, séries libres et séances</small></span></label><label class="ai-source-option"><input type="radio" name="cycleAiSource" value="manual"><span><strong>Renseigner manuellement</strong><small>Si ton historique ne reflète pas ton niveau</small></span></label></div><div class="ai-guide-grid"><label><span>1 · Objectif principal</span><select id="cycleAiObjective"><option>Plus de tractions</option><option>Plus de dips</option><option>Force</option><option>Muscle / volume</option><option>Endurance</option><option>Skill</option><option>Remise en forme</option><option>Personnalisé</option></select></label><label><span>2 · Cible</span><input id="cycleAiTarget" type="text" placeholder="Ex. 15 tractions"></label><label class="ai-manual-level" hidden><span>Niveau actuel</span><input id="cycleAiManualLevel" type="text" placeholder="Ex. 6 tractions strictes"></label><label><span>3 · Échéance</span><select id="cycleAiHorizon"><option>Progression durable, sans date</option><option>8 semaines</option><option>12 semaines</option><option>16 semaines</option></select></label><label><span>Contexte</span><select id="cycleAiContext"><option>Aucun point particulier</option><option>Reprise après un arrêt</option><option>Fatigue élevée</option><option>Sport complémentaire</option><option>Limiter le cardio</option><option>Gêne / douleur à prendre en compte</option></select></label></div><label class="cycle-ai-goal"><span>4 · Précision facultative</span><textarea id="cycleAiGoal" rows="2" placeholder="Ex. arrêt de 3 mois, priorité aux tractions strictes…"></textarea></label><div class="ai-data-preview"><div><strong>Données récupérées automatiquement</strong><small id="cycleAiDataSummary">Cycle · programme · matériel · historique · records</small></div><span>Auto</span></div><div class="cycle-ai-actions"><button class="btn btn-secondary" id="generateCycleAiPrompt">Générer mon prompt</button><span class="small muted">Aucune donnée n’est envoyée automatiquement.</span></div><div class="cycle-ai-output" id="cycleAiOutput" hidden><div class="cycle-ai-output-head"><strong>Prompt prêt à utiliser</strong><button class="btn btn-primary compact" id="copyCycleAiPrompt">Copier le prompt</button></div><textarea id="cycleAiPrompt" rows="14" readonly></textarea><p class="small muted">ChatGPT doit d’abord vérifier les données. S’il manque une information essentielle, il posera au maximum 3 questions ciblées.</p></div></section><div class="progression-manual-divider"><span>ou configure manuellement</span></div><div class="progression-mode-grid"><button class="progression-mode ${d.mode==='auto'?'active':''}" data-progression-mode="auto"><span>🤖</span><strong>Automatique</strong><small>Recommandé · l'app gère les 8 semaines</small></button><button class="progression-mode ${d.mode==='template'?'active':''}" data-progression-mode="template"><span>▤</span><strong>Modèle</strong><small>Force, volume, reprise, skills…</small></button><button class="progression-mode ${d.mode==='custom'?'active':''}" data-progression-mode="custom"><span>⚙</span><strong>Personnalisé</strong><small>Tu règles chaque semaine</small></button></div></section>
+  return `<main class="shell progression-builder-shell"><section class="card progression-builder-head"><button class="back-btn" id="closeProgressionEditor">← Mes séances</button><div class="kicker">${esc(c.name)} · Progression</div><h1>Comment ce cycle doit-il progresser ?</h1><p class="muted">Choisis le niveau de contrôle qui te convient. Le planning des exercices reste dans le cycle ; cette page décide comment sa difficulté évolue.</p><section class="cycle-ai-wizard-v109">
+<div class="cycle-ai-copy"><div class="cycle-ai-icon">✦</div><div><strong>Assistant de cycle</strong><p>Quelques étapes suffisent. L’app utilise d’abord les informations qu’elle connaît et ne te demande que ce qui manque.</p></div></div>
+<div class="ai-wizard-progress"><span class="active" data-ai-dot="1"></span><span data-ai-dot="2"></span><span data-ai-dot="3"></span><span data-ai-dot="4"></span><span data-ai-dot="5"></span></div>
+
+<div class="ai-wizard-step active" data-ai-step="1">
+<div class="kicker">Étape 1 sur 5</div><h3>Quel est ton objectif ?</h3>
+<label><span>Objectif principal</span><select id="cycleAiObjective"><option>Plus de tractions</option><option>Plus de dips</option><option>Muscle / volume</option><option>Force</option><option>Endurance</option><option>Remise en forme</option><option>Skill</option><option>Personnalisé</option></select></label>
+<label><span>Résultat ou skill visé</span><input id="cycleAiTarget" type="text" placeholder="Ex. 15 tractions ou premier Muscle-up"></label>
+<label><span>Objectif secondaire · facultatif</span><input id="cycleAiSecondary" type="text" placeholder="Ex. préparer le muscle-up"></label>
+</div>
+
+<div class="ai-wizard-step" data-ai-step="2">
+<div class="kicker">Étape 2 sur 5</div><h3>Quel délai veux-tu viser ?</h3>
+<div class="ai-choice-grid" id="cycleAiHorizonChoices">
+<button type="button" class="ai-choice active" data-value="Progression durable, sans date"><strong>Sans date</strong><small>Progression durable</small></button>
+<button type="button" class="ai-choice" data-value="8 semaines"><strong>8 semaines</strong><small>Cycle actuel</small></button>
+<button type="button" class="ai-choice" data-value="12 semaines"><strong>12 semaines</strong><small>Plus progressif</small></button>
+<button type="button" class="ai-choice" data-value="16 semaines"><strong>16 semaines</strong><small>Long terme</small></button>
+</div><input id="cycleAiHorizon" type="hidden" value="Progression durable, sans date">
+</div>
+
+<div class="ai-wizard-step" data-ai-step="3">
+<div class="kicker">Étape 3 sur 5</div><h3>Ton niveau actuel</h3>
+<div id="cycleAiDetectedData" class="ai-detected-data"></div>
+<div class="ai-source-choice">
+<label class="ai-source-option active"><input type="radio" name="cycleAiSource" value="app" checked><span><strong>Utiliser mes données de l’app</strong><small>Recommandé</small></span></label>
+<label class="ai-source-option"><input type="radio" name="cycleAiSource" value="manual"><span><strong>Renseigner manuellement</strong><small>Si elles ne reflètent pas ton niveau</small></span></label>
+</div>
+<label class="ai-manual-level" hidden><span>Décris seulement ton niveau actuel</span><textarea id="cycleAiManualLevel" rows="3" placeholder="Ex. 6 tractions strictes, 10 dips, dead hang 45 s..."></textarea></label>
+</div>
+
+<div class="ai-wizard-step" data-ai-step="4">
+<div class="kicker">Étape 4 sur 5</div><h3>Quelque chose à prendre en compte ?</h3>
+<label><span>Situation</span><select id="cycleAiContext"><option>Aucun point particulier</option><option>Reprise après un arrêt</option><option>Fatigue élevée</option><option>Sport complémentaire</option><option>Limiter le cardio</option><option>Gêne / douleur à prendre en compte</option></select></label>
+<label id="cycleAiBreakWrap" hidden><span>Depuis combien de temps avais-tu arrêté ?</span><input id="cycleAiBreakDuration" type="text" placeholder="Ex. 3 mois"></label>
+<div id="cycleAiPainWrap" hidden class="ai-guide-grid"><label><span>Zone concernée</span><select id="cycleAiPainZone"><option>Épaule</option><option>Coude</option><option>Poignet</option><option>Dos</option><option>Genou</option><option>Autre</option></select></label><label><span>Impact</span><select id="cycleAiPainImpact"><option>Léger</option><option>Modéré</option><option>Important</option></select></label></div>
+<label><span>Autre précision · facultatif</span><textarea id="cycleAiGoal" rows="2" placeholder="Une contrainte ou préférence que l’app ne peut pas connaître…"></textarea></label>
+</div>
+
+<div class="ai-wizard-step" data-ai-step="5">
+<div class="kicker">Étape 5 sur 5</div><h3>Vérification</h3>
+<div id="cycleAiReview" class="ai-review-box"></div>
+<p class="small muted">Le prompt contiendra également le programme complet, les paramètres des 8 semaines, le matériel et les dernières séances disponibles. Aucune donnée n’est envoyée automatiquement.</p>
+<button class="btn btn-primary" id="generateCycleAiPrompt">Générer mon prompt</button>
+<div class="cycle-ai-output" id="cycleAiOutput" hidden><div class="cycle-ai-output-head"><strong>Prompt prêt à utiliser</strong><button class="btn btn-primary compact" id="copyCycleAiPrompt">Copier le prompt</button></div><textarea id="cycleAiPrompt" rows="16" readonly></textarea></div>
+</div>
+
+<div class="ai-wizard-nav"><button type="button" class="btn btn-secondary" id="cycleAiPrev" hidden>← Retour</button><button type="button" class="btn btn-primary" id="cycleAiNext">Continuer →</button></div>
+</section><div class="progression-manual-divider"><span>ou configure manuellement</span></div><div class="progression-mode-grid"><button class="progression-mode ${d.mode==='auto'?'active':''}" data-progression-mode="auto"><span>🤖</span><strong>Automatique</strong><small>Recommandé · l'app gère les 8 semaines</small></button><button class="progression-mode ${d.mode==='template'?'active':''}" data-progression-mode="template"><span>▤</span><strong>Modèle</strong><small>Force, volume, reprise, skills…</small></button><button class="progression-mode ${d.mode==='custom'?'active':''}" data-progression-mode="custom"><span>⚙</span><strong>Personnalisé</strong><small>Tu règles chaque semaine</small></button></div></section>
   ${d.mode==='auto'?`<section class="card progression-builder-section"><div class="kicker">Objectif principal</div><h2>L'application choisit la courbe</h2><select class="select" id="progressionGoal">${goals.map(g=>`<option ${g===(d.goal||'Équilibré')?'selected':''}>${g}</option>`).join('')}</select><p class="muted small">Le moteur continue d'utiliser tes performances réelles pour faire progresser les exercices. Le bloc règle surtout la fatigue, la marge RIR, le cardio et les semaines allégées.</p></section>`:''}
   ${d.mode==='template'?`<section class="card progression-builder-section"><div class="kicker">Modèle</div><h2>Choisir une structure</h2><select class="select" id="progressionTemplate">${templates.map(([id,t])=>`<option value="${id}" ${id===(d.templateId||'standard')?'selected':''}>${t.name} · ${t.goal}</option>`).join('')}</select><p class="muted small">${esc((PROGRESSION_TEMPLATE_DEFS[d.templateId||'standard']||PROGRESSION_TEMPLATE_DEFS.standard).description)}</p></section>`:''}
   <section class="card progression-preview"><div class="section-head"><div><div class="kicker">Aperçu</div><h2>${esc(d.name||'Plan de progression')}</h2></div><span class="pill">8 semaines</span></div><div class="progression-preview-weeks">${(d.weeks||[]).map((w,i)=>{w=normalizeProgressionWeek(w,i);return `<div class="progression-preview-week"><span>S${i+1}</span><strong>${esc(w.name)}</strong><small>${Math.round(w.volumeFactor*100)} % vol · ${Math.round(w.targetFactor*100)} % cible · ${w.rir} RIR</small><em>${progressionDifficulty(w)}</em></div>`;}).join('')}</div></section>
@@ -2814,9 +2982,53 @@ function bindEvents(){
   document.querySelectorAll('.activate-cycle').forEach(b=>b.onclick=()=>activateTrainingCycle(b.dataset.cycleId));
   document.querySelectorAll('.edit-cycle-progression').forEach(b=>b.onclick=()=>openCycleProgressionEditor(b.dataset.cycleId));
   document.querySelectorAll('[data-progression-mode]').forEach(b=>b.onclick=()=>progressionDraftApplyMode(b.dataset.progressionMode));
-  document.querySelectorAll('input[name=cycleAiSource]').forEach(r=>r.onchange=()=>{const manual=document.querySelector('input[name=cycleAiSource]:checked')?.value==='manual',row=document.querySelector('.ai-manual-level');if(row)row.hidden=!manual;document.querySelectorAll('.ai-source-option').forEach(x=>x.classList.toggle('active',!!x.querySelector('input')?.checked));});
-  const genAi=document.getElementById('generateCycleAiPrompt');if(genAi)genAi.onclick=()=>{const c=trainingCycleById(state.cycleProgressionEditor),goal=(document.getElementById('cycleAiGoal')?.value||'').trim(),opts={objective:document.getElementById('cycleAiObjective')?.value,target:(document.getElementById('cycleAiTarget')?.value||'').trim(),horizon:document.getElementById('cycleAiHorizon')?.value,context:document.getElementById('cycleAiContext')?.value,source:document.querySelector('input[name=cycleAiSource]:checked')?.value||'app',manualLevel:(document.getElementById('cycleAiManualLevel')?.value||'').trim()},out=document.getElementById('cycleAiOutput'),ta=document.getElementById('cycleAiPrompt');ta.value=cycleAiPromptText(c,goal,opts);out.hidden=false;ta.focus();};
-  const copyAi=document.getElementById('copyCycleAiPrompt');if(copyAi)copyAi.onclick=async()=>{const ta=document.getElementById('cycleAiPrompt');try{await navigator.clipboard.writeText(ta.value);copyAi.textContent='Copié ✓';setTimeout(()=>copyAi.textContent='Copier le prompt',1600);}catch(e){ta.focus();ta.select();copyAi.textContent='Sélectionné';}};
+  const aiWizard=document.querySelector('.cycle-ai-wizard-v109');
+  if(aiWizard){
+    let aiStep=1;
+    const showAiStep=n=>{
+      aiStep=Math.max(1,Math.min(5,n));
+      document.querySelectorAll('[data-ai-step]').forEach(x=>x.classList.toggle('active',Number(x.dataset.aiStep)===aiStep));
+      document.querySelectorAll('[data-ai-dot]').forEach(x=>x.classList.toggle('active',Number(x.dataset.aiDot)<=aiStep));
+      const prev=document.getElementById('cycleAiPrev'),next=document.getElementById('cycleAiNext');
+      if(prev)prev.hidden=aiStep===1;if(next)next.hidden=aiStep===5;
+      if(aiStep===3)refreshAiDetected();
+      if(aiStep===5)refreshAiReview();
+    };
+    const aiObjective=()=>document.getElementById('cycleAiObjective')?.value||'';
+    const aiTarget=()=>document.getElementById('cycleAiTarget')?.value?.trim()||'';
+    const refreshAiDetected=()=>{
+      const box=document.getElementById('cycleAiDetectedData');if(!box)return;
+      const s=cycleAiDataSnapshot(aiObjective(),aiTarget()),title=s.status==='complete'?'Données suffisantes':s.status==='partial'?'Données partielles':'Peu de données disponibles';
+      box.innerHTML=`<div class="ai-detected-head"><div><strong>${title}</strong><small>${s.found}/${s.total} indicateurs utiles trouvés · ${s.sessions} séance${s.sessions!==1?'s':''} · ${s.quick} série${s.quick!==1?'s':''} libre${s.quick!==1?'s':''}</small></div><span class="ai-data-status ${s.status}">${s.status==='complete'?'OK':s.status==='partial'?'PARTIEL':'À COMPLÉTER'}</span></div><div class="ai-metric-list">${s.metrics.map(m=>`<div><span>${m.label}</span><strong>${Number(m.value||0)>0?`${m.value} ${m.unit}`:'—'}</strong></div>`).join('')}</div>`;
+    };
+    const refreshAiReview=()=>{
+      const box=document.getElementById('cycleAiReview');if(!box)return;
+      const source=document.querySelector('input[name=cycleAiSource]:checked')?.value||'app',snap=cycleAiDataSnapshot(aiObjective(),aiTarget());
+      box.innerHTML=`<div><span>Objectif</span><strong>${esc(aiObjective())} · ${esc(aiTarget()||'à préciser')}</strong></div><div><span>Échéance</span><strong>${esc(document.getElementById('cycleAiHorizon')?.value||'Sans date')}</strong></div><div><span>Niveau</span><strong>${source==='app'?`${snap.found}/${snap.total} indicateurs depuis l’app`:'Saisie manuelle'}</strong></div><div><span>Contexte</span><strong>${esc(document.getElementById('cycleAiContext')?.value||'Aucun')}</strong></div>`;
+    };
+    document.getElementById('cycleAiNext')?.addEventListener('click',()=>{if(aiStep===1&&!aiTarget()){document.getElementById('cycleAiTarget')?.focus();return;}showAiStep(aiStep+1);});
+    document.getElementById('cycleAiPrev')?.addEventListener('click',()=>showAiStep(aiStep-1));
+    document.querySelectorAll('#cycleAiHorizonChoices .ai-choice').forEach(b=>b.onclick=()=>{document.querySelectorAll('#cycleAiHorizonChoices .ai-choice').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('cycleAiHorizon').value=b.dataset.value;});
+    document.querySelectorAll('input[name=cycleAiSource]').forEach(r=>r.onchange=()=>{const manual=document.querySelector('input[name=cycleAiSource]:checked')?.value==='manual',row=document.querySelector('.ai-manual-level');if(row)row.hidden=!manual;document.querySelectorAll('.ai-source-option').forEach(x=>x.classList.toggle('active',!!x.querySelector('input')?.checked));});
+    const ctx=document.getElementById('cycleAiContext');if(ctx)ctx.onchange=()=>{const v=ctx.value,b=document.getElementById('cycleAiBreakWrap'),p=document.getElementById('cycleAiPainWrap');if(b)b.hidden=v!=='Reprise après un arrêt';if(p)p.hidden=v!=='Gêne / douleur à prendre en compte';};
+    document.getElementById('cycleAiObjective')?.addEventListener('change',refreshAiDetected);
+    document.getElementById('cycleAiTarget')?.addEventListener('input',refreshAiDetected);
+    const genAi=document.getElementById('generateCycleAiPrompt');if(genAi)genAi.onclick=()=>{
+      const c=trainingCycleById(state.cycleProgressionEditor),goal=(document.getElementById('cycleAiGoal')?.value||'').trim(),opts={
+        objective:aiObjective(),target:aiTarget(),secondary:(document.getElementById('cycleAiSecondary')?.value||'').trim(),
+        horizon:document.getElementById('cycleAiHorizon')?.value,context:document.getElementById('cycleAiContext')?.value,
+        source:document.querySelector('input[name=cycleAiSource]:checked')?.value||'app',
+        manualLevel:(document.getElementById('cycleAiManualLevel')?.value||'').trim(),
+        breakDuration:(document.getElementById('cycleAiBreakDuration')?.value||'').trim(),
+        painZone:document.getElementById('cycleAiContext')?.value==='Gêne / douleur à prendre en compte'?document.getElementById('cycleAiPainZone')?.value:'',
+        painImpact:document.getElementById('cycleAiContext')?.value==='Gêne / douleur à prendre en compte'?document.getElementById('cycleAiPainImpact')?.value:''
+      },out=document.getElementById('cycleAiOutput'),ta=document.getElementById('cycleAiPrompt');
+      ta.value=cycleAiPromptText(c,goal,opts);out.hidden=false;ta.focus();
+    };
+    const copyAi=document.getElementById('copyCycleAiPrompt');if(copyAi)copyAi.onclick=async()=>{const ta=document.getElementById('cycleAiPrompt');try{await navigator.clipboard.writeText(ta.value);copyAi.textContent='Copié ✓';setTimeout(()=>copyAi.textContent='Copier le prompt',1600);}catch(e){ta.focus();ta.select();copyAi.textContent='Sélectionné';}};
+    showAiStep(1);
+  }
+  
   const closeProg=document.getElementById('closeProgressionEditor');if(closeProg)closeProg.onclick=()=>{state.cycleProgressionEditor=null;state.cycleProgressionDraft=null;render();};
   const progGoal=document.getElementById('progressionGoal');if(progGoal)progGoal.onchange=()=>{state.cycleProgressionDraft=automaticProgression(progGoal.value);render();};
   const progTemplate=document.getElementById('progressionTemplate');if(progTemplate)progTemplate.onchange=()=>{state.cycleProgressionDraft=templateProgression(progTemplate.value);render();};
