@@ -922,6 +922,8 @@ const state = {
   bodyPhotoComparePosition: "front",
   bodyPhotoCompareA: "",
   bodyPhotoCompareB: "",
+  bodyMetric: "weight",
+  bodyCompareMetric: "none",
   selectedHistoryId: null,
   rankUpNotice: null,
   selectedRankId: null,
@@ -3425,98 +3427,135 @@ function renderBodyGoalCard(key,label,current,unit){const g=bodyGoalProgress(key
 function renderBodyFieldValue(logs,key){const d=bodyFieldDef(key),x=latestBodyValue(logs,key);if(!d||!x)return'';return `<div class="body-current-row"><span>${d.label}</span><strong>${x.value.toFixed(d.step<1?1:0).replace('.0','')} ${d.unit}</strong></div>`;}
 
 
-function renderBodyTrendChart(logs,key,unit,opts={}){
-  const def=bodyFieldDef(key),pts=(logs||[]).filter(x=>bodyValue(x,key)!=null).slice().reverse();
-  if(!pts.length)return `<div class="measure-chart-empty"><strong>${esc(def?.label||key)}</strong><span>Ajoute une mesure pour commencer la courbe.</span></div>`;
-  const vals=pts.map(x=>Number(bodyValue(x,key))),first=vals[0],last=vals[vals.length-1],delta=last-first;
-  if(vals.length===1)return `<div class="measure-chart-empty"><strong>${esc(def?.label||key)}</strong><b>${last.toFixed(1)} ${unit}</b><span>Une deuxième mesure permettra d'afficher la tendance.</span></div>`;
-  const min=Math.min(...vals),max=Math.max(...vals),pad=Math.max((max-min)*.18,.35),lo=min-pad,hi=max+pad,range=Math.max(.1,hi-lo);
-  const w=opts.large?760:360,h=opts.large?230:145,left=12,right=w-12,top=14,bottom=h-27;
-  const coords=vals.map((v,i)=>{const x=left+(i/(vals.length-1))*(right-left),y=top+(1-(v-lo)/range)*(bottom-top);return [x,y];});
-  const points=coords.map(p=>p.join(',')).join(' ');
-  const area=`${left},${bottom} ${points} ${right},${bottom}`;
-  const y1=(lo+range*.25).toFixed(1),y2=(lo+range*.75).toFixed(1);
-  const dates=[pts[0],pts[Math.floor((pts.length-1)/2)],pts[pts.length-1]].map(x=>formatShortDate(x.date));
-  const direction=delta===0?'stable':(delta<0?'down':'up');
-  return `<div class="measure-chart ${opts.large?'large':''}">
-    <div class="measure-chart-head"><div><span>${esc(def?.label||key)}</span><strong>${last.toFixed(1)} ${unit}</strong></div><div class="measure-chart-delta ${direction}">${delta===0?'stable':`${delta>0?'+':''}${delta.toFixed(1)} ${unit}`}</div></div>
-    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Évolution ${esc(def?.label||key)}">
-      <line x1="${left}" y1="${top+(bottom-top)*.25}" x2="${right}" y2="${top+(bottom-top)*.25}" class="measure-grid-line"/>
-      <line x1="${left}" y1="${top+(bottom-top)*.75}" x2="${right}" y2="${top+(bottom-top)*.75}" class="measure-grid-line"/>
-      <polygon points="${area}" class="measure-chart-area"/>
-      <polyline points="${points}" class="measure-chart-line" vector-effect="non-scaling-stroke"/>
-      ${coords.map((p,i)=>i===coords.length-1?`<circle cx="${p[0]}" cy="${p[1]}" r="${opts.large?4:3}" class="measure-chart-dot"/>`:'').join('')}
+const BODY_CHART_METRICS=[
+  ['weight','Poids','kg'],['waist','Tour de taille','cm'],['bodyFat','Masse grasse','%'],['leanMass','Masse maigre','kg']
+];
+function bodyMetricDefinition(key){
+  if(key==='bodyFat')return {key,label:'Masse grasse',unit:'%',value:l=>bodyDerived(l).bf};
+  if(key==='leanMass')return {key,label:'Masse maigre',unit:'kg',value:l=>bodyDerived(l).lean};
+  const f=bodyFieldDef(key)||{label:key,unit:''};return {key,label:f.label,unit:f.unit,value:l=>bodyValue(l,key)};
+}
+function bodyMetricPoints(logs,key){
+  const d=bodyMetricDefinition(key);
+  return (logs||[]).slice().reverse().map(l=>({log:l,value:Number(d.value(l)),date:new Date(l.date)})).filter(x=>Number.isFinite(x.value)&&x.value>0);
+}
+function bodyMetricDelta(logs,key){
+  const pts=bodyMetricPoints(logs,key);if(pts.length<2)return null;const d=pts[pts.length-1].value-pts[0].value;return Math.abs(d)<.05?0:d;
+}
+function bodyMovingAverage(points,window=7){
+  return points.map((p,i)=>{const slice=points.slice(Math.max(0,i-window+1),i+1),avg=slice.reduce((s,x)=>s+x.value,0)/slice.length;return {...p,value:avg};});
+}
+function bodyTrendClass(delta,key){
+  if(delta==null||delta===0)return 'neutral';
+  const lower=['weight','waist','bodyFat'].includes(key);
+  return lower?(delta<0?'good':'neutral'):'neutral';
+}
+function bodyMetricTrendText(logs,key){
+  const d=bodyMetricDefinition(key),delta=bodyMetricDelta(logs,key);
+  if(delta==null)return 'Pas assez de données';
+  if(delta===0)return 'Stable';
+  return `${delta>0?'+':'−'}${Math.abs(delta).toFixed(1).replace('.0','')} ${d.unit}`;
+}
+function renderBodyTrendChart(logs,key,compareKey='none'){
+  const mainDef=bodyMetricDefinition(key),pts=bodyMetricPoints(logs,key),compareDef=compareKey&&compareKey!=='none'?bodyMetricDefinition(compareKey):null,comparePts=compareDef?bodyMetricPoints(logs,compareKey):[];
+  if(!pts.length)return `<div class="measurement-no-data"><strong>Aucune donnée ${esc(mainDef.label.toLowerCase())}</strong><span>Ajoute une mesure pour commencer.</span></div>`;
+  if(pts.length===1)return `<div class="measurement-one-point"><div class="one-point-value"><span>${esc(mainDef.label)}</span><strong>${pts[0].value.toFixed(1)} <small>${mainDef.unit}</small></strong></div><div class="one-point-message"><strong>Point de départ enregistré</strong><p>Une deuxième mesure permettra de calculer une évolution. KINETIK n'affiche pas de tendance artificielle avec un seul relevé.</p></div></div>`;
+  const w=820,h=285,L=35,R=805,T=20,B=246;
+  const mainVals=pts.map(x=>x.value),mn=Math.min(...mainVals),mx=Math.max(...mainVals),pad=Math.max((mx-mn)*.18,.3),lo=mn-pad,hi=mx+pad,range=Math.max(.1,hi-lo);
+  const xFor=(i,n)=>L+(i/(Math.max(1,n-1)))*(R-L),yFor=v=>T+(1-(v-lo)/range)*(B-T);
+  const coords=pts.map((p,i)=>[xFor(i,pts.length),yFor(p.value)]);
+  const points=coords.map(x=>x.join(',')).join(' '),area=`${L},${B} ${points} ${R},${B}`;
+  const trendPts=key==='weight'&&pts.length>=4?bodyMovingAverage(pts,Math.min(7,pts.length)):null;
+  const trendCoords=trendPts?trendPts.map((p,i)=>[xFor(i,trendPts.length),yFor(p.value)]):[];
+  let comparePath='';
+  if(comparePts.length>=2){
+    const cvals=comparePts.map(x=>x.value),cmin=Math.min(...cvals),cmax=Math.max(...cvals),cr=Math.max(.1,cmax-cmin);
+    const cc=comparePts.map((p,i)=>[xFor(i,comparePts.length),T+(1-(p.value-cmin)/cr)*(B-T)]);
+    comparePath=`<polyline points="${cc.map(x=>x.join(',')).join(' ')}" class="body-chart-compare" vector-effect="non-scaling-stroke"/>`;
+  }
+  const eventMarks=pts.map((p,i)=>{if(i===0)return'';const prev=pts[i-1].log.trainingCycleName||'',cur=p.log.trainingCycleName||'';if(cur&&cur!==prev){const x=xFor(i,pts.length);return `<g class="body-chart-event"><line x1="${x}" y1="${T}" x2="${x}" y2="${B}"/><text x="${Math.min(x+5,R-90)}" y="${T+12}">${esc(cur.slice(0,18))}</text></g>`;}return'';}).join('');
+  const delta=bodyMetricDelta(logs,key),latest=pts[pts.length-1];
+  return `<div class="body-main-chart">
+    <div class="body-main-chart-summary"><div><span>${esc(mainDef.label)}</span><strong>${latest.value.toFixed(1)} <small>${mainDef.unit}</small></strong></div><div class="body-main-chart-change ${bodyTrendClass(delta,key)}"><span>Évolution période</span><strong>${bodyMetricTrendText(logs,key)}</strong></div>${trendPts?`<div><span>Tendance</span><strong>${trendPts[trendPts.length-1].value.toFixed(1)} ${mainDef.unit}</strong></div>`:''}</div>
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Évolution ${esc(mainDef.label)}">
+      <line x1="${L}" y1="${T+(B-T)*.25}" x2="${R}" y2="${T+(B-T)*.25}" class="body-chart-grid"/>
+      <line x1="${L}" y1="${T+(B-T)*.5}" x2="${R}" y2="${T+(B-T)*.5}" class="body-chart-grid"/>
+      <line x1="${L}" y1="${T+(B-T)*.75}" x2="${R}" y2="${T+(B-T)*.75}" class="body-chart-grid"/>
+      <polygon points="${area}" class="body-chart-area"/>
+      ${comparePath}
+      <polyline points="${points}" class="body-chart-line" vector-effect="non-scaling-stroke"/>
+      ${trendCoords.length?`<polyline points="${trendCoords.map(x=>x.join(',')).join(' ')}" class="body-chart-trend" vector-effect="non-scaling-stroke"/>`:''}
+      ${eventMarks}
+      <circle cx="${coords[coords.length-1][0]}" cy="${coords[coords.length-1][1]}" r="4" class="body-chart-last"/>
     </svg>
-    <div class="measure-chart-axis"><span>${dates[0]}</span><span>${dates[1]}</span><span>${dates[2]}</span></div>
+    <div class="body-chart-axis"><span>${formatShortDate(pts[0].log.date)}</span><span>${formatShortDate(pts[Math.floor((pts.length-1)/2)].log.date)}</span><span>${formatShortDate(latest.log.date)}</span></div>
+    ${compareDef&&comparePts.length>=2?`<div class="body-chart-legend"><span><i></i>${esc(mainDef.label)}</span><span class="compare"><i></i>${esc(compareDef.label)} · échelle normalisée</span></div>`:''}
   </div>`;
+}
+function renderBodyKinetikInsight(logs,context){
+  const n=logs.length,wd=bodyMetricDelta(logs,'weight'),wa=bodyMetricDelta(logs,'waist');
+  if(n<2)return `<section class="kinetik-reading"><div class="kicker">Lecture KINETIK</div><h2>Construisons d'abord une tendance</h2><p>Un seul relevé donne un point de départ, pas une progression. Ajoute une seconde mesure dans des conditions comparables pour commencer l'analyse.</p><strong>À surveiller</strong><span>Poids et tour de taille sont les deux indicateurs les plus utiles à mesurer régulièrement.</span></section>`;
+  let title='Tendance en construction',text='Tes mesures commencent à former une tendance. KINETIK la met en perspective avec ton entraînement sans surinterpréter les variations isolées.',watch='Continue à mesurer dans des conditions similaires.';
+  if(wd!=null&&wa!=null){
+    if(Math.abs(wd)<.5&&wa<-.5){title='Recomposition possible';text=`Ton poids est globalement stable (${bodyMetricTrendText(logs,'weight')}) tandis que ton tour de taille diminue (${bodyMetricTrendText(logs,'waist')}). Avec ${context.sessions} séance${context.sessions>1?'s':''} sur la période, ce profil est compatible avec une amélioration de composition corporelle.`;watch='Confirme la tendance avec plusieurs mesures hebdomadaires avant de conclure.';}
+    else if(wd<-.5&&wa<-.5){title='Tendance descendante cohérente';text=`Poids et tour de taille diminuent ensemble sur la période (${bodyMetricTrendText(logs,'weight')} · ${bodyMetricTrendText(logs,'waist')}).`;watch='Surveille aussi les performances pour vérifier que la baisse reste compatible avec tes objectifs sportifs.';}
+    else if(wd>.8&&wa<.2){title='Poids en hausse, taille stable';text=`Le poids augmente (${bodyMetricTrendText(logs,'weight')}) sans hausse nette du tour de taille. Le poids seul ne suffit donc pas à juger l'évolution.`;watch='Observe la tendance sur plusieurs semaines et rapproche-la des performances et du volume.';}
+    else if(wd>.8&&wa>.5){title='Hausse simultanée à surveiller';text=`Poids et tour de taille augmentent sur la période. KINETIK signale simplement cette évolution mesurée, sans en déduire une cause.`;watch="Vérifie la régularité des mesures et prolonge la période d'observation.";}
+  }
+  return `<section class="kinetik-reading"><div class="kicker">Lecture KINETIK</div><h2>${title}</h2><p>${text}</p><strong>À surveiller</strong><span>${watch}</span></section>`;
 }
 function renderBodyCompositionVisual(latest){
   if(!latest)return '';
   const d=bodyDerived(latest),bf=d.bf;
-  if(bf==null)return `<div class="measure-composition-empty"><strong>Composition corporelle</strong><span>Complète les données nécessaires pour obtenir une estimation.</span></div>`;
-  const lean=Math.max(0,100-bf),circ=100,offset=Math.max(0,Math.min(100,100-bf));
-  return `<div class="measure-composition">
-    <div class="measure-donut"><svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9155" class="donut-base"/><circle cx="21" cy="21" r="15.9155" class="donut-value" stroke-dasharray="${bf} ${100-bf}" stroke-dashoffset="25"/></svg><div><strong>${bf.toFixed(1)}%</strong><span>masse grasse</span></div></div>
-    <div class="measure-composition-legend">
-      <div><span>Masse maigre estimée</span><strong>${d.lean!=null?d.lean.toFixed(1)+' kg':'—'}</strong></div>
-      <div><span>Masse grasse estimée</span><strong>${d.weight&&bf!=null?(d.weight*bf/100).toFixed(1)+' kg':'—'}</strong></div>
-      <div><span>IMC</span><strong>${d.bmi!=null?d.bmi.toFixed(1):'—'}</strong></div>
-      <div><span>Ratio taille / taille</span><strong>${d.whtr!=null?d.whtr.toFixed(2):'—'}</strong></div>
-    </div>
-  </div>`;
+  if(bf==null)return `<div class="composition-unavailable"><div class="kicker">Composition corporelle</div><h2>Estimation non disponible</h2><p>Complète les données nécessaires dans un bilan complet pour afficher cette lecture.</p></div>`;
+  const fatKg=d.weight?d.weight*bf/100:null;
+  return `<section class="body-composition-optimal"><div><div class="kicker">Composition corporelle</div><h2>${bf.toFixed(1)} % <small>estimé</small></h2><p>Estimation calculée à partir des données disponibles. À utiliser comme tendance, pas comme mesure clinique.</p></div><div class="composition-bar"><span style="width:${Math.max(3,Math.min(97,bf))}%"></span></div><div class="composition-values"><div><span>Masse maigre</span><strong>${d.lean!=null?d.lean.toFixed(1)+' kg':'—'}</strong></div><div><span>Masse grasse</span><strong>${fatKg!=null?fatKg.toFixed(1)+' kg':'—'}</strong></div><div><span>IMC</span><strong>${d.bmi!=null?d.bmi.toFixed(1):'—'}</strong></div><div><span>Ratio taille/taille</span><strong>${d.whtr!=null?d.whtr.toFixed(2):'—'}</strong></div></div></section>`;
+}
+function renderBodyMeasurementGroups(all,cfg){
+  const groups=['Essentiels','Haut du corps','Bas du corps','Optionnel'];
+  return groups.map(g=>{
+    const fields=BODY_FIELDS.filter(f=>f.group===g&&cfg.tracked?.[f.key]!==false&&latestBodyValue(all,f.key));
+    if(!fields.length)return'';
+    return `<details class="measurement-group" ${g==='Essentiels'?'open':''}><summary><strong>${g}</strong><span>${fields.length} mesures</span></summary><div class="measurement-table">${fields.map(f=>{const now=latestBodyValue(all,f.key),delta=bodyMetricDelta(all,f.key);return `<div><span>${esc(f.label)}</span><strong>${now?now.value.toFixed(1).replace('.0','')+' '+f.unit:'—'}</strong><small>${delta==null?'—':`${delta>0?'+':''}${delta.toFixed(1).replace('.0','')} ${f.unit}`}</small></div>`;}).join('')}</div></details>`;
+  }).join('');
 }
 function renderMeasurements(){
-  const all=getBodyLogs(),logs=bodyLogsInPeriod(),cfg=getBodyConfig(),latest=all[0],latestDerived=bodyDerived(latest),quality=bodyDataQuality(),context=bodyTrainingContext(),cycles=bodyCycleSummary(logs),schedule=bodyTrackingSchedule();
-  const latestW=latestBodyValue(all,'weight')?.value,latestWaist=latestBodyValue(all,'waist')?.value,avg7=bodyAverageDays('weight',7),wDelta=bodyPeriodDelta(logs,'weight'),waistDelta=bodyPeriodDelta(logs,'waist');
-  const periodButtons=[['7d','7 j'],['30d','30 j'],['90d','90 j'],['180d','6 mois'],['365d','1 an'],['all','Tout']];
-  const sym=BODY_SYMMETRY.map(x=>bodySymmetry(all,...x)).filter(Boolean);
+  const all=getBodyLogs(),logs=bodyLogsInPeriod(),cfg=getBodyConfig(),latest=all[0],latestDerived=bodyDerived(latest),quality=bodyDataQuality(),context=bodyTrainingContext(),schedule=bodyTrackingSchedule(),sym=BODY_SYMMETRY.map(x=>bodySymmetry(all,...x)).filter(Boolean);
+  const latestW=latestBodyValue(all,'weight')?.value,latestWaist=latestBodyValue(all,'waist')?.value;
+  const metric=BODY_CHART_METRICS.some(x=>x[0]===state.bodyMetric)?state.bodyMetric:'weight',compare=BODY_CHART_METRICS.some(x=>x[0]===state.bodyCompareMetric)?state.bodyCompareMetric:'none';
   const allPhotoLogs=all.filter(l=>bodyPhotoId(l,'front')||bodyPhotoId(l,'side')||bodyPhotoId(l,'back')),photoLogs=bodyPhotoLogs(state.bodyPhotoComparePosition),aId=state.bodyPhotoCompareA||String(photoLogs[0]?.id||''),bId=state.bodyPhotoCompareB||String(photoLogs[photoLogs.length-1]?.id||'');
   const aLog=photoLogs.find(l=>String(l.id)===String(aId)),bLog=photoLogs.find(l=>String(l.id)===String(bId));
-  const tracked=BODY_FIELDS.filter(f=>cfg.tracked?.[f.key]!==false&&latestBodyValue(all,f.key));
-  const goalCards=[renderBodyGoalCard('weight','Poids',latestW,'kg'),renderBodyGoalCard('waist','Tour de taille',latestWaist,'cm'),renderBodyGoalCard('bodyFat','Masse grasse',latestDerived.bf,'%'),renderBodyGoalCard('chest','Poitrine',latestBodyValue(all,'chest')?.value,'cm')].filter(Boolean).join('');
-  const currentCycle=getActiveTrainingCycle();
-  return shell(`<header class="topbar measure-topbar"><div><div class="brand">Mesures</div><div class="daylabel">Comprendre les tendances, pas collectionner les chiffres</div></div><button class="btn btn-primary compact" id="addBody">＋ Mesurer</button></header>
+  return shell(`<header class="topbar measurement-optimal-top"><div><div class="brand">Mesures</div><div class="daylabel">Suis ton physique et comprends tes tendances</div></div><button class="btn btn-primary compact" id="addBody">＋ Nouvelle mesure</button></header>
+  ${!latest?`<section class="measurement-start"><div class="kicker">Point de départ</div><h1>Commence ton suivi physique</h1><p>Enregistre une première mesure. KINETIK attendra suffisamment de données avant d'afficher une tendance.</p><button class="btn btn-primary" id="addBodyEmpty">Ajouter ma première mesure</button></section>`:`
+  <section class="measurement-current-line">
+    <div><span>Poids</span><strong>${latestW?latestW.toFixed(1):'—'} <small>kg</small></strong><em>${bodyMetricTrendText(logs,'weight')}</em></div>
+    <div><span>Tour de taille</span><strong>${latestWaist?latestWaist.toFixed(1):'—'} <small>cm</small></strong><em>${bodyMetricTrendText(logs,'waist')}</em></div>
+    <div><span>Masse grasse</span><strong>${latestDerived.bf!=null?latestDerived.bf.toFixed(1):'—'} <small>%</small></strong><em>estimée</em></div>
+    <div><span>Masse maigre</span><strong>${latestDerived.lean!=null?latestDerived.lean.toFixed(1):'—'} <small>kg</small></strong><em>estimée</em></div>
+  </section>
+  <div class="measurement-last-note">Dernier relevé · ${formatDate(latest.date)} · ${all.length} mesure${all.length>1?'s':''}</div>
 
-    ${!latest?`<section class="measure-empty-state"><div><div class="kicker">Suivi physique</div><h1>Crée ton point de départ</h1><p>Une première mesure suffit. KINETIK construira ensuite les tendances à mesure que tu ajoutes des relevés.</p><button class="btn btn-primary" id="addBodyEmpty">Ajouter ma première mesure</button></div></section>`:`
-    <section class="measure-overview">
-      <div class="measure-date-block"><span>Dernière mesure</span><strong>${formatDate(latest.date)}</strong><small>${all.length} relevé${all.length>1?'s':''} enregistré${all.length>1?'s':''}</small></div>
-      <div class="measure-current"><span>Poids actuel</span><strong>${latestW?latestW.toFixed(1):'—'}<small> kg</small></strong><small>${avg7?`moyenne 7 j · ${avg7.toFixed(1)} kg`:'moyenne 7 j en attente'}</small></div>
-      <div class="measure-current"><span>Tour de taille</span><strong>${latestWaist?latestWaist.toFixed(1):'—'}<small> cm</small></strong><small>${bodyTrendText(waistDelta,'cm',true)}</small></div>
-      <div class="measure-current"><span>Masse grasse</span><strong>${latestDerived.bf!=null?latestDerived.bf.toFixed(1):'—'}<small> %</small></strong><small>${latestDerived.lean!=null?`${latestDerived.lean.toFixed(1)} kg masse maigre estimée`:'estimation en attente'}</small></div>
-    </section>
+  <section class="measurement-progress-main">
+    <div class="measurement-progress-head"><div><div class="kicker">Progression physique</div><h1>${esc(bodyMetricDefinition(metric).label)}</h1></div><div class="measurement-periods">${[['7d','7 j'],['30d','30 j'],['90d','3 mois'],['180d','6 mois'],['365d','1 an'],['all','Tout']].map(([id,l])=>`<button data-body-period="${id}" class="${state.bodyPeriod===id?'active':''}">${l}</button>`).join('')}</div></div>
+    <div class="measurement-metric-switch">${BODY_CHART_METRICS.map(([id,l])=>`<button data-body-metric="${id}" class="${metric===id?'active':''}">${l}</button>`).join('')}</div>
+    <div class="measurement-compare-control"><label>Comparer avec <select id="bodyCompareMetric"><option value="none">Aucune autre métrique</option>${BODY_CHART_METRICS.filter(x=>x[0]!==metric).map(([id,l])=>`<option value="${id}" ${compare===id?'selected':''}>${l}</option>`).join('')}</select></label></div>
+    ${renderBodyTrendChart(logs,metric,compare)}
+  </section>
 
-    <section class="measure-status-line">${schedule.slice(0,4).map(x=>`<div class="${x.due?'due':''}"><span>${x.label}</span><strong>${x.text}</strong></div>`).join('')}</section>
+  ${renderBodyKinetikInsight(logs,context)}
+  ${renderBodyCompositionVisual(latest)}
 
-    <section class="measure-trends">
-      <div class="measure-section-head"><div><div class="kicker">Progression</div><h2>Évolution du corps</h2></div><div class="measure-period-tabs">${periodButtons.map(([id,label])=>`<button class="${state.bodyPeriod===id?'active':''}" data-body-period="${id}">${label}</button>`).join('')}</div></div>
-      ${renderBodyTrendChart(logs,'weight','kg',{large:true})}
-      <div class="measure-secondary-charts">${renderBodyTrendChart(logs,'waist','cm')}${renderBodyTrendChart(logs,'chest','cm')}</div>
-    </section>
+  <section class="measurements-complete-section"><div class="measurement-section-title"><div><div class="kicker">Mensurations détaillées</div><h2>Le détail quand tu en as besoin</h2></div><button class="btn btn-secondary compact" id="addBodyFull">Bilan complet</button></div>${renderBodyMeasurementGroups(all,cfg)}
+    ${sym.length?`<details class="measurement-group"><summary><strong>Symétrie</strong><span>${sym.length} comparaisons</span></summary><div class="symmetry-optimal">${sym.map(x=>`<div><div><strong>${x.label}</strong><span>G ${x.l.toFixed(1)} · D ${x.r.toFixed(1)} cm</span></div><div class="symmetry-bar"><i style="width:${Math.min(100,x.pct*8)}%"></i></div><b>${x.pct.toFixed(1)} %</b></div>`).join('')}</div></details>`:''}
+  </section>
 
-    <section class="measure-analysis-grid">
-      <div class="measure-analysis-main">
-        <div class="kicker">Lecture de la période</div><h2>Corps + entraînement</h2>
-        <div class="measure-analysis-values"><div><span>Poids</span><strong>${bodyTrendText(wDelta,'kg',true)}</strong></div><div><span>Tour de taille</span><strong>${bodyTrendText(waistDelta,'cm',true)}</strong></div><div><span>Entraînement</span><strong>${context.sessions} séances</strong><small>${context.minutes} min</small></div><div><span>Volume force</span><strong>${context.reps.toLocaleString('fr-FR')} reps</strong></div></div>
-        ${cycles.length?`<p>Cycle sur la période · ${cycles.map(([n,c])=>`${esc(n)} (${c})`).join(' · ')}</p>`:''}
-      </div>
-      <div class="measure-analysis-composition">${renderBodyCompositionVisual(latest)}</div>
-    </section>
+  ${allPhotoLogs.length?`<details class="measurement-lower-section"><summary><div><div class="kicker">Progression visuelle</div><strong>Comparer mes photos</strong></div><span>⌄</span></summary><div class="measurement-lower-content"><div class="body-photo-tabs">${[['front','Face'],['side','Profil'],['back','Dos']].map(([id,l])=>`<button class="body-photo-tab ${state.bodyPhotoComparePosition===id?'active':''}" data-photo-position="${id}">${l}</button>`).join('')}</div>${photoLogs.length?`<div class="body-photo-selects"><select id="bodyPhotoA">${photoLogs.map(l=>`<option value="${l.id}" ${String(l.id)===String(aId)?'selected':''}>${formatDate(l.date)}</option>`).join('')}</select><span>↔</span><select id="bodyPhotoB">${photoLogs.map(l=>`<option value="${l.id}" ${String(l.id)===String(bId)?'selected':''}>${formatDate(l.date)}</option>`).join('')}</select></div><div class="body-photo-compare"><figure>${aLog?`<img data-body-photo-id="${bodyPhotoId(aLog,state.bodyPhotoComparePosition)||''}" alt="Photo A">`:''}<figcaption>${aLog?formatDate(aLog.date):'—'}</figcaption></figure><figure>${bLog?`<img data-body-photo-id="${bodyPhotoId(bLog,state.bodyPhotoComparePosition)||''}" alt="Photo B">`:''}<figcaption>${bLog?formatDate(bLog.date):'—'}</figcaption></figure></div>`:''}</div></details>`:''}
 
-    <details class="measure-details" open><summary><div><div class="kicker">Mensurations</div><strong>Dernières valeurs</strong></div><span>⌄</span></summary><div class="measure-details-content">
-      <div class="measure-body-grid">${tracked.map(f=>renderBodyFieldValue(all,f.key)).join('')}${cfg.customFields.filter(f=>latestBodyValue(all,f.key)).map(f=>renderBodyFieldValue(all,f.key)).join('')}</div>
-      ${sym.length?`<div class="measure-subsection"><strong>Symétrie gauche / droite</strong><div class="body-sym-grid">${sym.map(x=>`<div class="body-sym ${x.pct<=3?'good':x.pct<=6?'warn':'high'}"><strong>${x.label}</strong><span>G ${x.l.toFixed(1)} · D ${x.r.toFixed(1)} cm</span><b>${x.pct.toFixed(1)} % d'écart</b></div>`).join('')}</div></div>`:''}
-      <button class="btn btn-secondary compact" id="addBodyFull">Faire un bilan complet</button>
-    </div></details>
+  <details class="measurement-lower-section"><summary><div><div class="kicker">Historique</div><strong>${all.length} relevé${all.length>1?'s':''}</strong></div><span>⌄</span></summary><div class="measurement-lower-content"><div class="measurement-history-table"><div class="head"><span>Date</span><span>Poids</span><span>Taille</span><span>MG</span></div>${all.slice(0,8).map(l=>{const d=bodyDerived(l);return `<div><span>${formatDate(l.date)}</span><strong>${bodyValue(l,'weight')!=null?Number(bodyValue(l,'weight')).toFixed(1)+' kg':'—'}</strong><span>${bodyValue(l,'waist')!=null?Number(bodyValue(l,'waist')).toFixed(1)+' cm':'—'}</span><span>${d.bf!=null?d.bf.toFixed(1)+' %':'—'}</span></div>`;}).join('')}</div></div></details>
 
-    ${goalCards?`<details class="measure-details"><summary><div><div class="kicker">Objectifs</div><strong>Mes cibles physiques</strong></div><span>⌄</span></summary><div class="measure-details-content"><div class="body-goals">${goalCards}</div><button class="btn btn-outline compact" id="openBodySettings">Paramétrer les objectifs</button></div></details>`:''}
-
-    ${allPhotoLogs.length?`<details class="measure-details"><summary><div><div class="kicker">Progression visuelle</div><strong>Photos comparatives</strong></div><span>⌄</span></summary><div class="measure-details-content"><div class="body-photo-tabs">${[['front','Face'],['side','Profil'],['back','Dos']].map(([id,l])=>`<button class="body-photo-tab ${state.bodyPhotoComparePosition===id?'active':''}" data-photo-position="${id}">${l}</button>`).join('')}</div>${photoLogs.length?`<div class="body-photo-selects"><select id="bodyPhotoA">${photoLogs.map(l=>`<option value="${l.id}" ${String(l.id)===String(aId)?'selected':''}>${formatDate(l.date)}</option>`).join('')}</select><span>↔</span><select id="bodyPhotoB">${photoLogs.map(l=>`<option value="${l.id}" ${String(l.id)===String(bId)?'selected':''}>${formatDate(l.date)}</option>`).join('')}</select></div><div class="body-photo-compare"><figure>${aLog?`<img data-body-photo-id="${bodyPhotoId(aLog,state.bodyPhotoComparePosition)||''}" alt="Photo A">`:''}<figcaption>${aLog?formatDate(aLog.date):'—'}</figcaption></figure><figure>${bLog?`<img data-body-photo-id="${bodyPhotoId(bLog,state.bodyPhotoComparePosition)||''}" alt="Photo B">`:''}<figcaption>${bLog?formatDate(bLog.date):'—'}</figcaption></figure></div>`:'<p class="muted">Aucune photo pour cette position.</p>'}</div></details>`:''}
-
-    <details class="measure-details"><summary><div><div class="kicker">Données</div><strong>Qualité & historique</strong></div><span>⌄</span></summary><div class="measure-details-content">
-      <div class="measure-quality-inline"><div><strong>${quality.score}%</strong><span>${quality.label}</span></div><div class="body-quality-bar"><span style="width:${quality.score}%"></span></div><p>${quality.weights} pesées · ${quality.waists} tours de taille · ${quality.complete} bilans complets · ${quality.photos} séries photo sur 30 j.</p></div>
-      <div class="measure-history-clean">${all.slice(0,12).map(l=>{const d=bodyDerived(l);return `<div><span>${formatDate(l.date)}</span><strong>${bodyValue(l,'weight')!=null?Number(bodyValue(l,'weight')).toFixed(1)+' kg':'—'}</strong><span>${bodyValue(l,'waist')!=null?Number(bodyValue(l,'waist')).toFixed(1)+' cm taille':'—'}</span><span>${d.bf!=null?d.bf.toFixed(1)+' % MG':'—'}</span></div>`;}).join('')}</div>
-    </div></details>
-    `}`, 'measurements');
+  <section class="measurement-data-quality"><div><span>Qualité des tendances</span><strong>${quality.label}</strong></div><div class="body-quality-bar"><span style="width:${quality.score}%"></span></div><p>${quality.score}% · ${quality.weights} pesées · ${quality.waists} tours de taille · ${quality.complete} bilans complets sur 30 jours.</p></section>
+  <div class="measurement-frequency-note"><strong>Fréquence recommandée</strong><span>${schedule[0]?.text||'Mesure régulièrement, dans des conditions similaires.'}</span></div>
+  `}`, 'measurements');
 }
 function renderBodySettings(){const cfg=getBodyConfig();const goalDefs=[['weight','Poids','kg'],['waist','Tour de taille','cm'],['bodyFat','Masse grasse','%'],['chest','Poitrine','cm'],['armLeft','Bras G','cm'],['armRight','Bras D','cm'],['thighLeft','Cuisse G','cm'],['thighRight','Cuisse D','cm']];return `<div class="body-setting-section"><h3>Calcul de composition corporelle</h3><div class="parameter-grid"><label><span>Formule anthropométrique</span><select id="bodyFatFormula"><option value="male" ${cfg.bodyFatFormula==='male'?'selected':''}>US Navy · homme</option><option value="female" ${cfg.bodyFatFormula==='female'?'selected':''}>US Navy · femme</option><option value="off" ${cfg.bodyFatFormula==='off'?'selected':''}>Désactivée</option></select></label><label><span>Source masse grasse</span><select id="bodyFatSource"><option value="auto" ${cfg.bodyFatSource==='auto'?'selected':''}>Auto · balance puis estimation</option><option value="estimate" ${cfg.bodyFatSource==='estimate'?'selected':''}>Estimation uniquement</option><option value="scale" ${cfg.bodyFatSource==='scale'?'selected':''}>Balance uniquement</option></select></label></div><p class="muted small">L'estimation anthropométrique est indicative. Pour la formule femme, hanches + taille + cou sont nécessaires.</p></div><div class="divider"></div><div class="body-setting-section"><h3>Fréquences recommandées</h3><div class="parameter-grid threshold-grid"><label><span>Poids · tous les</span><input class="mini-input body-freq" data-freq="weightDays" type="number" min="1" value="${cfg.frequencies.weightDays}"></label><label><span>Taille · tous les</span><input class="mini-input body-freq" data-freq="waistDays" type="number" min="1" value="${cfg.frequencies.waistDays}"></label><label><span>Bilan complet · tous les</span><input class="mini-input body-freq" data-freq="completeDays" type="number" min="1" value="${cfg.frequencies.completeDays}"></label><label><span>Photos · tous les</span><input class="mini-input body-freq" data-freq="photoDays" type="number" min="1" value="${cfg.frequencies.photoDays}"></label></div><small class="muted">Valeurs en jours. Elles servent de repères, pas d'obligation.</small></div><div class="divider"></div><div class="body-setting-section"><h3>Objectifs</h3><div class="target-editor-list">${goalDefs.map(([k,l,u])=>`<div class="target-editor-row"><strong>${l}</strong><label><span>Cible ${u}</span><input class="mini-input body-goal-input" data-body-goal="${k}" type="number" min="0" step="0.1" value="${cfg.goals[k]??''}" placeholder="—"></label></div>`).join('')}</div></div><div class="divider"></div><div class="body-setting-section"><div class="section-head"><div><h3>Champs suivis</h3><small class="muted">Masque ce que tu n'utilises pas.</small></div><button class="btn btn-outline compact" id="addCustomBodyField">＋ Champ perso</button></div><div class="body-track-grid">${BODY_FIELDS.map(f=>`<label class="body-track"><input class="body-track-input" data-body-track="${f.key}" type="checkbox" ${cfg.tracked[f.key]!==false?'checked':''}><span>${f.label}</span></label>`).join('')}${cfg.customFields.map(f=>`<div class="body-track custom"><label><input class="body-track-custom" data-custom-track="${f.key}" type="checkbox" ${f.visible!==false?'checked':''}><span>${esc(f.label)} (${esc(f.unit||'')})</span></label><button class="body-remove-custom" data-remove-custom="${f.key}">×</button></div>`).join('')}</div></div><div class="parameter-actions"><button class="btn btn-primary" id="saveBodyConfig">Enregistrer</button><button class="btn btn-outline" id="resetBodyConfig">Valeurs par défaut</button></div>`;}
 
@@ -3790,6 +3829,8 @@ function bindEvents(){
   const addBodyFullEmpty=document.getElementById('addBodyFullEmpty');if(addBodyFullEmpty)addBodyFullEmpty.onclick=()=>openBody('full');
   document.querySelectorAll('[data-body-mode]').forEach(b=>b.onclick=()=>{state.bodyEditorMode=b.dataset.bodyMode;render();});
   document.querySelectorAll('[data-body-period]').forEach(b=>b.onclick=()=>{state.bodyPeriod=b.dataset.bodyPeriod;render();});
+  document.querySelectorAll('[data-body-metric]').forEach(b=>b.onclick=()=>{state.bodyMetric=b.dataset.bodyMetric;state.bodyCompareMetric='none';render();});
+  const bodyCompareMetric=document.getElementById('bodyCompareMetric');if(bodyCompareMetric)bodyCompareMetric.onchange=()=>{state.bodyCompareMetric=bodyCompareMetric.value;render();};
   const bodyFrom=document.getElementById('bodyPeriodFrom');if(bodyFrom)bodyFrom.onchange=()=>{state.bodyPeriodFrom=bodyFrom.value;render();};
   const bodyTo=document.getElementById('bodyPeriodTo');if(bodyTo)bodyTo.onchange=()=>{state.bodyPeriodTo=bodyTo.value;render();};
   document.querySelectorAll('[data-photo-position]').forEach(b=>b.onclick=()=>{state.bodyPhotoComparePosition=b.dataset.photoPosition;state.bodyPhotoCompareA='';state.bodyPhotoCompareB='';render();});
