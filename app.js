@@ -3198,54 +3198,68 @@ function capabilityScores(){
   const explosiveReps=bestExerciseValue('Tractions explosives');
   const explosiveEval=Number(typeof aiEvaluationFor==='function'?aiEvaluationFor('Tractions explosives')?.value||0:0);
   const mu=bestExerciseValue('Muscle-up strict');
+  const assistedMu=bestExerciseValue('Muscle-up assisté');
   const freeHs=bestExerciseValue('Handstand libre');
   const toes=bestExerciseValue('Toes-to-bar');
+  const towel=bestExerciseValue('Towel hang');
+  const oneArmAssist=bestExerciseValue('One-arm assisted hang');
 
-  const pullBase=piecewiseScore(pullups,[[0,0],[1,5],[3,10],[5,15],[8,23],[10,28],[12,33],[15,40],[20,47],[25,52],[30,55]]);
-  const chestBonus=piecewiseScore(ctb,[[0,0],[1,5],[3,10],[5,15],[8,20]]);
+  // TIRAGE · les tractions seules sont plafonnées à ~50.
+  const pullBase=piecewiseScore(pullups,[[0,0],[1,4],[3,9],[5,14],[8,21],[10,26],[12,31],[15,37],[20,43],[25,47],[30,50]]);
+  const chestBonus=piecewiseScore(ctb,[[0,0],[1,4],[3,9],[5,14],[8,18],[12,20]]);
   const explosiveBonus=Math.max(
-    piecewiseScore(explosiveReps,[[0,0],[1,6],[3,10],[5,15]]),
-    piecewiseScore(explosiveEval,[[0,0],[1,2],[2,5],[3,10],[4,13]])
+    piecewiseScore(explosiveReps,[[0,0],[1,4],[3,8],[5,12],[8,15]]),
+    piecewiseScore(explosiveEval,[[0,0],[1,2],[2,5],[3,9],[4,13]])
   );
-  const muBonus=piecewiseScore(mu,[[0,0],[1,5],[3,8],[5,10]]);
+  const muBonus=piecewiseScore(mu,[[0,0],[1,6],[3,10],[5,13],[10,15]]);
   const pull=Math.min(100,Math.round(pullBase+chestBonus+explosiveBonus+muBonus));
 
-  const dipBase=piecewiseScore(dips,[[0,0],[5,10],[8,15],[10,18],[15,26],[20,33],[30,44],[40,55]]);
+  // POUSSÉE · les dips seuls sont plafonnés à ~50.
+  const dipBase=piecewiseScore(dips,[[0,0],[5,8],[8,13],[10,17],[15,24],[20,31],[30,40],[40,47],[50,50]]);
   const pike=skillDoneSafe('pike-elevated')?8:0;
-  const wallHspu=skillDoneSafe('hspu-wall')?18:0;
-  const freeHspu=skillDoneSafe('hspu-free')?27:0;
+  const wallHspu=skillDoneSafe('hspu-wall')?17:0;
+  const freeHspu=skillDoneSafe('hspu-free')?25:0;
   const push=Math.min(100,Math.round(dipBase+pike+wallHspu+freeHspu));
 
-  const grip=Math.round(piecewiseScore(dead,[[0,0],[15,5],[30,12],[45,20],[60,28],[90,42],[120,57],[150,70],[180,82],[240,100]]));
+  // GRIP · le dead hang seul est volontairement plafonné à 65.
+  // Pour dépasser le niveau solide, il faut plusieurs formes de grip.
+  const deadBase=piecewiseScore(dead,[[0,0],[15,4],[30,10],[45,17],[60,23],[90,33],[120,42],[150,50],[180,56],[240,62],[300,65]]);
+  const towelBonus=piecewiseScore(towel,[[0,0],[10,3],[20,7],[30,11],[45,15],[60,18],[90,20]]);
+  const oneArmBonus=piecewiseScore(oneArmAssist,[[0,0],[5,4],[10,8],[15,11],[25,14],[40,15]]);
+  const grip=Math.min(100,Math.round(deadBase+towelBonus+oneArmBonus));
 
+  // CORE · un seul hold ne suffit pas aux scores experts.
   let core=0;
-  const coreSteps=[['tuck-10',10],['tuck-20',20],['oneleg-lsit',38],['lsit-10',55],['lsit-20',72],['toes-bar',88]];
+  const coreSteps=[['tuck-10',8],['tuck-20',16],['oneleg-lsit',30],['lsit-10',45],['lsit-20',58],['toes-bar',68]];
   coreSteps.forEach(([id,v])=>{if(skillDoneSafe(id))core=Math.max(core,v);});
-  if(toes>1)core=Math.max(core,Math.round(piecewiseScore(toes,[[1,88],[5,94],[10,100]])));
+  if(toes>1)core=Math.max(core,Math.round(piecewiseScore(toes,[[1,68],[5,75],[10,82],[15,86]])));
+  // Le score >86 est réservé à des preuves de maîtrise futures (V-sit / compression avancée).
+  core=Math.min(86,core);
 
-  let balance=Math.round(piecewiseScore(wall,[[0,0],[20,8],[30,12],[45,18],[60,25],[90,30]]));
-  if(skillDoneSafe('hs-free-5')||freeHs>=5)balance=Math.max(balance,50);
-  if(skillDoneSafe('hs-free-20')||freeHs>=20)balance=Math.max(balance,75);
-  if(skillDoneSafe('hs-free-30')||freeHs>=30)balance=Math.max(balance,90);
-  if(freeHs>=60)balance=100;
+  // ÉQUILIBRE · le handstand au mur plafonne à 25, le libre à 75.
+  let balance=Math.round(piecewiseScore(wall,[[0,0],[20,6],[30,10],[45,15],[60,20],[90,25]]));
+  if(freeHs>0)balance=Math.max(balance,Math.round(piecewiseScore(freeHs,[[1,30],[5,38],[10,46],[20,55],[30,62],[45,69],[60,75],[90,78]])));
+  if(skillDoneSafe('hspu-wall'))balance=Math.max(balance,80);
+  if(skillDoneSafe('hspu-free'))balance=Math.max(balance,90);
+  // 100 est réservé à de futures preuves de contrôle avancé (press, variations).
+  balance=Math.min(90,balance);
 
-  let explosive=Math.round(
-    Math.max(piecewiseScore(ctb,[[0,0],[1,8],[3,15],[5,20]]),0)+
-    Math.max(piecewiseScore(explosiveEval,[[0,0],[1,5],[2,12],[3,24],[4,35]]),piecewiseScore(explosiveReps,[[0,0],[1,12],[3,25],[5,35]]))
+  // EXPLOSIVITÉ · nécessite progressivement tirage haut + MU assisté + MU strict.
+  const highPull=Math.min(40,
+    Math.max(piecewiseScore(ctb,[[0,0],[1,6],[3,12],[5,17],[8,20]]),0)+
+    Math.max(piecewiseScore(explosiveEval,[[0,0],[1,3],[2,8],[3,15],[4,20]]),piecewiseScore(explosiveReps,[[0,0],[1,7],[3,14],[5,20]]))
   );
-  if(skillDoneSafe('mu-assisted'))explosive=Math.max(explosive,55);
-  if(skillDoneSafe('muscle-up')||mu>=1)explosive=Math.max(explosive,75);
-  if(skillDoneSafe('muscle-up-3')||mu>=3)explosive=Math.max(explosive,90);
-  if(mu>=5)explosive=100;
-  explosive=Math.min(100,explosive);
+  const assistedBonus=piecewiseScore(assistedMu,[[0,0],[1,5],[3,10],[5,15]]);
+  const strictBonus=piecewiseScore(mu,[[0,0],[1,15],[3,25],[5,32],[10,40]]);
+  const explosive=Math.min(95,Math.round(highPull+assistedBonus+strictBonus));
 
   const rows=[
     {id:'pull',label:'Tirage',score:pull,assessed:pullups>0||ctb>0||explosiveEval>0||explosiveReps>0,detail:pullups?`${pullups} tractions · ${ctb||0} chest-to-bar`:'Tests à compléter'},
     {id:'push',label:'Poussée',score:push,assessed:dips>0||pike||wallHspu||freeHspu,detail:dips?`${dips} dips stricts`:'Tests à compléter'},
     {id:'core',label:'Core',score:core,assessed:core>0,detail:core?`${capabilityLevel(core,true)}`:'L-sit / core non évalué'},
-    {id:'grip',label:'Grip',score:grip,assessed:dead>0,detail:dead?`${dead} s dead hang`:'Dead hang non évalué'},
+    {id:'grip',label:'Grip',score:grip,assessed:dead>0||towel>0||oneArmAssist>0,detail:dead?`${dead} s dead hang${towel?` · ${towel} s towel`:''}${oneArmAssist?` · ${oneArmAssist} s 1 bras assisté`:''}`:'Grip non évalué'},
     {id:'balance',label:'Équilibre',score:balance,assessed:wall>0||freeHs>0,detail:freeHs?`${freeHs} s handstand libre`:wall?`${wall} s au mur`:'Handstand non évalué'},
-    {id:'explosive',label:'Explosivité',score:explosive,assessed:ctb>0||explosiveEval>0||explosiveReps>0||mu>0,detail:mu?`${mu} muscle-up strict`:explosiveEval?`tirage explosif niveau ${explosiveEval}`:ctb?`${ctb} chest-to-bar`:'Non évaluée'}
+    {id:'explosive',label:'Explosivité',score:explosive,assessed:ctb>0||explosiveEval>0||explosiveReps>0||assistedMu>0||mu>0,detail:mu?`${mu} muscle-up strict`:assistedMu?`${assistedMu} MU assisté`:explosiveEval?`tirage explosif niveau ${explosiveEval}`:ctb?`${ctb} chest-to-bar`:'Non évaluée'}
   ];
   return rows.map(x=>({...x,level:capabilityLevel(x.score,x.assessed)}));
 }
@@ -3261,14 +3275,42 @@ function technicalSkillPoints(){
 function masterySkillCount(){
   return ['hs-free-30','hspu-free','muscle-up-3','lever-full','flag-full','pistol-5','lsit-20'].filter(skillDoneSafe).length;
 }
+function majorMasterySkillCount(){
+  return ['muscle-up-3','hspu-free','lever-full','flag-full'].filter(skillDoneSafe).length;
+}
+function trainingYearsEvidence(){
+  const p=typeof getAthleteProfile==='function'?getAthleteProfile():{};
+  const declared=Math.max(0,Number(p?.yearsTraining||0));
+  const dates=getHistory().map(x=>new Date(x.date).getTime()).filter(Number.isFinite);
+  const tracked=dates.length>=2?(Math.max(...dates)-Math.min(...dates))/(365.25*86400000):0;
+  return Math.max(declared,tracked);
+}
 const KINETIK_RANK_RULES={
-  bronze:{xp:0,sessions:0,weeks:0,avg:0,caps:{},skillPoints:0,mastery:0},
-  silver:{xp:700,sessions:15,weeks:3,avg:12,caps:{pull:15,push:15,grip:18},skillPoints:0,mastery:0},
-  gold:{xp:2200,sessions:40,weeks:8,avg:22,caps:{pull:25,push:25,grip:28,core:10},skillPoints:6,mastery:0},
-  platinum:{xp:5000,sessions:80,weeks:16,avg:32,caps:{pull:38,push:35,grip:40,core:25,balance:20,explosive:20},skillPoints:15,mastery:0},
-  diamond:{xp:9000,sessions:150,weeks:30,avg:45,caps:{pull:52,push:48,grip:55,core:40,balance:35,explosive:40},skillPoints:30,mastery:0},
-  master:{xp:15000,sessions:250,weeks:50,avg:60,caps:{pull:68,push:62,grip:70,core:55,balance:50,explosive:60},skillPoints:50,mastery:1},
-  legend:{xp:24000,sessions:400,weeks:80,avg:76,caps:{pull:82,push:78,grip:82,core:70,balance:70,explosive:78},skillPoints:75,mastery:3}
+  // Construction : accessible à un pratiquant régulier.
+  bronze:{xp:0,sessions:0,weeks:0,avg:0,caps:{},skillPoints:0,mastery:0,majorMastery:0,years:0},
+  silver:{xp:700,sessions:15,weeks:3,avg:12,caps:{pull:14,push:13,grip:15},skillPoints:0,mastery:0,majorMastery:0,years:0},
+  gold:{xp:2400,sessions:45,weeks:9,avg:22,caps:{pull:24,push:24,grip:23,core:8},skillPoints:7,mastery:0,majorMastery:0,years:0},
+
+  // Athlète intermédiaire / avancé : les points faibles commencent à bloquer.
+  platinum:{xp:6500,sessions:110,weeks:22,avg:34,caps:{pull:38,push:35,grip:34,core:25,balance:20,explosive:20},skillPoints:20,mastery:0,majorMastery:0,years:.5},
+  diamond:{xp:13000,sessions:220,weeks:44,avg:50,caps:{pull:52,push:50,grip:48,core:42,balance:35,explosive:42},skillPoints:48,mastery:1,majorMastery:0,years:1},
+
+  // Maître est déjà exceptionnel : plusieurs années et aucune grosse faiblesse.
+  master:{xp:26000,sessions:450,weeks:85,avg:67,caps:{pull:68,push:65,grip:62,core:58,balance:55,explosive:65},skillPoints:90,mastery:3,majorMastery:1,years:2.5},
+
+  // Légende = quasi hors-échelle.
+  // La règle est volontairement conçue pour ne pas être atteinte par simple ancienneté.
+  legend:{
+    xp:60000,
+    sessions:1000,
+    weeks:150,
+    avg:90,
+    caps:{pull:88,push:85,grip:82,core:82,balance:82,explosive:85},
+    skillPoints:160,
+    mastery:5,
+    majorMastery:3,
+    years:4
+  }
 };
 function xpSummary(){
   const history=getHistory(),training=history.reduce((sum,s)=>sum+sessionXP(s),0);
@@ -3280,16 +3322,18 @@ function xpSummary(){
 }
 function rankRuleFor(rank){return KINETIK_RANK_RULES[rank?.id]||KINETIK_RANK_RULES.bronze;}
 function rankGateRows(rank){
-  const rule=rankRuleFor(rank),caps=capabilityScores(),capMap=Object.fromEntries(caps.map(x=>[x.id,x])),sessions=getHistory().length,weeks=consistentWeeksCount(),xp=xpSummary(),skillPoints=technicalSkillPoints(),mastery=masterySkillCount();
+  const rule=rankRuleFor(rank),caps=capabilityScores(),capMap=Object.fromEntries(caps.map(x=>[x.id,x])),sessions=getHistory().length,weeks=consistentWeeksCount(),xp=xpSummary(),skillPoints=technicalSkillPoints(),mastery=masterySkillCount(),majorMastery=majorMasterySkillCount(),years=trainingYearsEvidence();
   const assessed=caps.filter(x=>x.assessed),avg=assessed.length?Math.round(assessed.reduce((s,x)=>s+x.score,0)/assessed.length):0;
   const rows=[];
   if(rule.xp)rows.push({id:'xp',label:'Expérience KINETIK',current:xp.total,target:rule.xp,unit:'XP'});
   if(rule.sessions)rows.push({id:'sessions',label:'Séances terminées',current:sessions,target:rule.sessions,unit:''});
   if(rule.weeks)rows.push({id:'weeks',label:'Semaines régulières',current:weeks,target:rule.weeks,unit:'sem'});
+  if(rule.years)rows.push({id:'years',label:"Années d'entraînement",current:Number(years.toFixed(1)),target:rule.years,unit:'ans',detail:'historique KINETIK ou expérience renseignée dans le profil'});
   if(rule.avg)rows.push({id:'avg',label:'Moyenne des capacités évaluées',current:avg,target:rule.avg,unit:'/100'});
   Object.entries(rule.caps||{}).forEach(([id,target])=>rows.push({id:`cap-${id}`,label:capMap[id]?.label||id,current:capMap[id]?.assessed?capMap[id].score:0,target,unit:'/100',detail:capMap[id]?.assessed?capMap[id].detail:'non évalué'}));
   if(rule.skillPoints)rows.push({id:'skills',label:'Difficulté technique cumulée',current:skillPoints,target:rule.skillPoints,unit:'pts'});
   if(rule.mastery)rows.push({id:'mastery',label:'Skills de maîtrise',current:mastery,target:rule.mastery,unit:''});
+  if(rule.majorMastery)rows.push({id:'major-mastery',label:'Skills majeurs de maîtrise',current:majorMastery,target:rule.majorMastery,unit:'',detail:'Muscle-up avancé · HSPU libre · Front lever · Human flag'});
   return rows.map(x=>({...x,done:Number(x.current)>=Number(x.target),progress:clamp(Number(x.current)/Math.max(1,Number(x.target)),0,1)}));
 }
 function evaluateRank(rank){
@@ -3498,12 +3542,12 @@ function recentSkillAchievements(limit=5){
 }
 function renderRankSystemV2(){
   const rs=getRankState();
-  return `<div class="rank-v2-list">${RANKS.map((r,i)=>{const ev=evaluateRank(r),gates=ev.gates||[],stateLabel=i<rs.index?'Validé':i===rs.index?'Rang actuel':'À atteindre';return `<details class="rank-v2-row" ${i===rs.index||i===rs.index+1?'open':''}><summary><div><strong>${r.name}</strong><span>${r.title}</span></div><b>${stateLabel}</b></summary><div class="rank-v2-content">${gates.length?gates.map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join(''):'<p>Point de départ du système KINETIK.</p>'}</div></details>`}).join('')}</div><p class="rank-scale-note">Le score 0–100 est une échelle interne de maîtrise KINETIK, pas un percentile de population. 75+ correspond volontairement à un niveau avancé et 90+ à un niveau expert.</p>`;
+  return `<div class="rank-v2-list">${RANKS.map((r,i)=>{const ev=evaluateRank(r),gates=ev.gates||[],stateLabel=i<rs.index?'Validé':i===rs.index?'Rang actuel':'À atteindre';return `<details class="rank-v2-row" ${i===rs.index||i===rs.index+1?'open':''}><summary><div><strong>${r.name}</strong><span>${r.title}</span></div><b>${stateLabel}</b></summary><div class="rank-v2-content">${gates.length?gates.map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join(''):'<p>Point de départ du système KINETIK.</p>'}</div></details>`}).join('')}</div><p class="rank-scale-note">Le score 0–100 est une échelle interne de maîtrise KINETIK. Un score élevé exige plusieurs preuves différentes dans une même capacité. Légende est volontairement quasi hors-échelle : 90 de moyenne, aucun point faible majeur, plusieurs skills de maîtrise et plusieurs années de pratique.</p>`;
 }
 function renderSkills(){
   const manual=getManualSkills(),rank=getRankState(),caps=capabilityScores(),focus=primarySkillTree(),fp=skillTreeProgress(focus),performances=skillPerformanceRows(),achievements=recentSkillAchievements(),allLevels=SKILL_TREES.flatMap(t=>t.levels),doneCount=allLevels.filter(skillDone).length;
   const nextGates=rank.next?rankGateRows(rank.next):[],weak=nextGates.filter(g=>!g.done).sort((a,b)=>a.progress-b.progress)[0];
-  return shell(`<header class="topbar capabilities-topbar"><div><div class="brand">Capacités</div><div class="daylabel">Progression réelle · standards difficiles · maîtrise à long terme</div></div></header>
+  return shell(`<header class="topbar capabilities-topbar"><div><div class="brand">Capacités</div><div class="daylabel">Progression réelle · hauts scores multi-preuves · Légende quasi inaccessible</div></div></header>
 
   <section class="cap-rank-intro">
     <div><div class="kicker">Niveau KINETIK</div><h1>${rank.displayName}</h1><p>${rank.current.title} · ${rank.xp.total.toLocaleString('fr-FR')} XP · ${consistentWeeksCount()} semaines régulières</p></div>
@@ -3513,9 +3557,9 @@ function renderSkills(){
   ${weak?`<div class="rank-bottleneck"><span>Facteur limitant actuel</span><strong>${weak.label}</strong><em>${Number(weak.current).toFixed(Number(weak.current)%1?1:0)} / ${weak.target}${weak.unit?` ${weak.unit}`:''}</em></div>`:''}
 
   <section class="cap-profile-section">
-    <div class="cap-section-heading"><div><div class="kicker">Ton profil</div><h2>Capacités fondamentales</h2></div><p>Les scores utilisent des courbes de difficulté non linéaires. Les premiers progrès comptent, mais les hauts scores demandent beaucoup plus.</p></div>
+    <div class="cap-section-heading"><div><div class="kicker">Ton profil</div><h2>Capacités fondamentales</h2></div><p>Les scores sont non linéaires et plafonnés par type de preuve. Une seule performance peut construire une base, mais ne suffit plus pour atteindre les niveaux avancés.</p></div>
     <div class="capability-bars">${caps.map(c=>`<div class="${c.assessed?'':'unassessed'}"><div class="cap-label"><span>${c.label}</span><small>${esc(c.detail)}</small></div><div><i style="width:${c.assessed?c.score:0}%"></i></div><strong>${c.assessed?c.score:'—'}<small>${c.level}</small></strong></div>`).join('')}</div>
-    <div class="cap-scale"><span>0 Fondations</span><span>30 Intermédiaire</span><span>60 Solide</span><span>75 Avancé</span><span>90 Expert</span><span>100 Maîtrise</span></div>
+    <div class="cap-scale"><span>0 Fondations</span><span>30 Intermédiaire</span><span>60 Solide</span><span>75 Avancé</span><span>90 Expert</span><span>100 Hors-échelle</span></div>
   </section>
 
   <section class="cap-next-focus">
@@ -3535,6 +3579,8 @@ function renderSkills(){
   </section>
 
   ${achievements.length?`<section class="cap-achievements"><div class="cap-section-heading"><div><div class="kicker">Accomplissements</div><h2>Jalons validés</h2></div><strong>${doneCount}/${allLevels.length}</strong></div><div>${achievements.map(x=>`<div><span>✓</span><div><strong>${esc(x.level.name)}</strong><small>${esc(x.tree.name)}</small></div></div>`).join('')}</div></section>`:''}
+
+  <section class="legend-standard"><div><div class="kicker">Échelle de maîtrise</div><h2>Légende n'est pas un objectif normal</h2><p>Ce rang représente une maîtrise athlétique rarissime. L'ancienneté ou l'XP ne peuvent pas compenser une faiblesse : toutes les capacités doivent être très élevées, avec plusieurs skills majeurs maîtrisés.</p></div><div class="legend-standard-values"><div><span>Moyenne requise</span><strong>90 / 100</strong></div><div><span>Capacité minimale</span><strong>82+</strong></div><div><span>Séances</span><strong>1 000</strong></div><div><span>Expérience</span><strong>4 ans+</strong></div></div></section>
 
   <details class="cap-rank-details"><summary><div><div class="kicker">Système de rang</div><strong>Voir les exigences Bronze → Légende</strong></div><span>⌄</span></summary><div>${renderRankSystemV2()}</div></details>
   `, "skills");
