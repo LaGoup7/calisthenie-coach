@@ -2437,3 +2437,11 @@ html[data-theme="dark"] .next-exercise-preview-rich,html[data-theme="dark"] .pro
 .ai-output-plan>div{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
 .ai-output-plan>div>span{font-size:.57rem;font-weight:900;color:var(--muted);padding-top:2px}
 .ai-output-plan p{display:grid;gap:2px;margin:0}.ai-output-plan b{font-size:.7rem}.ai-output-plan small{font-size:.62rem;color:var(--muted)}
+
+/* V10.11 · ChatGPT cycle import */
+.cycle-ai-importer{margin:18px 0;padding:18px;border:1px solid var(--line);border-radius:18px;background:var(--surface-2)}
+.cycle-ai-importer>textarea{width:100%;box-sizing:border-box;margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font:inherit;resize:vertical}
+.ai-import-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.ai-import-summary>div{display:grid;gap:3px;padding:10px;border:1px solid var(--line);border-radius:11px;background:var(--surface)}.ai-import-summary span{font-size:.58rem;color:var(--muted)}.ai-import-summary strong{font-size:.7rem}
+.ai-import-weeks,.ai-import-changes{border-top:1px solid var(--line);margin-top:12px}.ai-import-weeks>div,.ai-import-changes>div{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}.ai-import-weeks b,.ai-import-changes b{font-size:.65rem}.ai-import-weeks span,.ai-import-changes span{font-size:.67rem}.ai-import-weeks small,.ai-import-changes small{font-size:.59rem;color:var(--muted)}
+.ai-import-error,.ai-import-warning{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}.ai-import-error strong{font-size:.72rem}.ai-import-error p,.ai-import-warning p{font-size:.63rem;color:var(--muted);margin:5px 0}.ai-import-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+@media(max-width:560px){.ai-import-summary{grid-template-columns:1fr 1fr}.ai-import-weeks>div,.ai-import-changes>div{grid-template-columns:45px 1fr}.ai-import-weeks small,.ai-import-changes small{grid-column:2}}

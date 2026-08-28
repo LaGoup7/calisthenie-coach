@@ -1994,9 +1994,75 @@ A. le tableau S1 à S${cs.weekCount};
 B. une liste compacte des adaptations sous la forme:
 J4 | REMPLACER | Curl biceps avec bande | Tractions explosives | 3×2 | S1-S3
 J6 | AJOUTER | — | Muscle-up assisté | 3×2 | S1-S3
-Utilise exactement les noms d'exercices du programme quand ils existent.`;
+Utilise exactement les noms d'exercices du programme quand ils existent.
+
+IMPORT AUTOMATIQUE — OBLIGATOIRE UNE FOIS L'ANALYSE FINALISÉE
+Après CONFIGURATION À REPORTER DANS CALISTHENIE COACH, ajoute un unique bloc de code JSON valide, sans commentaire dans le JSON, respectant EXACTEMENT cette structure:
+{
+  "schemaVersion": 1,
+  "cycle": {
+    "name": "Nom court du nouveau cycle",
+    "goal": "Objectif",
+    "weeks": [
+      {"week":1,"phase":"Nom","volume":0.85,"target":0.95,"rir":4,"cardio":0.90,"autoProgress":false}
+    ]
+  },
+  "programChanges": [
+    {"day":4,"action":"replace","exercise":"Nom exact actuel","newExercise":"Nom exact bibliothèque","sets":3,"target":2,"type":"reps","weeks":[1,2,3],"reason":"Raison courte"}
+  ]
+}
+Règles JSON:
+- cycle.weeks doit contenir exactement ${cs.weekCount} semaines;
+- volume, target et cardio sont des facteurs décimaux: 0.85 = 85%;
+- rir doit être compris entre 0 et 5;
+- day doit être compris entre 1 et 7;
+- action doit être exactement "keep", "modify", "replace", "add" ou "remove";
+- type doit être "reps", "reps_band", "hold" ou "timer";
+- pour modify/remove/replace, exercise doit reprendre exactement le nom existant;
+- pour add/replace, newExercise doit reprendre si possible un nom de la bibliothèque/programme;
+- weeks est un tableau de numéros de semaines;
+- n'ajoute aucune clé non prévue sauf si elle est indispensable.
+Si tu dois d'abord poser des questions parce qu'une donnée indispensable manque, NE FOURNIS PAS ce JSON avant d'avoir reçu les réponses.`;
 }
 
+
+function extractCycleAiJson(text){
+  const blocks=[...String(text||'').matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map(m=>m[1].trim());
+  for(const b of blocks){try{const o=JSON.parse(b);if(o?.schemaVersion&&o?.cycle)return o;}catch(e){}}
+  const start=String(text||'').lastIndexOf('{"schemaVersion"');
+  if(start>=0){let depth=0,inStr=false,escp=false;for(let i=start;i<text.length;i++){const ch=text[i];if(inStr){if(escp)escp=false;else if(ch==='\\')escp=true;else if(ch==='"')inStr=false;}else{if(ch==='"')inStr=true;else if(ch==='{')depth++;else if(ch==='}'&&--depth===0){try{return JSON.parse(text.slice(start,i+1));}catch(e){break;}}}}}
+  return null;
+}
+function validateCycleAiImport(data,sourceCycle){
+  const errors=[],warnings=[];if(!data||data.schemaVersion!==1)errors.push('Version de format non reconnue.');
+  const weeks=data?.cycle?.weeks;if(!Array.isArray(weeks)||weeks.length!==8)errors.push('Le cycle doit contenir exactement 8 semaines.');
+  (weeks||[]).forEach((w,i)=>{if(Number(w.week)!==i+1)errors.push(`S${i+1}: numéro de semaine invalide.`);for(const k of ['volume','target','cardio']){const v=Number(w[k]);if(!Number.isFinite(v)||v<.4||v>1.5)errors.push(`S${i+1}: ${k} hors limites.`);}const rir=Number(w.rir);if(!Number.isFinite(rir)||rir<0||rir>5)errors.push(`S${i+1}: RIR invalide.`);});
+  const allowed=new Set(['keep','modify','replace','add','remove']),types=new Set(['reps','reps_band','hold','timer']);
+  (data?.programChanges||[]).forEach((ch,i)=>{const n=i+1,day=Number(ch.day);if(day<1||day>7)errors.push(`Adaptation ${n}: jour invalide.`);if(!allowed.has(ch.action))errors.push(`Adaptation ${n}: action inconnue.`);if(ch.type&&!types.has(ch.type))errors.push(`Adaptation ${n}: type inconnu.`);const dayEx=(cycleDayTemplate(sourceCycle,day-1).exercises||[]).map(x=>x.name);if(['modify','replace','remove'].includes(ch.action)&&!dayEx.includes(ch.exercise))errors.push(`J${day}: exercice actuel introuvable « ${ch.exercise||''} ».`);if(['add','replace'].includes(ch.action)&&ch.newExercise&&!exerciseInfo(ch.newExercise))warnings.push(`J${day}: « ${ch.newExercise} » n'est pas reconnu dans la bibliothèque; vérification nécessaire.`);if(ch.weeks&&!ch.weeks.every(w=>Number(w)>=1&&Number(w)<=8))errors.push(`Adaptation ${n}: semaines invalides.`);});
+  return {ok:!errors.length,errors,warnings};
+}
+function previewCycleAiImport(data,validation){
+  const weeks=data.cycle.weeks||[],changes=data.programChanges||[];
+  return `<div class="ai-import-summary"><div><span>Nouveau cycle</span><strong>${esc(data.cycle.name||'Cycle ChatGPT')}</strong></div><div><span>Objectif</span><strong>${esc(data.cycle.goal||'—')}</strong></div><div><span>Semaines</span><strong>${weeks.length}</strong></div><div><span>Adaptations</span><strong>${changes.filter(x=>x.action!=='keep').length}</strong></div></div>
+  <div class="ai-import-weeks">${weeks.map(w=>`<div><b>S${w.week}</b><span>${esc(w.phase)}</span><small>${Math.round(Number(w.volume)*100)}% · cible ${Math.round(Number(w.target)*100)}% · RIR ${w.rir}</small></div>`).join('')}</div>
+  ${changes.length?`<div class="ai-import-changes">${changes.filter(x=>x.action!=='keep').map(ch=>`<div><b>J${ch.day} · ${esc(ch.action.toUpperCase())}</b><span>${esc(ch.exercise||'—')}${ch.newExercise?` → <strong>${esc(ch.newExercise)}</strong>`:''}</span><small>${ch.sets?`${ch.sets}×${ch.target||''} · `:''}${esc((ch.weeks||[]).map(x=>'S'+x).join(', '))}</small></div>`).join('')}</div>`:''}
+  ${validation.warnings.length?`<div class="ai-import-warning">${validation.warnings.map(x=>`<p>⚠ ${esc(x)}</p>`).join('')}</div>`:''}`;
+}
+function createCycleFromAiImport(data,sourceCycle){
+  const now=Date.now(),copy={...clone(sourceCycle),id:String(now),name:String(data.cycle.name||`${sourceCycle.name} · IA`).trim(),description:`Adapté avec ChatGPT · ${data.cycle.goal||''}`.trim(),base:false,archived:false,days:clone(sourceCycle.days||{}),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  // Materialize every source day so changes never affect/fall back to the original cycle.
+  copy.days={};for(let d=0;d<7;d++)copy.days[d]=cycleDayTemplate(sourceCycle,d);
+  for(const ch of (data.programChanges||[])){
+    if(ch.action==='keep')continue;const day=Number(ch.day)-1,w=copy.days[day],arr=w.exercises||[],idx=arr.findIndex(x=>x.name===ch.exercise);
+    const makeExercise=name=>{const fallback={name,type:ch.type||'reps',sets:Number(ch.sets||3),target:Number(ch.target||8),baseTarget:Number(ch.target||8)};const e=exerciseFromLibrary(name,fallback);e.sets=Number(ch.sets||e.sets||3);e.target=Number(ch.target||e.target||8);e.baseTarget=e.target;if(ch.type)e.type=ch.type;e.aiWeeks=Array.isArray(ch.weeks)?ch.weeks.map(Number):[];e.aiReason=ch.reason||'';return e;};
+    if(ch.action==='remove'&&idx>=0)arr.splice(idx,1);
+    else if(ch.action==='replace'&&idx>=0)arr.splice(idx,1,makeExercise(ch.newExercise));
+    else if(ch.action==='add'&&ch.newExercise)arr.push(makeExercise(ch.newExercise));
+    else if(ch.action==='modify'&&idx>=0){arr[idx]={...arr[idx],sets:Number(ch.sets||arr[idx].sets),target:Number(ch.target||arr[idx].target),baseTarget:Number(ch.target||arr[idx].target),type:ch.type||arr[idx].type,aiWeeks:Array.isArray(ch.weeks)?ch.weeks.map(Number):[],aiReason:ch.reason||''};}
+  }
+  copy.progression={mode:'custom',goal:data.cycle.goal||'Personnalisé',name:data.cycle.name||'Cycle ChatGPT',description:'Progression importée depuis une proposition ChatGPT.',weeks:data.cycle.weeks.map((w,i)=>normalizeProgressionWeek({week:i+1,name:w.phase||`Semaine ${i+1}`,volumeFactor:Number(w.volume),targetFactor:Number(w.target),cardioFactor:Number(w.cardio),rir:Number(w.rir),allowProgress:!!w.autoProgress},i))};
+  const list=getStoredTrainingCycles();list.push(copy);setStoredTrainingCycles(list);ensureCycleProgressionState(copy.id);return copy;
+}
 function renderCycleProgressionEditor(){
   const id=state.cycleProgressionEditor,c=trainingCycleById(id),d=state.cycleProgressionDraft||progressionPlanForCycle(c),templates=Object.entries(PROGRESSION_TEMPLATE_DEFS),goals=['Équilibré','Reprise','Force','Muscle / volume','Skills'];
   return `<main class="shell progression-builder-shell"><section class="card progression-builder-head"><button class="back-btn" id="closeProgressionEditor">← Mes séances</button><div class="kicker">${esc(c.name)} · Progression</div><h1>Comment ce cycle doit-il progresser ?</h1><p class="muted">Choisis le niveau de contrôle qui te convient. Le planning des exercices reste dans le cycle ; cette page décide comment sa difficulté évolue.</p><section class="cycle-ai-wizard-v109">
@@ -2047,7 +2113,7 @@ function renderCycleProgressionEditor(){
 </div>
 
 <div class="ai-wizard-nav"><button type="button" class="btn btn-secondary" id="cycleAiPrev" hidden>← Retour</button><button type="button" class="btn btn-primary" id="cycleAiNext">Continuer →</button></div>
-</section><div class="progression-manual-divider"><span>ou configure manuellement</span></div><div class="progression-mode-grid"><button class="progression-mode ${d.mode==='auto'?'active':''}" data-progression-mode="auto"><span>🤖</span><strong>Automatique</strong><small>Recommandé · l'app gère les 8 semaines</small></button><button class="progression-mode ${d.mode==='template'?'active':''}" data-progression-mode="template"><span>▤</span><strong>Modèle</strong><small>Force, volume, reprise, skills…</small></button><button class="progression-mode ${d.mode==='custom'?'active':''}" data-progression-mode="custom"><span>⚙</span><strong>Personnalisé</strong><small>Tu règles chaque semaine</small></button></div></section>
+</section><section class="cycle-ai-importer"><div class="cycle-ai-copy"><div class="cycle-ai-icon">↧</div><div><strong>Importer la réponse ChatGPT</strong><p>Colle la réponse complète. L’app extrait la configuration, la vérifie et crée toujours un nouveau cycle.</p></div></div><textarea id="cycleAiImportText" rows="7" placeholder="Colle ici toute la réponse de ChatGPT…"></textarea><div class="cycle-ai-actions"><button class="btn btn-secondary" id="analyzeCycleAiImport">Analyser la proposition</button><span class="small muted">Ton cycle actuel ne sera jamais modifié.</span></div><div id="cycleAiImportResult" hidden></div></section><div class="progression-manual-divider"><span>ou configure manuellement</span></div><div class="progression-mode-grid"><button class="progression-mode ${d.mode==='auto'?'active':''}" data-progression-mode="auto"><span>🤖</span><strong>Automatique</strong><small>Recommandé · l'app gère les 8 semaines</small></button><button class="progression-mode ${d.mode==='template'?'active':''}" data-progression-mode="template"><span>▤</span><strong>Modèle</strong><small>Force, volume, reprise, skills…</small></button><button class="progression-mode ${d.mode==='custom'?'active':''}" data-progression-mode="custom"><span>⚙</span><strong>Personnalisé</strong><small>Tu règles chaque semaine</small></button></div></section>
   ${d.mode==='auto'?`<section class="card progression-builder-section"><div class="kicker">Objectif principal</div><h2>L'application choisit la courbe</h2><select class="select" id="progressionGoal">${goals.map(g=>`<option ${g===(d.goal||'Équilibré')?'selected':''}>${g}</option>`).join('')}</select><p class="muted small">Le moteur continue d'utiliser tes performances réelles pour faire progresser les exercices. Le bloc règle surtout la fatigue, la marge RIR, le cardio et les semaines allégées.</p></section>`:''}
   ${d.mode==='template'?`<section class="card progression-builder-section"><div class="kicker">Modèle</div><h2>Choisir une structure</h2><select class="select" id="progressionTemplate">${templates.map(([id,t])=>`<option value="${id}" ${id===(d.templateId||'standard')?'selected':''}>${t.name} · ${t.goal}</option>`).join('')}</select><p class="muted small">${esc((PROGRESSION_TEMPLATE_DEFS[d.templateId||'standard']||PROGRESSION_TEMPLATE_DEFS.standard).description)}</p></section>`:''}
   <section class="card progression-preview"><div class="section-head"><div><div class="kicker">Aperçu</div><h2>${esc(d.name||'Plan de progression')}</h2></div><span class="pill">8 semaines</span></div><div class="progression-preview-weeks">${(d.weeks||[]).map((w,i)=>{w=normalizeProgressionWeek(w,i);return `<div class="progression-preview-week"><span>S${i+1}</span><strong>${esc(w.name)}</strong><small>${Math.round(w.volumeFactor*100)} % vol · ${Math.round(w.targetFactor*100)} % cible · ${w.rir} RIR</small><em>${progressionDifficulty(w)}</em></div>`;}).join('')}</div></section>
@@ -3050,6 +3116,7 @@ function bindEvents(){
     showAiStep(1);
   }
   
+  const analyzeAiImport=document.getElementById('analyzeCycleAiImport');if(analyzeAiImport)analyzeAiImport.onclick=()=>{const raw=document.getElementById('cycleAiImportText')?.value||'',result=document.getElementById('cycleAiImportResult'),data=extractCycleAiJson(raw),source=trainingCycleById(state.cycleProgressionEditor);result.hidden=false;if(!data){result.innerHTML='<div class="ai-import-error"><strong>Configuration JSON introuvable</strong><p>Vérifie que ChatGPT a terminé son analyse et fourni le bloc JSON demandé par Calisthenie Coach.</p></div>';return;}const validation=validateCycleAiImport(data,source);if(!validation.ok){result.innerHTML=`<div class="ai-import-error"><strong>Import impossible</strong>${validation.errors.map(x=>`<p>• ${esc(x)}</p>`).join('')}</div>`;return;}state.cycleAiImport={data,sourceId:String(source.id)};result.innerHTML=`${previewCycleAiImport(data,validation)}<div class="ai-import-actions"><button class="btn btn-secondary" id="cancelCycleAiImport">Annuler</button><button class="btn btn-primary" id="createCycleAiImport">Créer ce cycle</button></div>`;document.getElementById('cancelCycleAiImport').onclick=()=>{state.cycleAiImport=null;result.hidden=true;result.innerHTML='';};document.getElementById('createCycleAiImport').onclick=()=>{const x=state.cycleAiImport;if(!x)return;const created=createCycleFromAiImport(x.data,trainingCycleById(x.sourceId));state.cycleAiImport=null;state.cycleProgressionEditor=created.id;state.cycleProgressionDraft=progressionPlanForCycle(created);render();};};
   const closeProg=document.getElementById('closeProgressionEditor');if(closeProg)closeProg.onclick=()=>{state.cycleProgressionEditor=null;state.cycleProgressionDraft=null;render();};
   const progGoal=document.getElementById('progressionGoal');if(progGoal)progGoal.onchange=()=>{state.cycleProgressionDraft=automaticProgression(progGoal.value);render();};
   const progTemplate=document.getElementById('progressionTemplate');if(progTemplate)progTemplate.onchange=()=>{state.cycleProgressionDraft=templateProgression(progTemplate.value);render();};
