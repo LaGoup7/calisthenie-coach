@@ -3156,7 +3156,7 @@ function bindEvents(){
   if(aiWizard){
     let aiStep=1;
     const showAiStep=n=>{
-      aiStep=Math.max(1,Math.min(5,n));
+      aiStep=Math.max(1,Math.min(6,n));
       document.querySelectorAll('[data-ai-step]').forEach(x=>x.classList.toggle('active',Number(x.dataset.aiStep)===aiStep));
       document.querySelectorAll('[data-ai-dot]').forEach(x=>x.classList.toggle('active',Number(x.dataset.aiDot)<=aiStep));
       const prev=document.getElementById('cycleAiPrev'),next=document.getElementById('cycleAiNext');
