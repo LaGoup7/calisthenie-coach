@@ -1,4 +1,4 @@
-# Calisthénie Coach · V10.4 — Progress & Guided Preview
+# Calisthénie Coach · V10.5 — Progress & Guided Preview
 
 Refonte UI globale basée sur V10.1, sans changement du moteur d’entraînement ni des données.
 
