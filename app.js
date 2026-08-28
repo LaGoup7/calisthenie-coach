@@ -2528,7 +2528,7 @@ function uiIcon(name, cls="ui-icon") {
 function shell(content, activeTab=state.view) {
   const navTab=activeTab==='custom'?'week':['today','week','flexibility','progress'].includes(activeTab)?activeTab:((activeTab==='athlete'||activeTab==='more'||activeTab==='settings'||activeTab==='profile'||activeTab==='skills'||activeTab==='measurements')?'athlete':'athlete');
   return `<main class="shell">${content}</main>
-  ${activeTab==='today'?'':`<button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une série rapide"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`}
+  ${['today','week'].includes(activeTab)?'':`<button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une série rapide"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`}
   ${renderQuickLogModal()}
   <nav class="bottom-nav bottom-nav-simple" aria-label="Navigation principale">
     <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>${uiIcon('today')}</span>Aujourd'hui</button>
@@ -5555,6 +5555,81 @@ bindEvents=function(){
 };
 const _activityUiIconV1070=activityUiIcon;
 activityUiIcon=function(id){return id==='boxing'?'B':_activityUiIconV1070(id);};
+
+
+/* ========================================================================== */
+/* V10.71 · Planning readability pass                                         */
+/* Program first · multisport around it · analysis progressively disclosed    */
+/* ========================================================================== */
+function v1071MainExercisePreview(w){
+  const rows=(w?.exercises||[]).filter(e=>(e.phase||'main')==='main'&&e.type!=='timer');
+  if(!rows.length)return '';
+  const names=rows.slice(0,5).map(e=>esc(e.name));
+  return `<div class="planning-exercise-preview">${names.join(' · ')}${rows.length>5?' · …':''}</div>`;
+}
+function v1071KinetikDetails(day){
+  if(!day.kinetik)return '';
+  const w=day.kinetik.workout,expanded=state.expandedWeekDay===day.kinetik.day;
+  return `<div class="planning-kinetik-details ${expanded?'open':''}" ${expanded?'':'hidden'}>
+    <div class="planning-details-head"><strong>${w.exercises.length} étapes</strong><span>Prescription actuelle · détails, séries et répétitions</span></div>
+    <div class="week-exercise-list">${w.exercises.map(renderWeekExercise).join('')}</div>
+    ${day.key===v1070DateKey(new Date())?`<button class="btn btn-primary start-day planning-start-workout" data-day="${day.kinetik.day}">Commencer cette séance</button>`:''}
+  </div>`;
+}
+function v1071RenderKinetik(day){
+  const k=day.kinetik;if(!k)return '';
+  const actual=day.actualStrength[0],expanded=state.expandedWeekDay===k.day,w=k.workout;
+  return `<section class="planning-kinetik-primary ${actual?'completed':''}">
+    <button class="planning-kinetik-toggle week-toggle" data-day="${k.day}" aria-expanded="${expanded}">
+      <div class="planning-session-copy"><span class="planning-source">KINETIK</span><h3>${esc(k.name)}</h3><p>${esc(w.subtitle||'')}</p>${v1071MainExercisePreview(w)}<div class="planning-session-meta"><span>${k.duration} min</span><span>${w.exercises.length} étapes</span>${actual?`<span>Réalisé · ${actual.durationMinutes||0} min · RPE ${actual.rpe||'—'}</span>`:`<span>Charge ${k.load} UA</span>`}</div></div>
+      <span class="planning-expand-label">${expanded?'Réduire':'Voir les exercices'} <b>${expanded?'↑':'↓'}</b></span>
+    </button>
+    ${v1071KinetikDetails(day)}
+  </section>`;
+}
+function v1071RenderExternalEvent(e){
+  const type=plannedEventType(e),actual=plannedEventActual(e),realText=v1070PlanRealizationText(e);
+  return `<div class="planning-external-event ${actual?'completed':''}">
+    <div class="planning-external-time">${e.time||'—'}</div>
+    <div class="planning-external-copy"><strong>${esc(type.label)}</strong><span>${e.duration} min · RPE ${e.rpe} · ${v1070PriorityLabel(e.priority)}</span>${e.note?`<small>${esc(e.note)}</small>`:''}${realText?`<small class="planned-real">Réalisé · ${esc(realText)}</small>`:''}</div>
+    <div class="planning-external-actions">${!actual?`<button data-complete-plan="${e.id}">Réaliser</button>`:''}<button data-edit-plan="${e.id}">Modifier</button><button data-delete-plan="${e.id}" aria-label="Supprimer">×</button></div>
+  </div>`;
+}
+function v1071RenderDay(day){
+  const weekday=DAY_NAMES[day.date.getDay()].slice(0,3).toUpperCase(),today=day.key===v1070DateKey(new Date()),linkedIds=new Set(day.manual.map(e=>String(plannedEventActual(e)?.id||''))),unplanned=day.actualManual.filter(a=>!linkedIds.has(String(a.id))),hasAnything=!!day.kinetik||day.manual.length||unplanned.length;
+  return `<article class="planning-day-v1071 ${today?'today':''}">
+    <header class="planning-day-v1071-head"><div class="planning-date-v1071"><span>${weekday}</span><strong>${day.date.getDate()}</strong>${today?'<em>Aujourd’hui</em>':''}</div><button class="planning-add" data-plan-date="${day.key}" aria-label="Ajouter une activité">＋</button></header>
+    <div class="planning-day-v1071-body">
+      ${v1071RenderKinetik(day)}
+      ${day.manual.map(v1071RenderExternalEvent).join('')}
+      ${unplanned.map(v1070RenderUnplannedActual).join('')}
+      ${!hasAnything?`<div class="planning-rest-v1071"><strong>Repos</strong><span>Aucune séance principale prévue.</span></div>`:!day.kinetik&&day.manual.length?`<div class="planning-no-kinetik">Pas de séance KINETIK prévue</div>`:''}
+      <div class="planning-mobility-v1071"><span>Mobilité recommandée</span><strong>${recommendedFlexRoutine(day.date.getDay()).duration} min</strong></div>
+    </div>
+  </article>`;
+}
+function v1071RenderAnalysis(stats,conflicts,maxLoad){
+  return `<details class="planning-analysis">
+    <summary><div><strong>Analyser la charge de la semaine</strong><span>Prévu / réalisé, conflits et optimisation</span></div><b>⌄</b></summary>
+    <div class="planning-analysis-body">
+      <div class="planning-week-summary-v1071"><div><span>Prévue</span><strong>${stats.planned.toLocaleString('fr-FR')} UA</strong></div><div><span>Réalisée</span><strong>${stats.actual.toLocaleString('fr-FR')} UA</strong></div><div><span>Recovery</span><strong>${stats.actualRecovery}/${stats.plannedRecovery} min</strong></div></div>
+      <div class="planning-load-week-v1071"><div class="planning-load-legend"><span><i></i>Prévu</span><span><b></b>Réalisé</span></div><div class="planning-load-columns">${stats.days.map(d=>`<div><div class="planning-load-column"><i style="height:${Math.max(3,d.plannedSportLoad/maxLoad*100)}%"></i>${d.actualSportLoad?`<b style="height:${Math.max(3,d.actualSportLoad/maxLoad*100)}%"></b>`:''}</div><span>${DAY_NAMES[d.date.getDay()].slice(0,1)}</span></div>`).join('')}</div></div>
+      ${conflicts.length?`<div class="planning-conflicts-v1071"><div class="kicker">À surveiller</div>${conflicts.map(c=>`<div class="${c.level}"><strong>${esc(c.title)}</strong><span>${formatShortDate(c.date)} · ${esc(c.detail)}</span></div>`).join('')}</div>`:''}
+      <div class="planning-analysis-actions"><button class="planning-optimize">Optimiser ma semaine</button><span>KINETIK propose seulement ; aucun déplacement n’est appliqué sans validation.</span></div>
+      ${renderPlanningOptimizer()}
+    </div>
+  </details>`;
+}
+renderWeek=function(){
+  const start=v1070WeekStart(),stats=v1070WeekStats(start),conflicts=v1070Conflicts(start),maxLoad=Math.max(600,...stats.days.map(x=>x.plannedSportLoad),...stats.days.map(x=>x.actualSportLoad)),todayWeek=Number(state.planningWeekOffset||0)===0;
+  const plannedText=`${stats.plannedSessions} séance${stats.plannedSessions>1?'s':''} prévue${stats.plannedSessions>1?'s':''}`;
+  return shell(`<header class="topbar"><div><div class="brand">Planning</div><div class="daylabel">Ta semaine d’entraînement</div></div></header>
+    ${renderPlanningTabs('calendar')}
+    <section class="planning-week-header-v1071"><button data-week-shift="-1" aria-label="Semaine précédente">←</button><div><div class="kicker">${todayWeek?'Cette semaine':'Semaine'}</div><h1>${v1070WeekLabel(start)}</h1><p>${plannedText} · ${stats.planned.toLocaleString('fr-FR')} UA prévues · ${stats.actualSessions} réalisée${stats.actualSessions>1?'s':''}</p></div><button data-week-shift="1" aria-label="Semaine suivante">→</button></section>
+    <section class="planning-primary-actions"><button class="planning-new-event" data-plan-date="${v1070DateKey(new Date())}">＋ Planifier une activité</button>${todayWeek?'':`<button class="planning-today-week">Cette semaine</button>`}</section>
+    ${v1071RenderAnalysis(stats,conflicts,maxLoad)}
+    <section class="planning-days-v1071">${stats.days.map(v1071RenderDay).join('')}</section>`, "week");
+};
 
 applyAppTheme();
 
