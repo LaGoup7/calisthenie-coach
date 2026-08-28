@@ -3999,6 +3999,7 @@ function renderReminderSettings(){const p=getReminderPrefs();return `<section cl
 function renderAppearanceSettings(){const p=getPrefs(),theme=p.appTheme||'system';return `<section class="card"><div class="kicker">Interface</div><h2>Apparence & accessibilité</h2><label class="field-label">Thème</label><select class="select" id="appTheme"><option value="system" ${theme==='system'?'selected':''}>Système</option><option value="light" ${theme==='light'?'selected':''}>Clair</option><option value="dark" ${theme==='dark'?'selected':''}>Sombre</option></select><p class="muted small">Les animations respectent automatiquement “Réduire les animations” du système et les éléments interactifs gardent une zone tactile adaptée au mobile.</p></section>`;}
 function applyAppTheme(){const p=getPrefs(),wanted=p.appTheme||'system',dark=wanted==='dark'||(wanted==='system'&&window.matchMedia?.('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=dark?'dark':'light';const meta=document.querySelector('meta[name=\"theme-color\"]');if(meta)meta.setAttribute('content',dark?'#090d14':'#f7f8fa');}
 
+const _renderAthleteProfileV1023=renderMore;
 const _renderProfileV97=renderProfile;
 renderProfile=function(){
   let html=_renderProfileV97();
@@ -4008,20 +4009,9 @@ renderProfile=function(){
   if(html.includes(alertMarker))html=html.replace(alertMarker,renderEquipmentSetupCard(false)+renderRestrictionSettings()+renderReminderSettings()+renderAppearanceSettings()+alertMarker);
   return html;
 };
-renderMore=function(){
-  const logs=getBodyLogs(),latest=logs[0],setup=getEquipmentSetup(),available=EQUIPMENT_CATALOG.filter(x=>setup[x.id]).length;
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.4</div></div></header>
-    <section class="more-grid more-grid-six">
-      <button class="card more-tile" data-view="flexibility"><span class="more-icon">${uiIcon('flex')}</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
-      <button class="card more-tile" data-view="skills"><span class="more-icon">${uiIcon('skills')}</span><div><strong>Skills</strong><small>Rangs, priorités & Skill Tree</small></div></button>
-      <button class="card more-tile" id="openExerciseLibrary"><span class="more-icon">${uiIcon('exercises')}</span><div><strong>Exercices</strong><small>${visibleExerciseLibrary().length} mouvements & variantes</small></div></button>
-      <button class="card more-tile" data-view="custom"><span class="more-icon">＋</span><div><strong>Mes séances</strong><small>Cycles & entraînements personnalisés</small></div></button>
-      <button class="card more-tile" data-view="measurements"><span class="more-icon">${uiIcon('measurements')}</span><div><strong>Mesures</strong><small>${latest?(latest.weight?latest.weight+' kg · ':'')+(latest.waist?latest.waist+' cm taille':'Dernier relevé enregistré'):'Corps, photos & tendances'}</small></div></button>
-      <button class="card more-tile" data-view="profile"><span class="more-icon">${uiIcon('profile')}</span><div><strong>Profil</strong><small>${available}/${EQUIPMENT_CATALOG.length} équipements · adaptations & réglages</small></div></button>
-    </section>
-    <details class="today-details"><summary><div><div class="kicker">Détails</div><strong>Progression, rang & coach adaptatif</strong></div><span>⌄</span></summary><div class="details-stack">${renderCycleMini()}${renderRankMini()}${renderProgressionRecommendations()}</div></details>
-    ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}`, 'more');
-};
+// v10.23.2 · legacy compatibility
+// Keep the modern athlete profile as the sole renderer for the main Profile tab.
+renderMore=function(){ return _renderAthleteProfileV1023(); };
 
 function annotateWeekExercise(e){
   const a=exerciseAdaptation(e.name),issue=!a.equipment.available||a.restriction.restricted;
