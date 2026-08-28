@@ -2095,10 +2095,47 @@ Si tu dois d'abord poser des questions parce qu'une donnée indispensable manque
 
 
 function extractCycleAiJson(text){
-  const blocks=[...String(text||'').matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map(m=>m[1].trim());
-  for(const b of blocks){try{const o=JSON.parse(b);if(o?.schemaVersion&&o?.cycle)return o;}catch(e){}}
-  const start=String(text||'').lastIndexOf('{"schemaVersion"');
-  if(start>=0){let depth=0,inStr=false,escp=false;for(let i=start;i<text.length;i++){const ch=text[i];if(inStr){if(escp)escp=false;else if(ch==='\\')escp=true;else if(ch==='"')inStr=false;}else{if(ch==='"')inStr=true;else if(ch==='{')depth++;else if(ch==='}'&&--depth===0){try{return JSON.parse(text.slice(start,i+1));}catch(e){break;}}}}}
+  let raw=String(text||'').trim();
+  if(!raw)return null;
+  // Remove common rich-copy wrappers / smart formatting without changing JSON content.
+  raw=raw.replace(/^\uFEFF/,'').replace(/\u00A0/g,' ');
+  const tryJson=s=>{
+    try{
+      const o=JSON.parse(String(s).trim());
+      return o&&Number(o.schemaVersion)===1&&o.cycle?o:null;
+    }catch(e){return null;}
+  };
+  // Whole paste first.
+  let found=tryJson(raw);if(found)return found;
+  // Markdown fences: language label is optional.
+  for(const m of raw.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)){
+    found=tryJson(m[1]);if(found)return found;
+  }
+  // Robust fallback: scan every opening brace and extract balanced objects.
+  // This survives prose before/after the JSON and ChatGPT copy formatting.
+  for(let start=0;start<raw.length;start++){
+    if(raw[start]!=='{')continue;
+    let depth=0,inString=false,escaped=false;
+    for(let i=start;i<raw.length;i++){
+      const ch=raw[i];
+      if(inString){
+        if(escaped)escaped=false;
+        else if(ch==='\\')escaped=true;
+        else if(ch==='"')inString=false;
+        continue;
+      }
+      if(ch==='"'){inString=true;continue;}
+      if(ch==='{')depth++;
+      else if(ch==='}'){
+        depth--;
+        if(depth===0){
+          found=tryJson(raw.slice(start,i+1));
+          if(found)return found;
+          break;
+        }
+      }
+    }
+  }
   return null;
 }
 function validateCycleAiImport(data,sourceCycle){
@@ -2196,7 +2233,7 @@ function renderCycleProgressionEditor(){
 </div>
 
 <div class="ai-wizard-nav"><button type="button" class="btn btn-secondary" id="cycleAiPrev" hidden>← Retour</button><button type="button" class="btn btn-primary" id="cycleAiNext">Continuer →</button></div>
-</section><section class="cycle-ai-importer"><div class="cycle-ai-copy"><div class="cycle-ai-icon">↧</div><div><strong>Importer la réponse ChatGPT</strong><p>Colle la réponse complète. L’app extrait la configuration, la vérifie et crée toujours un nouveau cycle.</p></div></div><textarea id="cycleAiImportText" rows="7" placeholder="Colle ici toute la réponse de ChatGPT…"></textarea><div class="cycle-ai-actions"><button class="btn btn-secondary" id="analyzeCycleAiImport">Analyser la proposition</button><span class="small muted">Ton cycle actuel ne sera jamais modifié.</span></div><div id="cycleAiImportResult" hidden></div></section><div class="progression-manual-divider"><span>ou configure manuellement</span></div><div class="progression-mode-grid"><button class="progression-mode ${d.mode==='auto'?'active':''}" data-progression-mode="auto"><span>🤖</span><strong>Automatique</strong><small>Recommandé · l'app gère les 8 semaines</small></button><button class="progression-mode ${d.mode==='template'?'active':''}" data-progression-mode="template"><span>▤</span><strong>Modèle</strong><small>Force, volume, reprise, skills…</small></button><button class="progression-mode ${d.mode==='custom'?'active':''}" data-progression-mode="custom"><span>⚙</span><strong>Personnalisé</strong><small>Tu règles chaque semaine</small></button></div></section>
+</section><section class="cycle-ai-importer"><div class="cycle-ai-copy"><div class="cycle-ai-icon">↧</div><div><strong>Importer la réponse ChatGPT</strong><p>Colle la réponse complète. L’app extrait la configuration, la vérifie et crée toujours un nouveau cycle.</p></div></div><textarea id="cycleAiImportText" rows="7" placeholder="Colle ici toute la réponse de ChatGPT…"></textarea><div class="cycle-ai-actions"><button type="button" class="btn btn-secondary" id="analyzeCycleAiImport">Analyser la proposition</button><span class="small muted">Ton cycle actuel ne sera jamais modifié.</span></div><div id="cycleAiImportResult" hidden></div></section><div class="progression-manual-divider"><span>ou configure manuellement</span></div><div class="progression-mode-grid"><button class="progression-mode ${d.mode==='auto'?'active':''}" data-progression-mode="auto"><span>🤖</span><strong>Automatique</strong><small>Recommandé · l'app gère les 8 semaines</small></button><button class="progression-mode ${d.mode==='template'?'active':''}" data-progression-mode="template"><span>▤</span><strong>Modèle</strong><small>Force, volume, reprise, skills…</small></button><button class="progression-mode ${d.mode==='custom'?'active':''}" data-progression-mode="custom"><span>⚙</span><strong>Personnalisé</strong><small>Tu règles chaque semaine</small></button></div></section>
   ${d.mode==='auto'?`<section class="card progression-builder-section"><div class="kicker">Objectif principal</div><h2>L'application choisit la courbe</h2><select class="select" id="progressionGoal">${goals.map(g=>`<option ${g===(d.goal||'Équilibré')?'selected':''}>${g}</option>`).join('')}</select><p class="muted small">Le moteur continue d'utiliser tes performances réelles pour faire progresser les exercices. Le bloc règle surtout la fatigue, la marge RIR, le cardio et les semaines allégées.</p></section>`:''}
   ${d.mode==='template'?`<section class="card progression-builder-section"><div class="kicker">Modèle</div><h2>Choisir une structure</h2><select class="select" id="progressionTemplate">${templates.map(([id,t])=>`<option value="${id}" ${id===(d.templateId||'standard')?'selected':''}>${t.name} · ${t.goal}</option>`).join('')}</select><p class="muted small">${esc((PROGRESSION_TEMPLATE_DEFS[d.templateId||'standard']||PROGRESSION_TEMPLATE_DEFS.standard).description)}</p></section>`:''}
   <section class="card progression-preview"><div class="section-head"><div><div class="kicker">Aperçu</div><h2>${esc(d.name||'Plan de progression')}</h2></div><span class="pill">8 semaines</span></div><div class="progression-preview-weeks">${(d.weeks||[]).map((w,i)=>{w=normalizeProgressionWeek(w,i);return `<div class="progression-preview-week"><span>S${i+1}</span><strong>${esc(w.name)}</strong><small>${Math.round(w.volumeFactor*100)} % vol · ${Math.round(w.targetFactor*100)} % cible · ${w.rir} RIR</small><em>${progressionDifficulty(w)}</em></div>`;}).join('')}</div></section>
@@ -3204,7 +3241,51 @@ function bindEvents(){
     showAiStep(1);
   }
   
-  const analyzeAiImport=document.getElementById('analyzeCycleAiImport');if(analyzeAiImport)analyzeAiImport.onclick=()=>{const raw=document.getElementById('cycleAiImportText')?.value||'',result=document.getElementById('cycleAiImportResult'),data=extractCycleAiJson(raw),source=trainingCycleById(state.cycleProgressionEditor);result.hidden=false;if(!data){result.innerHTML='<div class="ai-import-error"><strong>Configuration JSON introuvable</strong><p>Vérifie que ChatGPT a terminé son analyse et fourni le bloc JSON demandé par Calisthenie Coach.</p></div>';return;}const validation=validateCycleAiImport(data,source);if(!validation.ok){result.innerHTML=`<div class="ai-import-error"><strong>Import impossible</strong>${validation.errors.map(x=>`<p>• ${esc(x)}</p>`).join('')}</div>`;return;}state.cycleAiImport={data,sourceId:String(source.id)};result.innerHTML=`${previewCycleAiImport(data,validation)}<div class="ai-import-actions"><button class="btn btn-secondary" id="cancelCycleAiImport">Annuler</button><button class="btn btn-primary" id="createCycleAiImport">Créer ce cycle</button></div>`;document.getElementById('cancelCycleAiImport').onclick=()=>{state.cycleAiImport=null;result.hidden=true;result.innerHTML='';};document.getElementById('createCycleAiImport').onclick=()=>{const x=state.cycleAiImport;if(!x)return;const created=createCycleFromAiImport(x.data,trainingCycleById(x.sourceId));state.cycleAiImport=null;state.cycleProgressionEditor=created.id;state.cycleProgressionDraft=progressionPlanForCycle(created);render();};};
+  const analyzeAiImport=document.getElementById('analyzeCycleAiImport');
+  if(analyzeAiImport){
+    analyzeAiImport.addEventListener('click',()=>{
+      const result=document.getElementById('cycleAiImportResult');
+      if(!result)return;
+      result.hidden=false;
+      result.innerHTML='<div class="ai-import-loading"><strong>Analyse de la proposition…</strong><p>Extraction et vérification de la configuration ChatGPT.</p></div>';
+      try{
+        const raw=document.getElementById('cycleAiImportText')?.value||'';
+        if(!raw.trim()){
+          result.innerHTML='<div class="ai-import-error"><strong>Colle d’abord la réponse de ChatGPT</strong><p>Tu peux coller la réponse complète, pas uniquement le JSON.</p></div>';
+          return;
+        }
+        const data=extractCycleAiJson(raw);
+        if(!data){
+          result.innerHTML=`<div class="ai-import-error"><strong>Configuration JSON introuvable</strong><p>${raw.length.toLocaleString('fr-FR')} caractères reçus, mais aucun objet JSON valide avec schemaVersion 1 n’a été détecté.</p><p>Astuce : colle directement depuis la première accolade <b>{</b> jusqu’à la dernière <b>}</b>.</p></div>`;
+          return;
+        }
+        const source=trainingCycleById(state.cycleProgressionEditor);
+        const validation=validateCycleAiImport(data,source);
+        if(!validation.ok){
+          result.innerHTML=`<div class="ai-import-error"><strong>Configuration trouvée, mais import impossible</strong>${validation.errors.map(x=>`<p>• ${esc(x)}</p>`).join('')}</div>`;
+          return;
+        }
+        state.cycleAiImport={data,sourceId:String(source.id)};
+        result.innerHTML=`${previewCycleAiImport(data,validation)}<div class="ai-import-actions"><button type="button" class="btn btn-secondary" id="cancelCycleAiImport">Annuler</button><button type="button" class="btn btn-primary" id="createCycleAiImport">Créer ce cycle</button></div>`;
+        document.getElementById('cancelCycleAiImport')?.addEventListener('click',()=>{state.cycleAiImport=null;result.hidden=true;result.innerHTML='';});
+        document.getElementById('createCycleAiImport')?.addEventListener('click',()=>{
+          try{
+            const x=state.cycleAiImport;if(!x)return;
+            const created=createCycleFromAiImport(x.data,trainingCycleById(x.sourceId));
+            state.cycleAiImport=null;state.cycleProgressionEditor=created.id;state.cycleProgressionDraft=progressionPlanForCycle(created);render();
+          }catch(err){
+            console.error('Cycle AI create error',err);
+            result.hidden=false;
+            result.innerHTML=`<div class="ai-import-error"><strong>Impossible de créer le cycle</strong><p>${esc(err?.message||'Erreur inconnue')}</p></div>`;
+          }
+        });
+      }catch(err){
+        console.error('Cycle AI import analysis error',err);
+        result.hidden=false;
+        result.innerHTML=`<div class="ai-import-error"><strong>Erreur pendant l’analyse</strong><p>${esc(err?.message||'Erreur inconnue')}</p><p>La proposition n’a pas été appliquée.</p></div>`;
+      }
+    });
+  }
   const closeProg=document.getElementById('closeProgressionEditor');if(closeProg)closeProg.onclick=()=>{state.cycleProgressionEditor=null;state.cycleProgressionDraft=null;render();};
   const progGoal=document.getElementById('progressionGoal');if(progGoal)progGoal.onchange=()=>{state.cycleProgressionDraft=automaticProgression(progGoal.value);render();};
   const progTemplate=document.getElementById('progressionTemplate');if(progTemplate)progTemplate.onchange=()=>{state.cycleProgressionDraft=templateProgression(progTemplate.value);render();};
