@@ -2472,3 +2472,13 @@ html[data-theme="dark"] .next-exercise-preview-rich,html[data-theme="dark"] .pro
 .ai-eval-test p{margin:4px 0 0;color:var(--muted);font-size:.72rem;line-height:1.45}.ai-eval-test label{margin:0}
 .ai-eval-note{font-size:.68rem;color:var(--muted);line-height:1.45}.ai-eval-complete{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px}
 @media(max-width:680px){.ai-eval-test{grid-template-columns:1fr}}
+
+/* v10.15 · equipment without pills */
+.equipment-clean-list{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:12px 0 10px}
+.equipment-clean-row{display:flex;align-items:center;gap:10px;font-size:.84rem;font-weight:650;letter-spacing:-.01em}
+.equipment-separator{color:var(--muted);font-weight:400}
+@media(max-width:520px){.equipment-clean-list{display:grid;gap:7px}.equipment-clean-row{justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:7px}.equipment-clean-row:last-child{border-bottom:0}.equipment-separator{display:none}}
+
+/* v10.16 · activity heatmap semantics */
+.cycle-heat-cell.done-express{background:#0ea5e9;border-color:#0284c7}
+.cycle-heat-legend i.done-express{background:#0ea5e9}

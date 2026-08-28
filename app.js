@@ -1128,11 +1128,15 @@ function dailyCycleStatus(value){
   if(key>today)return {key,status:'future',cycle,w};
   const sessions=getHistory().filter(h=>localDateKey(h.date)===key),quick=getQuickLogs().filter(q=>localDateKey(q.date)===key&&isStrengthQuickLog(q)),runs=getStravaActivities().filter(a=>activityDateKey(a)===key&&isRunActivity(a)&&Number(a.moving_time||a.elapsed_time||0)>=900);
   if(isRest){
-    if(key===today)return {key,status:(sessions.length||quick.length||runs.length)?'rest-broken':'rest-planned',cycle,w};
-    return {key,status:(sessions.length||quick.length||runs.length)?'rest-broken':'rest-ok',cycle,w};
+    // Mobility, stretching, walking and cardio are compatible with a recovery day.
+    // Only a real strength/calisthenics session or strength micro-set interrupts the planned rest.
+    const strengthSessions=sessions.filter(h=>(h.entries||[]).some(e=>{const n=String(e.exercise||'');return !/mobilité|étirement|stretch|respiration|cardio|marche|échauffement|retour au calme/i.test(n);}));
+    const breaksRest=strengthSessions.length||quick.length;
+    if(key===today)return {key,status:breaksRest?'rest-broken':'rest-planned',cycle,w};
+    return {key,status:breaksRest?'rest-broken':'rest-ok',cycle,w};
   }
   const plannedSessions=sessions.filter(h=>h.trainingCycleId?String(h.trainingCycleId)===String(cycle.id)&&Number(h.day)===d.getDay():!h.customWorkoutId&&Number(h.day)===d.getDay());
-  if(plannedSessions.length)return {key,status:'done',cycle,w,session:plannedSessions[0]};
+  if(plannedSessions.length){const session=plannedSessions[0],status=session.sessionLength==='short'?'done-express':'done';return {key,status,cycle,w,session};}
   return {key,status:key===today?'planned':'missed',cycle,w};
 }
 function respectedRestDays(){
@@ -1141,9 +1145,9 @@ function respectedRestDays(){
 }
 function renderCycleHeatmap(weeks=16){
   const today=new Date(),end=mondayDate(today);end.setDate(end.getDate()+6);const start=new Date(end);start.setDate(start.getDate()-(weeks*7-1));
-  const cells=[];const counts={done:0,'rest-ok':0,missed:0,'rest-broken':0};
-  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){const st=dailyCycleStatus(new Date(d));if(counts[st.status]!=null)counts[st.status]++;const title=`${st.key} · ${st.cycle.name} · ${st.status==='done'?'séance terminée':st.status==='rest-ok'?'repos respecté':st.status==='rest-planned'?'repos prévu':st.status==='rest-broken'?'repos interrompu':st.status==='missed'?'séance manquée':st.status==='planned'?'séance prévue':st.status==='untracked'?'avant suivi':'à venir'}`;cells.push(`<i class="cycle-heat-cell ${st.status}" title="${esc(title)}" aria-label="${esc(title)}"></i>`);}
-  return `<section class="card cycle-heat-card"><div class="section-head"><div><div class="kicker">Régularité · ${weeks} semaines</div><h2>Historique du cycle</h2></div><span class="pill">+10 XP / repos respecté</span></div><div class="cycle-heat-summary"><span><strong>${counts.done}</strong> séances terminées</span><span><strong>${counts['rest-ok']}</strong> repos respectés</span><span><strong>${counts.missed}</strong> jours manqués</span></div><div class="cycle-heat-wrap"><div class="cycle-heat-days"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="cycle-heat-grid">${cells.join('')}</div></div><div class="cycle-heat-legend"><span><i class="done"></i>Séance terminée</span><span><i class="rest-ok"></i>Repos respecté</span><span><i class="missed"></i>Manqué</span><span><i class="rest-broken"></i>Repos interrompu</span></div><p class="muted small">Un repos est validé le lendemain s'il appartenait au cycle actif et qu'aucune séance, micro-série de renforcement ou course Strava de 15 min+ n'a été enregistrée. Mobilité douce et marche non enregistrée restent compatibles.</p></section>`;
+  const cells=[];const counts={done:0,'done-express':0,'rest-ok':0,missed:0,'rest-broken':0};
+  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){const st=dailyCycleStatus(new Date(d));if(counts[st.status]!=null)counts[st.status]++;const title=`${st.key} · ${st.cycle.name} · ${st.status==='done'?'séance complète':st.status==='done-express'?'séance express':st.status==='rest-ok'?'repos respecté':st.status==='rest-planned'?'repos prévu':st.status==='rest-broken'?'repos interrompu':st.status==='missed'?'séance manquée':st.status==='planned'?'séance prévue':st.status==='untracked'?'avant suivi':'à venir'}`;cells.push(`<i class="cycle-heat-cell ${st.status}" title="${esc(title)}" aria-label="${esc(title)}"></i>`);}
+  return `<section class="card cycle-heat-card"><div class="section-head"><div><div class="kicker">Régularité · ${weeks} semaines</div><h2>Historique du cycle</h2></div><span class="pill">+10 XP / repos respecté</span></div><div class="cycle-heat-summary"><span><strong>${counts.done+counts['done-express']}</strong> séances terminées</span><span><strong>${counts['rest-ok']}</strong> repos respectés</span><span><strong>${counts.missed}</strong> jours manqués</span></div><div class="cycle-heat-wrap"><div class="cycle-heat-days"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="cycle-heat-grid">${cells.join('')}</div></div><div class="cycle-heat-legend"><span><i class="done"></i>Séance complète</span><span><i class="done-express"></i>Séance express</span><span><i class="rest-ok"></i>Repos respecté</span><span><i class="missed"></i>Manqué</span><span><i class="rest-broken"></i>Repos interrompu</span></div><p class="muted small">Un repos est validé le lendemain tant qu’aucun renforcement ou micro-série de force n’est enregistré. Étirements, mobilité, marche et cardio restent compatibles avec la récupération.</p></section>`;
 }
 
 const QUICK_PRESETS = [
@@ -1500,7 +1504,9 @@ function applySessionLength(base, sessionLength="full"){
 function prepareWorkoutObject(base, readiness=null){
   const w=clone(base),cycle=getCycleState();
   w.cycle=cycle;w.readiness=readiness;
-  w.exercises=(w.exercises||[]).map(e=>{
+  // Cardio is tracked as a separate activity, not as a mandatory step of strength sessions.
+  w.cardioPlan=(w.exercises||[]).filter(e=>e.phase==='cardio');
+  w.exercises=(w.exercises||[]).filter(e=>e.phase!=='cardio').map(e=>{
     let chosen=applyExerciseChoice(e),ai=aiWeeklyPrescriptionFor(chosen,cycle.week);
     if(ai){
       chosen={...chosen,sets:ai.sets,target:ai.target,baseTarget:ai.target,type:ai.type||chosen.type,progressionTarget:ai.target,prescriptionStatus:'ai-cycle',prescriptionNote:ai.note||`Prescription spécifique S${cycle.week}${ai.assistance?` · ${ai.assistance}`:''}`,aiAssistance:ai.assistance||''};
@@ -2442,7 +2448,7 @@ function renderMore(){
     </section>
     <details class="today-details"><summary><div><div class="kicker">Détails</div><strong>Progression, rang & coach adaptatif</strong></div><span>⌄</span></summary><div class="details-stack">${renderCycleMini()}${renderRankMini()}${renderProgressionRecommendations()}</div></details>
     ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}
-    <section class="card home-equipment"><div class="kicker">Matériel maison</div><h2>Ton setup</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les dips et L-sit utilisent en priorité les barres parallèles. Les pompes peuvent se faire sur poignées. Pour les jambes, la résistance vient actuellement des bandes : aucun sac à dos n’est utilisé dans le programme.</p></section>`, 'more');
+    <section class="card home-equipment"><div class="kicker">Matériel maison</div><h2>Ton setup</h2><div class="equipment-clean-list">${HOME_EQUIPMENT.map((x,i)=>`<div class="equipment-clean-row"><span>${esc(x)}</span>${i<HOME_EQUIPMENT.length-1?'<span class="equipment-separator">·</span>':''}</div>`).join('')}</div><p class="muted small">Les dips et L-sit utilisent en priorité les barres parallèles. Les pompes peuvent se faire sur poignées. Pour les jambes, la résistance vient actuellement des bandes : aucun sac à dos n’est utilisé dans le programme.</p></section>`, 'more');
 }
 function renderTodayUsefulActions(){
   const x=progressWeekStats(),rank=getRankState(),next=rank.next;
@@ -3211,7 +3217,7 @@ function renderProfile(){const p=getPrefs();return shell(`<header class="topbar"
   <section class="card"><h2>Alertes & écran</h2><div class="switchline"><div><strong>Son du timer</strong><div class="small muted">Triple bip à la fin d'un chrono</div></div><input id="soundPref" type="checkbox" ${p.sound?'checked':''}></div><div class="switchline"><div><strong>Garder l'écran actif</strong><div class="small muted">Recommandé sur iPhone : empêche la mise en veille pendant un chrono</div></div><input id="keepAwakePref" type="checkbox" ${p.keepAwake!==false?'checked':''}></div><div class="switchline"><div><strong>Vibration</strong><div class="small muted">Utilisée uniquement si le navigateur la prend en charge</div></div><input id="vibrationPref" type="checkbox" ${p.vibration?'checked':''}></div><p class="install-note">Si tu verrouilles volontairement l’iPhone, iOS peut suspendre une PWA. Pour une alarme garantie sur écran verrouillé, il faudra ajouter des notifications push côté serveur.</p></section>
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
   <section class="card"><h2>Installer l'application</h2><p class="install-note">Android/Chrome : bouton ci-dessous si disponible. iPhone/Safari : Partager → Ajouter à l'écran d'accueil.</p><button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer':'Installation via le navigateur'}</button></section>
-  <section class="card"><div class="kicker">Matériel maison</div><h2>Power Tower + barres parallèles + poignées + bandes + tapis</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les barres parallèles et poignées de pompes sont intégrées aux recommandations. Pour le moment, les séances utilisent les bandes à la place du sac à dos pour ajouter de la résistance.</p></section>
+  <section class="card"><div class="kicker">Matériel maison</div><h2>Ton équipement</h2><div class="equipment-clean-list">${HOME_EQUIPMENT.map((x,i)=>`<div class="equipment-clean-row"><span>${esc(x)}</span>${i<HOME_EQUIPMENT.length-1?'<span class="equipment-separator">·</span>':''}</div>`).join('')}</div><p class="muted small">Les barres parallèles et poignées de pompes sont intégrées aux recommandations. Pour le moment, les séances utilisent les bandes à la place du sac à dos pour ajouter de la résistance.</p></section>
   <section class="card"><div class="section-head"><div><div class="kicker">Training Engine</div><h2>Programme & bibliothèque</h2></div><span class="pill">V10.1</span></div><button class="btn btn-secondary" id="openExerciseLibrary">Ouvrir la bibliothèque d’exercices</button><div class="divider"></div><strong>Variantes actives</strong>${Object.entries(getExerciseChoices()).length?`<div class="choice-list">${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${base} → <strong>${chosen}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div>`:'<p class="muted small">Aucune progression d’exercice adoptée pour le moment.</p>'}<div class="divider"></div><div class="section-head"><div><strong>Progression du cycle actif</strong><div class="small muted">${progressionModeLabel(getCycleState().plan)} · Semaine ${getCycleState().week}/${getCycleState().weekCount} · ${getCycleState().name}</div></div><div class="profile-progression-actions"><button class="btn btn-secondary compact edit-cycle-progression" data-cycle-id="${getActiveTrainingCycleId()}">Configurer</button><button class="btn btn-outline compact" id="resetCycle">Nouveau bloc</button></div></div></section>
   <section class="card data-card"><div class="section-head"><div><div class="kicker">Sauvegarde</div><h2>Données</h2></div><span class="pill">JSON</span></div><p class="muted small">Avant de changer de téléphone, de navigateur ou de passer sur une nouvelle adresse Vercel, exporte une sauvegarde. Elle contient séances, Quick Logs, progression, réglages et photos.</p><div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div><p class="install-note">Le fichier reste sur ton appareil : rien n’est envoyé vers un serveur.</p><div class="divider"></div><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></section>`,'profile');}
 
@@ -3351,7 +3357,7 @@ function bindEvents(){
           try{
             const x=state.cycleAiImport;if(!x)return;
             const created=createCycleFromAiImport(x.data,trainingCycleById(x.sourceId));
-            state.cycleAiImport=null;state.cycleProgressionEditor=created.id;state.cycleProgressionDraft=progressionPlanForCycle(created);render();
+            state.cycleAiImport=null;state.cycleProgressionEditor=null;state.cycleProgressionDraft=null;state.view='custom';render();
           }catch(err){
             console.error('Cycle AI create error',err);
             result.hidden=false;
