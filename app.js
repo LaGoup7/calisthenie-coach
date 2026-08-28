@@ -20,6 +20,7 @@ const STORAGE = {
   cycleActivationHistory: "cc_cycle_activation_history_v1",
   cycleProgressions: "cc_cycle_progressions_v1",
   cycleProgressionStates: "cc_cycle_progression_states_v1",
+  activities: "cc_activities_v1",
 };
 
 function ex(name, type, sets, target, rest, tip, opts={}) {
@@ -949,6 +950,7 @@ const state = {
   repVolumeTo: "",
   cycleProgressionEditor: null,
   cycleProgressionDraft: null,
+  activityEditor: false,
 };
 
 function parse(key, fallback) {
@@ -2383,6 +2385,7 @@ function renderProgramAudit(){
 function render() {
   const app = document.getElementById("app");
   if (state.active) app.innerHTML = renderCoach();
+  else if (state.activityEditor) app.innerHTML = renderActivityEditor();
   else if (state.sessionModeEditor) app.innerHTML = renderSessionModePicker();
   else if (state.readinessEditor) app.innerHTML = renderReadiness();
   else if (state.exerciseLibrary) app.innerHTML = renderExerciseLibrary();
@@ -2450,6 +2453,41 @@ function renderMore(){
     ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}
     <section class="card home-equipment"><div class="kicker">Matériel maison</div><h2>Ton setup</h2><div class="equipment-clean-list">${HOME_EQUIPMENT.map((x,i)=>`<div class="equipment-clean-row"><span>${esc(x)}</span>${i<HOME_EQUIPMENT.length-1?'<span class="equipment-separator">·</span>':''}</div>`).join('')}</div><p class="muted small">Les dips et L-sit utilisent en priorité les barres parallèles. Les pompes peuvent se faire sur poignées. Pour les jambes, la résistance vient actuellement des bandes : aucun sac à dos n’est utilisé dans le programme.</p></section>`, 'more');
 }
+
+const ACTIVITY_TYPES=[
+  {id:'running',label:'Course',unit:'min'},
+  {id:'cycling',label:'Vélo',unit:'min'},
+  {id:'swimming',label:'Piscine',unit:'min'},
+  {id:'crossfit',label:'CrossFit',unit:'min'},
+  {id:'hyrox',label:'HYROX',unit:'min'},
+  {id:'walking',label:'Marche / randonnée',unit:'min'},
+  {id:'rowing',label:'Rameur',unit:'min'},
+  {id:'sport',label:'Autre sport',unit:'min'}
+];
+function getActivities(){return parse(STORAGE.activities,[]);}
+function setActivities(v){save(STORAGE.activities,v);}
+function activityType(id){return ACTIVITY_TYPES.find(x=>x.id===id)||{id,label:id||'Activité',unit:'min'};}
+function addActivityLog(type,duration,distance=0,intensity='moderate',note=''){
+  const rows=getActivities();rows.unshift({id:String(Date.now()),date:new Date().toISOString(),type,duration:Number(duration)||0,distance:Number(distance)||0,intensity,note:String(note||'')});setActivities(rows.slice(0,1500));
+}
+function activityStats(days=7){
+  const cut=Date.now()-days*86400000,manual=getActivities().filter(x=>new Date(x.date).getTime()>=cut);
+  const strava=getStravaActivities().filter(a=>new Date(a.start_date||a.start_date_local||0).getTime()>=cut&&isRunActivity(a));
+  const rows={};
+  for(const a of manual){const x=activityType(a.type);rows[x.label]=(rows[x.label]||0)+Number(a.duration||0);}
+  const runMin=Math.round(strava.reduce((s,a)=>s+Number(a.moving_time||a.elapsed_time||0),0)/60);
+  if(runMin)rows['Course Strava']=(rows['Course Strava']||0)+runMin;
+  return {minutes:Object.values(rows).reduce((a,b)=>a+b,0),sessions:manual.length+strava.length,rows,manual};
+}
+function renderActivityHub(){
+  const s=activityStats(7),s30=activityStats(30);
+  return `<section class="card activity-hub"><div class="section-head"><div><div class="kicker">Activités · 7 jours</div><h2>${s.minutes} min d'activité</h2><p class="muted small">${s.sessions} session${s.sessions!==1?'s':''} enregistrée${s.sessions!==1?'s':''}</p></div><button type="button" class="btn btn-secondary compact" id="openActivityLog">＋ Activité</button></div>
+  ${Object.keys(s.rows).length?`<div class="activity-volume-list">${Object.entries(s.rows).map(([name,min])=>`<div><span>${esc(name)}</span><strong>${Math.round(min)} min</strong></div>`).join('')}</div>`:'<p class="muted small">Ajoute course, vélo, piscine, CrossFit, HYROX ou toute autre activité pour suivre ton volume global.</p>'}
+  <div class="activity-month"><span>30 jours</span><strong>${s30.minutes} min · ${s30.sessions} sessions</strong></div></section>`;
+}
+function renderActivityEditor(){
+  return shell(`<header class="topbar"><div><div class="brand">Ajouter une activité</div><div class="daylabel">Volume cardio & sports complémentaires</div></div></header><section class="card activity-editor"><label><span>Activité</span><select id="activityType">${ACTIVITY_TYPES.map(x=>`<option value="${x.id}">${x.label}</option>`).join('')}</select></label><div class="activity-editor-grid"><label><span>Durée</span><div class="input-with-unit"><input id="activityDuration" type="number" min="1" step="1" value="30"><b>min</b></div></label><label><span>Distance <small>optionnel</small></span><div class="input-with-unit"><input id="activityDistance" type="number" min="0" step=".1" placeholder="0"><b>km</b></div></label></div><label><span>Intensité</span><select id="activityIntensity"><option value="easy">Facile</option><option value="moderate" selected>Modérée</option><option value="hard">Difficile</option><option value="very-hard">Très difficile</option></select></label><label><span>Note <small>optionnel</small></span><textarea id="activityNote" rows="3" placeholder="Ex. piscine technique, sortie vélo vallonnée…"></textarea></label><div class="editor-actions"><button type="button" class="btn btn-secondary" id="cancelActivity">Annuler</button><button type="button" class="btn btn-primary" id="saveActivity">Enregistrer</button></div></section>`,'today');
+}
 function renderTodayUsefulActions(){
   const x=progressWeekStats(),rank=getRankState(),next=rank.next;
   const count=(x.recs?.length||0)+(x.due?.overdue?1:0)+(next?1:0);
@@ -2460,11 +2498,11 @@ function renderToday() {
   const recent=history.filter(h=>new Date(h.date).getTime()>=seven),weeklyMinutes=recent.reduce((a,h)=>a+(h.durationMinutes||0),0);
   const rank=getRankState(),warning=dailyQuickLoadWarning(),todayEquipment=[...new Set((w.exercises||[]).flatMap(e=>equipmentForExercise(e.name)))];
   const baseToday=workoutTemplateForDay(day),activeCycle=getActiveTrainingCycle();
-  const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p><div class="rest-reward-note"><strong>+10 XP récupération</strong><span>Le bonus sera validé demain si aucune séance, micro-série de renforcement ou course de 15 min+ n'est enregistrée aujourd'hui.</span></div></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment"><strong>Matériel prévu</strong><div>${todayEquipment.map(x=>`<span class="pill">${x}</span>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
+  const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p><div class="rest-reward-note"><strong>+10 XP récupération</strong><span>Le bonus sera validé demain si aucune séance, micro-série de renforcement ou course de 15 min+ n'est enregistrée aujourd'hui.</span></div></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment today-equipment-clean"><strong>Matériel prévu</strong><div class="today-equipment-list">${todayEquipment.map((x,i)=>`<span>${esc(x)}${i<todayEquipment.length-1?'<b aria-hidden="true">·</b>':''}</span>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
     <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>${uiIcon('add')}</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card rank-cockpit rank-${rank.current.id}"><strong>${rank.current.name}</strong><small>${rank.next?`${rankProgressText(rank.next,rank.nextEval)} vers ${rank.next.name}`:`${rank.xp.total.toLocaleString('fr-FR')} XP · rang maximal`}</small></div><div class="cockpit-card"><span>${uiIcon('clock')}</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
-    ${renderDailyVolumeCard()}${renderTodayUsefulActions()}${program}`, 'today');
+    ${renderActivityHub()}${renderDailyVolumeCard()}${renderTodayUsefulActions()}${program}`, 'today');
 }
 function renderWeekExercise(e, i) {
   const rest = e.rest > 0 ? ` · repos ${fmtTime(e.rest)}` : '';
@@ -3232,6 +3270,9 @@ async function hydrateBodyPhotos(){const imgs=[...document.querySelectorAll('[da
 
 function bindEvents(){
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;state.selectedHistoryId=null;render();});
+  const openActivity=document.getElementById('openActivityLog');if(openActivity)openActivity.onclick=()=>{state.activityEditor=true;render();};
+  const cancelActivity=document.getElementById('cancelActivity');if(cancelActivity)cancelActivity.onclick=()=>{state.activityEditor=false;render();};
+  const saveActivity=document.getElementById('saveActivity');if(saveActivity)saveActivity.onclick=()=>{const duration=Number(document.getElementById('activityDuration')?.value||0);if(duration<=0)return;addActivityLog(document.getElementById('activityType')?.value||'sport',duration,Number(document.getElementById('activityDistance')?.value||0),document.getElementById('activityIntensity')?.value||'moderate',document.getElementById('activityNote')?.value||'');state.activityEditor=false;render();};
   document.querySelectorAll('[data-progress-tab]').forEach(b=>b.onclick=()=>{state.progressTab=b.dataset.progressTab;state.selectedHistoryId=null;render();});
   document.querySelectorAll('[data-today-progress]').forEach(b=>b.onclick=()=>{state.view='progress';state.progressTab=b.dataset.todayProgress||'performance';state.selectedHistoryId=null;render();});
   const openQuick=document.getElementById('openQuickLog');if(openQuick)openQuick.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();};
