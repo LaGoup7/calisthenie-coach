@@ -2633,6 +2633,7 @@ const ACTIVITY_TYPES=[
   {id:'swimming',label:'Piscine',distance:true,metric:'m'},
   {id:'crossfit',label:'CrossFit',distance:false},
   {id:'hyrox',label:'HYROX',distance:false},
+  {id:'boxing',label:'Boxe / sports de combat',distance:false},
   {id:'walking',label:'Marche / randonnée',distance:true,metric:'km'},
   {id:'rowing',label:'Rameur',distance:true,metric:'km'},
   {id:'mobility',label:'Mobilité / étirements',distance:false},
@@ -5368,6 +5369,192 @@ bindEvents=function(){
   _bindEventsV1060();
   document.querySelectorAll('.next-best-choice [data-progress-tab]').forEach(b=>b.onclick=()=>{state.view='progress';state.progressTab=b.dataset.progressTab||'performance';render();});
 };
+
+
+/* ========================================================================== */
+/* V10.70 · Multisport Planning                                               */
+/* Planned vs completed · weekly load forecast · conflicts · opt-in optimizer */
+/* ========================================================================== */
+STORAGE.plannedEvents="kinetik_planned_events_v1";
+Object.assign(state,{planningEditor:false,planningEditId:null,planningEditorDate:null,planningWeekOffset:0,planningOptimizeProposal:null,activityDraftPlanId:null});
+
+function getPlannedEvents(){return parse(STORAGE.plannedEvents,[]);}
+function setPlannedEvents(v){save(STORAGE.plannedEvents,v);}
+function v1070Pad(n){return String(n).padStart(2,'0');}
+function v1070DateKey(d){d=new Date(d);return `${d.getFullYear()}-${v1070Pad(d.getMonth()+1)}-${v1070Pad(d.getDate())}`;}
+function v1070DateFromKey(k){const [y,m,d]=String(k||'').split('-').map(Number);return new Date(y,m-1,d,12,0,0);}
+function v1070AddDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function v1070WeekStart(offset=state.planningWeekOffset||0){const d=mondayDate(new Date());d.setHours(12,0,0,0);d.setDate(d.getDate()+Number(offset||0)*7);return d;}
+function v1070WeekLabel(start){const end=v1070AddDays(start,6),fmt=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});return `${fmt(start)} — ${fmt(end)}`;}
+function plannedEventById(id){return getPlannedEvents().find(x=>String(x.id)===String(id))||null;}
+function plannedEventsForDate(key){return getPlannedEvents().filter(x=>x.date===key).sort((a,b)=>String(a.time||'99:99').localeCompare(String(b.time||'99:99')));}
+function actualActivitiesForDate(key){return getActivities().filter(x=>v1070DateKey(x.date)===key).sort((a,b)=>v1070DateMs(a.date)-v1070DateMs(b.date));}
+function actualStrengthForDate(key){return getHistory().filter(x=>v1070DateKey(x.date)===key).sort((a,b)=>v1070DateMs(a.date)-v1070DateMs(b.date));}
+function plannedEventType(e){return activityType(e.type);}
+function plannedEventLoad(e){return e.type==='mobility'?0:Math.round(Number(e.duration||0)*Math.max(1,Number(e.rpe||5)));}
+function plannedEventRecoveryMinutes(e){return e.type==='mobility'?Number(e.duration||0):0;}
+function plannedEventActual(e){
+  const direct=getActivities().find(a=>String(a.linkedPlanId||'')===String(e.id));if(direct)return direct;
+  const same=actualActivitiesForDate(e.date).filter(a=>a.type===e.type);
+  return same.length===1?same[0]:null;
+}
+function v1070PlannedKinetikForDate(key){
+  const d=v1070DateFromKey(key),day=d.getDay(),w=preparedWorkout(day,null,'full');
+  if(!w?.exercises?.length)return null;
+  const expectedRpe=6;
+  return {day,name:w.name,duration:Number(w.duration||45),rpe:expectedRpe,load:Math.round(Number(w.duration||45)*expectedRpe),workout:w};
+}
+function v1070ActualKinetikLoad(key){return actualStrengthForDate(key).reduce((s,x)=>s+strengthSessionInternalLoad(x),0);}
+function v1070DayPlan(key){
+  const manual=plannedEventsForDate(key),kinetik=v1070PlannedKinetikForDate(key),actualManual=actualActivitiesForDate(key),actualStrength=actualStrengthForDate(key);
+  const plannedSportLoad=(kinetik?.load||0)+manual.reduce((s,x)=>s+plannedEventLoad(x),0),plannedRecovery=manual.reduce((s,x)=>s+plannedEventRecoveryMinutes(x),0);
+  const actualSportLoad=v1070ActualKinetikLoad(key)+actualManual.filter(x=>x.type!=='mobility').reduce((s,x)=>s+activityInternalLoad(x),0),actualRecovery=actualManual.filter(x=>x.type==='mobility').reduce((s,x)=>s+Number(x.duration||0),0);
+  return {key,date:v1070DateFromKey(key),manual,kinetik,actualManual,actualStrength,plannedSportLoad,plannedRecovery,actualSportLoad,actualRecovery};
+}
+function v1070WeekDays(start=v1070WeekStart()){return Array.from({length:7},(_,i)=>v1070DayPlan(v1070DateKey(v1070AddDays(start,i))));}
+function v1070WeekStats(start=v1070WeekStart()){
+  const days=v1070WeekDays(start),planned=days.reduce((s,x)=>s+x.plannedSportLoad,0),actual=days.reduce((s,x)=>s+x.actualSportLoad,0),plannedRecovery=days.reduce((s,x)=>s+x.plannedRecovery,0),actualRecovery=days.reduce((s,x)=>s+x.actualRecovery,0);
+  const plannedSessions=days.reduce((s,x)=>s+(x.kinetik?1:0)+x.manual.filter(e=>e.type!=='mobility').length,0),actualSessions=days.reduce((s,x)=>s+x.actualStrength.length+x.actualManual.filter(e=>e.type!=='mobility').length,0);
+  return {days,planned,actual,plannedRecovery,actualRecovery,plannedSessions,actualSessions};
+}
+function v1070PriorityLabel(id){return ({priority:'Prioritaire',important:'Important',flexible:'Flexible'})[id]||'Flexible';}
+function v1070DefaultPriority(type){return ['boxing','crossfit','hyrox'].includes(type)?'important':'flexible';}
+function v1070LoadDelta(planned,actual){if(!planned||!actual)return null;return Math.round((actual-planned)/planned*100);}
+function v1070PlanRealizationText(e){
+  const a=plannedEventActual(e);if(!a)return null;
+  const planned=plannedEventLoad(e),actual=a.type==='mobility'?0:activityInternalLoad(a),delta=v1070LoadDelta(planned,actual),type=activityType(a.type);
+  return `${a.duration} min${a.distance?` · ${a.distance} ${type.metric||'km'}`:''} · RPE ${a.rpe||'—'}${delta!=null?` · charge ${delta>=0?'+':''}${delta}% vs prévu`:''}`;
+}
+function v1070Conflicts(start=v1070WeekStart()){
+  const days=v1070WeekDays(start),rows=[];
+  days.forEach((d,i)=>{
+    const hard=d.manual.filter(e=>e.type!=='mobility'&&Number(e.rpe||0)>=8&&Number(e.duration||0)>=45);
+    if(d.plannedSportLoad>=900)rows.push({level:'high',date:d.key,title:'Journée très dense',detail:`Charge prévue ${d.plannedSportLoad} UA.`});
+    if(hard.length&&d.kinetik)rows.push({level:'medium',date:d.key,title:'Double contrainte le même jour',detail:`${hard.map(x=>plannedEventType(x).label).join(', ')} intense + ${d.kinetik.name}.`});
+    if(i<6){
+      const n=days[i+1],hardManual=hard.length||d.manual.some(e=>['boxing','crossfit','hyrox'].includes(e.type)&&Number(e.rpe||0)>=7);
+      if(hardManual&&n.kinetik&&n.kinetik.duration>=45)rows.push({level:'medium',date:n.key,title:'Récupération à surveiller',detail:`Une activité intense précède ${n.kinetik.name}. La séance sera réévaluée après la charge réelle.`});
+      if(d.plannedSportLoad>=550&&n.plannedSportLoad>=550)rows.push({level:'medium',date:n.key,title:'Deux journées chargées consécutives',detail:`${d.plannedSportLoad} puis ${n.plannedSportLoad} UA prévues.`});
+    }
+  });
+  return rows.slice(0,6);
+}
+function v1070OptimizerProposal(start=v1070WeekStart()){
+  const days=v1070WeekDays(start),load=Object.fromEntries(days.map(d=>[d.key,d.plannedSportLoad])),moves=[],protectedNotes=[],weight={flexible:0,important:1,priority:2};
+  const movable=getPlannedEvents().filter(e=>days.some(d=>d.key===e.date)&&e.type!=='mobility').sort((a,b)=>weight[a.priority||'flexible']-weight[b.priority||'flexible']);
+  for(const e of movable){
+    const pr=e.priority||'flexible',day=days.find(d=>d.key===e.date);if(!day)continue;
+    const idx=days.findIndex(d=>d.key===e.date),adjacentHeavy=((days[idx-1]?.plannedSportLoad||0)>=550||(days[idx+1]?.plannedSportLoad||0)>=550)&&day.plannedSportLoad>=450;
+    const needs=day.plannedSportLoad>=800||adjacentHeavy;if(!needs)continue;
+    if(pr==='priority'){protectedNotes.push(`${plannedEventType(e).label} ${formatShortDate(e.date)} protégée (prioritaire).`);continue;}
+    const candidates=days.filter(d=>d.key!==e.date&&d.key>=v1070DateKey(new Date())&&load[d.key]+plannedEventLoad(e)<=650&&!d.manual.some(x=>x.type===e.type));
+    candidates.sort((a,b)=>(load[a.key]+(a.kinetik?120:0))-(load[b.key]+(b.kinetik?120:0)));
+    const target=candidates[0];if(!target)continue;
+    moves.push({id:e.id,from:e.date,to:target.key,label:plannedEventType(e).label,reason:`Répartir la charge : ${load[e.date]} UA → journée à ${load[target.key]} UA.`});
+    load[e.date]-=plannedEventLoad(e);load[target.key]+=plannedEventLoad(e);
+  }
+  return {moves,protectedNotes,createdAt:Date.now()};
+}
+function v1070ApplyOptimizer(){
+  const p=state.planningOptimizeProposal;if(!p?.moves?.length)return;
+  const rows=getPlannedEvents();p.moves.forEach(m=>{const e=rows.find(x=>String(x.id)===String(m.id));if(e)e.date=m.to;});setPlannedEvents(rows);state.planningOptimizeProposal=null;render();
+}
+function v1070DayLoadBar(day,max){const planned=Math.round(day.plannedSportLoad/max*100),actual=Math.round(day.actualSportLoad/max*100);return `<div class="planning-load-bar"><i style="width:${Math.max(0,planned)}%"></i>${actual?`<b style="width:${Math.max(0,actual)}%"></b>`:''}</div>`;}
+function v1070RenderPlannedEvent(e){
+  const type=plannedEventType(e),actual=plannedEventActual(e),realText=v1070PlanRealizationText(e);
+  return `<div class="planned-event ${actual?'completed':''}"><div class="planned-event-time">${e.time||'—'}</div><div class="planned-event-main"><strong>${esc(type.label)}</strong><span>${e.duration} min · RPE prévu ${e.rpe} · ${v1070PriorityLabel(e.priority)}</span>${e.note?`<small>${esc(e.note)}</small>`:''}${realText?`<small class="planned-real">Réalisé · ${esc(realText)}</small>`:''}</div><div class="planned-event-actions">${!actual?`<button data-complete-plan="${e.id}">Réaliser</button>`:''}<button data-edit-plan="${e.id}">Modifier</button><button data-delete-plan="${e.id}" aria-label="Supprimer">×</button></div></div>`;
+}
+function v1070RenderUnplannedActual(a){const type=activityType(a.type);return `<div class="planning-actual-unplanned"><span>${activityUiIcon(a.type)}</span><div><strong>${esc(type.label)} · réalisé</strong><small>${a.duration} min${a.distance?` · ${a.distance} ${type.metric||'km'}`:''} · RPE ${a.rpe||'—'} · non planifié</small></div></div>`;}
+function v1070RenderDay(day,maxLoad){
+  const weekday=DAY_NAMES[day.date.getDay()].slice(0,3).toUpperCase(),today=day.key===v1070DateKey(new Date()),kinActual=day.actualStrength[0],linkedIds=new Set(day.manual.map(e=>String(plannedEventActual(e)?.id||''))),unplanned=day.actualManual.filter(a=>!linkedIds.has(String(a.id)));
+  return `<article class="planning-day ${today?'today':''}"><div class="planning-day-head"><div class="planning-date"><span>${weekday}</span><strong>${day.date.getDate()}</strong></div><div class="planning-day-load"><span>${day.plannedSportLoad} UA prévues${day.actualSportLoad?` · ${day.actualSportLoad} réalisées`:''}</span>${v1070DayLoadBar(day,maxLoad)}</div><button class="planning-add" data-plan-date="${day.key}">＋</button></div><div class="planning-day-body">
+  ${day.kinetik?`<div class="planning-kinetik ${kinActual?'completed':''}"><span class="planning-source">KINETIK</span><div><strong>${esc(day.kinetik.name)}</strong><small>${day.kinetik.duration} min · charge estimée ${day.kinetik.load} UA${kinActual?` · réalisé ${kinActual.durationMinutes||0} min / RPE ${kinActual.rpe||'—'}`:''}</small></div>${today?`<button class="week-quick-start start-day" data-day="${day.kinetik.day}">Démarrer</button>`:`<span class="planning-status">${kinActual?'Réalisé':'Planifié'}</span>`}</div>`:`<div class="planning-rest"><span>Repos programme</span><small>La journée reste disponible pour recovery ou activité externe.</small></div>`}
+  ${day.manual.map(v1070RenderPlannedEvent).join('')}${unplanned.map(v1070RenderUnplannedActual).join('')}<div class="planning-mobility-line"><span>Mobilité</span><strong>${recommendedFlexRoutine(day.date.getDay()).duration} min recommandées</strong></div></div></article>`;
+}
+function renderPlanningOptimizer(){
+  const p=state.planningOptimizeProposal;if(!p)return '';
+  return `<section class="planning-optimizer-review"><div class="planning-section-head"><div><div class="kicker">Proposition KINETIK</div><h2>${p.moves.length?p.moves.length+' déplacement'+(p.moves.length>1?'s':''):'Aucun déplacement utile'}</h2></div><button class="planning-close-optimizer" aria-label="Fermer">×</button></div>${p.moves.length?`<div class="planning-moves">${p.moves.map(m=>`<div><strong>${esc(m.label)}</strong><span>${formatShortDate(m.from)} → ${formatShortDate(m.to)}</span><small>${esc(m.reason)}</small></div>`).join('')}</div><div class="planning-optimizer-actions"><button class="btn btn-outline planning-cancel-opt">Garder mon planning</button><button class="btn btn-primary planning-apply-opt">Appliquer la proposition</button></div>`:`<p class="muted">Les activités flexibles sont déjà correctement réparties, ou les contraintes concernent des séances protégées. KINETIK ne déplace jamais une séance prioritaire automatiquement.</p>`}${p.protectedNotes?.length?`<div class="planning-protected">${p.protectedNotes.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}</section>`;
+}
+renderWeek=function(){
+  const start=v1070WeekStart(),stats=v1070WeekStats(start),conflicts=v1070Conflicts(start),maxLoad=Math.max(600,...stats.days.map(x=>x.plannedSportLoad),...stats.days.map(x=>x.actualSportLoad)),todayWeek=Number(state.planningWeekOffset||0)===0;
+  return shell(`<header class="topbar"><div><div class="brand">Planning</div><div class="daylabel">Programme, sports et récupération dans une seule semaine</div></div></header>${renderPlanningTabs('calendar')}
+  <section class="planning-week-header"><button data-week-shift="-1" aria-label="Semaine précédente">←</button><div><div class="kicker">${todayWeek?'Cette semaine':'Semaine'}</div><h1>${v1070WeekLabel(start)}</h1></div><button data-week-shift="1" aria-label="Semaine suivante">→</button></section>
+  <section class="planning-week-summary"><div><span>Charge prévue</span><strong>${stats.planned.toLocaleString('fr-FR')} UA</strong></div><div><span>Charge réalisée</span><strong>${stats.actual.toLocaleString('fr-FR')} UA</strong></div><div><span>Sessions</span><strong>${stats.actualSessions}/${stats.plannedSessions}</strong></div><div><span>Recovery</span><strong>${stats.actualRecovery}/${stats.plannedRecovery} min</strong></div></section>
+  <section class="planning-load-week"><div class="planning-section-head"><div><div class="kicker">Répartition</div><h2>Charge sportive de la semaine</h2></div><div class="planning-load-legend"><span><i></i>Prévu</span><span><b></b>Réalisé</span></div></div><div class="planning-load-columns">${stats.days.map(d=>`<div><div class="planning-load-column"><i style="height:${Math.max(3,d.plannedSportLoad/maxLoad*100)}%"></i>${d.actualSportLoad?`<b style="height:${Math.max(3,d.actualSportLoad/maxLoad*100)}%"></b>`:''}</div><span>${DAY_NAMES[d.date.getDay()].slice(0,1)}</span></div>`).join('')}</div></section>
+  <section class="planning-command-row"><button class="planning-new-event" data-plan-date="${v1070DateKey(new Date())}">＋ Planifier une activité</button><button class="planning-optimize">Optimiser ma semaine</button>${todayWeek?'':`<button class="planning-today-week">Revenir à cette semaine</button>`}</section>
+  ${conflicts.length?`<section class="planning-conflicts"><div class="kicker">À surveiller</div>${conflicts.map(c=>`<div class="${c.level}"><strong>${esc(c.title)}</strong><span>${formatShortDate(c.date)} · ${esc(c.detail)}</span></div>`).join('')}</section>`:''}
+  ${renderPlanningOptimizer()}<section class="planning-days">${stats.days.map(d=>v1070RenderDay(d,maxLoad)).join('')}</section>`, "week");
+};
+
+function renderPlanningEventEditor(){
+  const editing=state.planningEditId?plannedEventById(state.planningEditId):null,date=editing?.date||state.planningEditorDate||v1070DateKey(new Date()),type=editing?.type||'running',duration=Number(editing?.duration||45),rpe=Number(editing?.rpe||6),priority=editing?.priority||v1070DefaultPriority(type),time=editing?.time||'',note=editing?.note||'';
+  return shell(`<header class="topbar"><div><button class="back-btn planning-editor-close">← Planning</button><div class="daylabel">${editing?'Modifier une activité planifiée':'Nouvelle activité planifiée'}</div></div></header>
+  <section class="planning-editor"><div class="planning-editor-head"><div class="kicker">Multisport</div><h1>${editing?'Modifier':'Planifier'} une activité</h1><p>KINETIK utilise la durée et le RPE prévus pour estimer la charge. Le réalisé restera séparé.</p></div>
+  <div class="planning-editor-grid"><label><span>Sport</span><select id="planType">${ACTIVITY_TYPES.map(x=>`<option value="${x.id}" ${x.id===type?'selected':''}>${x.label}</option>`).join('')}</select></label><label><span>Date</span><input id="planDate" type="date" value="${date}"></label><label><span>Heure <small>optionnel</small></span><input id="planTime" type="time" value="${time}"></label><label><span>Durée prévue</span><div class="planning-inline-input"><input id="planDuration" type="number" min="5" step="5" value="${duration}"><b>min</b></div></label></div>
+  <div class="planning-rpe"><div><span>RPE prévu</span><strong id="planRpeValue">${rpe}</strong></div><input id="planRpe" type="range" min="1" max="10" value="${rpe}"><div><span>facile</span><span>modéré</span><span>intense</span></div></div>
+  <div class="planning-priority"><span>Priorité</span>${[['priority','Prioritaire','KINETIK ne la déplace pas'],['important','Importante','à protéger si possible'],['flexible','Flexible','peut être proposée ailleurs']].map(([id,label,sub])=>`<label><input type="radio" name="planPriority" value="${id}" ${priority===id?'checked':''}><div><strong>${label}</strong><small>${sub}</small></div></label>`).join('')}</div>
+  ${!editing?`<label class="planning-repeat"><span>Répéter</span><select id="planRepeat"><option value="1">Une seule fois</option><option value="4">Chaque semaine · 4 semaines</option><option value="8">Chaque semaine · 8 semaines</option><option value="12">Chaque semaine · 12 semaines</option></select></label>`:''}
+  <label class="planning-note"><span>Note <small>optionnel</small></span><textarea id="planNote" rows="3" placeholder="Cours club, zone 2, terrain, objectif…">${esc(note)}</textarea></label>
+  <div class="planning-load-preview"><span>Charge sportive estimée</span><strong id="planLoadPreview">${type==='mobility'?'Recovery':Math.round(duration*rpe)+' UA'}</strong></div><div class="planning-editor-actions"><button class="btn btn-outline planning-editor-close">Annuler</button><button class="btn btn-primary" id="savePlannedEvent">${editing?'Enregistrer':'Ajouter au planning'}</button></div></section>`,'week');
+}
+function v1070SavePlannedEvent(){
+  const type=document.getElementById('planType')?.value||'running',date=document.getElementById('planDate')?.value||v1070DateKey(new Date()),time=document.getElementById('planTime')?.value||'',duration=Math.max(5,Number(document.getElementById('planDuration')?.value||45)),rpe=clamp(Number(document.getElementById('planRpe')?.value||6),1,10),priority=document.querySelector('input[name="planPriority"]:checked')?.value||v1070DefaultPriority(type),note=document.getElementById('planNote')?.value||'',rows=getPlannedEvents();
+  if(state.planningEditId){const i=rows.findIndex(x=>String(x.id)===String(state.planningEditId));if(i>=0)rows[i]={...rows[i],date,time,type,duration,rpe,priority,note,updatedAt:new Date().toISOString()};}
+  else{const repeat=Math.max(1,Number(document.getElementById('planRepeat')?.value||1));for(let n=0;n<repeat;n++){const d=v1070DateFromKey(date);d.setDate(d.getDate()+n*7);rows.push({id:`p${Date.now()}_${n}`,date:v1070DateKey(d),time,type,duration,rpe,priority,note,createdAt:new Date().toISOString()});}}
+  setPlannedEvents(rows.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.time||'99:99').localeCompare(String(b.time||'99:99'))));state.planningEditor=false;state.planningEditId=null;state.planningEditorDate=null;state.view='week';render();
+}
+
+const _renderActivityEditorV1070=renderActivityEditor;
+renderActivityEditor=function(){
+  if(!state.activityDraftPlanId)return _renderActivityEditorV1070();
+  const plan=plannedEventById(state.activityDraftPlanId);if(!plan)return _renderActivityEditorV1070();
+  const type=activityType(plan.type),date=plan.date,duration=Number(plan.duration||30),rpe=Number(plan.rpe||5);
+  return shell(`<header class="topbar activity-topbar"><div><div class="brand">Activité réalisée</div><div class="daylabel">Prévu vs réalisé · ${esc(type.label)}</div></div></header><section class="activity-editor activity-editor-premium">
+  <div class="activity-editor-intro"><div class="activity-editor-symbol">${activityUiIcon(type.id)}</div><div><div class="kicker">Planifié ${plan.duration} min · RPE ${plan.rpe}</div><h1>${esc(type.label)}</h1><p>Corrige les valeurs avec ce que tu as réellement fait. KINETIK comparera ensuite la charge au planning.</p></div></div>
+  <div class="activity-form-section activity-editor-two"><label class="activity-field"><span>Type</span><select id="activityType">${ACTIVITY_TYPES.map(x=>`<option value="${x.id}" ${x.id===type.id?'selected':''}>${x.label}</option>`).join('')}</select></label><label class="activity-field"><span>Date</span><input id="activityDate" type="date" value="${date}"></label></div>
+  <div class="activity-metrics-grid"><label class="activity-metric"><span>Durée réelle</span><div><input id="activityDuration" type="number" min="1" value="${duration}"><b>min</b></div></label><label class="activity-metric" id="activityDistanceWrap"><span>Distance <small>optionnel</small></span><div><input id="activityDistance" type="number" min="0" step=".1" placeholder="0"><b id="activityDistanceUnit">${type.metric||'km'}</b></div></label></div>
+  <div class="activity-form-section activity-rpe-section"><div class="activity-rpe-head"><div><span>RPE réel</span><small>Ce que la séance t’a réellement demandé</small></div><strong id="activityRpeValue">${rpe}</strong></div><input id="activityRpe" class="activity-rpe-slider" type="range" min="1" max="10" value="${rpe}"></div>
+  <div class="activity-form-section"><label class="activity-field"><span>Note</span><textarea id="activityNote" rows="3">${esc(plan.note||'')}</textarea></label></div><div class="activity-load-preview activity-load-premium"><div><span>Charge réelle</span><small>prévue ${plannedEventLoad(plan)} UA</small></div><strong id="activityLoadPreview">${plan.type==='mobility'?'—':Math.round(duration*rpe)+' <small>UA</small>'}</strong></div>
+  <div class="activity-editor-actions"><button class="btn activity-cancel" id="cancelActivity">Annuler</button><button class="btn activity-save" id="saveActivity">Enregistrer le réalisé</button></div></section>`,'week');
+};
+
+function renderTodayPlannedEvents(){
+  const events=plannedEventsForDate(v1070DateKey(new Date())).filter(e=>!plannedEventActual(e));if(!events.length)return '';
+  return `<section class="today-planned-events"><div><div class="kicker">Aussi prévu aujourd’hui</div>${events.map(e=>{const type=plannedEventType(e);return `<button data-complete-plan="${e.id}"><span>${e.time||'—'}</span><div><strong>${esc(type.label)}</strong><small>${e.duration} min · RPE ${e.rpe}</small></div><b>Réaliser →</b></button>`}).join('')}</div></section>`;
+}
+const _renderTodayV1070=renderToday;
+renderToday=function(){let html=_renderTodayV1070(),marker='<section class="today-cockpit today-primary-actions">';return html.includes(marker)?html.replace(marker,renderTodayPlannedEvents()+marker):html;};
+
+const _renderV1070=render;
+render=function(){if(state.planningEditor){document.getElementById("app").innerHTML=renderPlanningEventEditor();bindEvents();return;}_renderV1070();};
+
+const _bindEventsV1070=bindEvents;
+bindEvents=function(){
+  _bindEventsV1070();
+  document.querySelectorAll('[data-week-shift]').forEach(b=>b.onclick=()=>{state.planningWeekOffset+=Number(b.dataset.weekShift||0);state.planningOptimizeProposal=null;render();});
+  document.querySelectorAll('.planning-today-week').forEach(b=>b.onclick=()=>{state.planningWeekOffset=0;state.planningOptimizeProposal=null;render();});
+  document.querySelectorAll('[data-plan-date],.planning-new-event').forEach(b=>b.onclick=()=>{state.planningEditor=true;state.planningEditId=null;state.planningEditorDate=b.dataset.planDate||v1070DateKey(new Date());render();});
+  document.querySelectorAll('[data-edit-plan]').forEach(b=>b.onclick=()=>{const e=plannedEventById(b.dataset.editPlan);state.planningEditor=true;state.planningEditId=e?.id||null;state.planningEditorDate=e?.date||null;render();});
+  document.querySelectorAll('[data-delete-plan]').forEach(b=>b.onclick=()=>{if(!confirm('Supprimer cette activité planifiée ?'))return;setPlannedEvents(getPlannedEvents().filter(x=>String(x.id)!==String(b.dataset.deletePlan)));render();});
+  document.querySelectorAll('[data-complete-plan]').forEach(b=>b.onclick=()=>{state.activityDraftPlanId=b.dataset.completePlan;state.activityEditId=null;state.activityEditor=true;render();});
+  document.querySelectorAll('.planning-editor-close').forEach(b=>b.onclick=()=>{state.planningEditor=false;state.planningEditId=null;state.planningEditorDate=null;render();});
+  const savePlan=document.getElementById('savePlannedEvent');if(savePlan)savePlan.onclick=v1070SavePlannedEvent;
+  const pType=document.getElementById('planType'),pDur=document.getElementById('planDuration'),pRpe=document.getElementById('planRpe'),pRpeV=document.getElementById('planRpeValue'),pLoad=document.getElementById('planLoadPreview');
+  const syncPlan=()=>{if(!pType)return;const d=Number(pDur?.value||0),r=Number(pRpe?.value||5);if(pRpeV)pRpeV.textContent=r;if(pLoad)pLoad.textContent=pType.value==='mobility'?'Recovery':`${Math.round(d*r)} UA`;};if(pType)pType.onchange=syncPlan;if(pDur)pDur.oninput=syncPlan;if(pRpe)pRpe.oninput=syncPlan;syncPlan();
+  document.querySelectorAll('.planning-optimize').forEach(b=>b.onclick=()=>{state.planningOptimizeProposal=v1070OptimizerProposal();render();});
+  document.querySelectorAll('.planning-cancel-opt,.planning-close-optimizer').forEach(b=>b.onclick=()=>{state.planningOptimizeProposal=null;render();});
+  document.querySelectorAll('.planning-apply-opt').forEach(b=>b.onclick=()=>{if(confirm('Appliquer uniquement les déplacements proposés ? Les séances prioritaires restent inchangées.'))v1070ApplyOptimizer();});
+  if(state.activityDraftPlanId){
+    const cancel=document.getElementById('cancelActivity');if(cancel)cancel.onclick=()=>{state.activityEditor=false;state.activityDraftPlanId=null;render();};
+    const saveActivity=document.getElementById('saveActivity');if(saveActivity)saveActivity.onclick=()=>{
+      const duration=Number(document.getElementById('activityDuration')?.value||0);if(duration<=0)return;
+      const type=document.getElementById('activityType')?.value||'sport',distance=Number(document.getElementById('activityDistance')?.value||0),rpe=clamp(Number(document.getElementById('activityRpe')?.value||5),1,10),note=document.getElementById('activityNote')?.value||'',date=document.getElementById('activityDate')?.value||v1070DateKey(new Date()),rows=getActivities(),planId=state.activityDraftPlanId;
+      rows.unshift({id:String(Date.now()),date:new Date(`${date}T12:00:00`).toISOString(),type,duration,distance:Math.max(0,distance),intensity:'rpe',note,rpe,load:Math.round(duration*rpe),linkedPlanId:planId});setActivities(rows.slice(0,1500));state.activityEditor=false;state.activityDraftPlanId=null;state.view='week';render();
+    };
+  }
+};
+const _activityUiIconV1070=activityUiIcon;
+activityUiIcon=function(id){return id==='boxing'?'B':_activityUiIconV1070(id);};
 
 applyAppTheme();
 
