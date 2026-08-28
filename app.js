@@ -964,6 +964,8 @@ const state = {
   cycleProgressionDraft: null,
   activityEditor: false,
   athleteProfileEditor: false,
+  assessmentEditor: null,
+  assessmentCategory: "all",
 };
 
 function parse(key, fallback) {
@@ -2483,12 +2485,14 @@ function render() {
   else if (state.sessionModeEditor) app.innerHTML = renderSessionModePicker();
   else if (state.readinessEditor) app.innerHTML = renderReadiness();
   else if (state.exerciseLibrary) app.innerHTML = renderExerciseLibrary();
+  else if (state.assessmentEditor) app.innerHTML = renderAssessmentEditor();
   else if (state.testEditor) app.innerHTML = renderTestEditor();
   else if (state.bodyEditor) app.innerHTML = renderBodyEditor();
   else if (state.tutorialManager) app.innerHTML = renderTutorialManager();
   else if (state.view === "week") app.innerHTML = renderWeek();
   else if (state.view === "flexibility") app.innerHTML = renderFlexibility();
   else if (state.view === "progress") app.innerHTML = renderProgress();
+  else if (state.view === "assessment") app.innerHTML = renderAssessmentCenter();
   else if (state.view === "skills") app.innerHTML = renderSkills();
   else if (state.view === "measurements") app.innerHTML = renderMeasurements();
   else if (state.view === "athlete") app.innerHTML = renderMore();
@@ -4687,7 +4691,361 @@ bindEvents=function(){
   const closeEP=document.getElementById('closeExerciseProgress');if(closeEP)closeEP.onclick=()=>{state.exerciseDetailName=null;render();};
   const remEnabled=document.getElementById('remindersEnabled');if(remEnabled)remEnabled.onchange=()=>{const p=getReminderPrefs();p.enabled=remEnabled.checked;setReminderPrefs(p);render();};
   document.querySelectorAll('.reminder-toggle').forEach(el=>el.onchange=()=>{const p=getReminderPrefs();p[el.dataset.reminder]=el.checked;setReminderPrefs(p);render();});
-  const theme=document.getElementById('appTheme');if(theme)theme.onchange=()=>{const p=getPrefs();p.appTheme=theme.value;setPrefs(p);applyAppTheme();render();};
+  const theme=document.getElementById('appTheme');if(theme)theme.onchange=()=>{const p=getPrefs();p.appTheme=theme.value;setPrefs(p);
+/* ========================================================================== */
+/* V10.40 · Intelligence foundation                                           */
+/* ========================================================================== */
+Object.assign(state,{activityEditId:null});
+
+function progressionRirMinV1040(name){return /muscle.?up|front lever|human flag|handstand|hspu|planche/i.test(String(name||''))?3:2;}
+const _startWorkoutV1040=startWorkout;
+startWorkout=function(day=todayDay(),readiness=null){_startWorkoutV1040(day,readiness);if(state.active&&state.active.kind!=='flexibility')state.active.reviewTechnique=4;};
+const _prescriptionForV1040=prescriptionFor;
+prescriptionFor=function(e,allowProgress=true){
+  const base=_prescriptionForV1040(e,allowProgress);if(!e||e.type==='timer'||!getPrefs().smartProgression)return base;
+  const sessions=exerciseSessions(e.name,6);if(!sessions.length)return base;
+  const last=sessions[0],target=Math.max(Number(e.baseTarget||0),Number(sessionProgressionTarget(last)||e.baseTarget||0)),tech=Number(last.session.reviewTechnique??4),minRir=progressionRirMinV1040(e.name);
+  if(last.session.jointDiscomfort||tech<=2){return {target:e.type.startsWith('hold')?Math.max(10,target-5):Math.max(3,target-1),status:'recover',note:last.session.jointDiscomfort?'Gêne signalée : cible réduite et variante conseillée.':'Technique dégradée : réduis la cible et reconstruis des répétitions propres.'};}
+  if(base.status==='progress'){
+    const same=sessions.filter(s=>Math.abs(Number(sessionProgressionTarget(s))-target)<.01).slice(0,2);
+    const ok=same.length>=2&&same.every(s=>{const rir=Number(s.session.reviewRir??NaN),q=Number(s.session.reviewTechnique??4);return sessionExerciseRatio(s.entries)>=.98&&Number(s.session.rpe||0)<=7&&!s.session.jointDiscomfort&&q>=4&&(!Number.isFinite(rir)||rir>=minRir);});
+    if(!ok)return {target,status:'maintain',note:`Progression en attente : valide 2 séances propres à technique ≥ 4/5 et ${minRir}+ RIR.`};
+  }
+  return base;
+};
+
+renderWorkoutReview=function(){
+  const a=state.active,duration=activeDurationMinutes(a),counted=a.entries.filter(x=>x.type!=="timer"),hit=counted.filter(x=>x.value>=x.target).length,score=counted.length?Math.round(hit/counted.length*100):100;
+  if(a.kind==='flexibility')return `<main class="shell coach-shell"><section class="card review-card"><div class="kicker">Routine terminée</div><h1>Mobilité faite.</h1><div class="stat-grid"><div class="stat"><div class="stat-value">${duration}</div><div class="stat-label">minutes</div></div><div class="stat"><div class="stat-value">${a.workout.exercises.length}</div><div class="stat-label">étapes</div></div></div><div class="divider"></div><h2>Confort global</h2><div class="comfort-row">${[1,2,3,4,5].map(n=>`<button class="comfort-btn ${a.reviewComfort===n?'active':''}" data-comfort="${n}">${n}</button>`).join('')}</div><label class="checkline"><input id="jointDiscomfort" type="checkbox" ${a.reviewDiscomfort?'checked':''}><span><strong>Douleur ou pincement inhabituel</strong></span></label><label class="field-label">Note facultative</label><textarea class="textarea" id="reviewNote">${esc(a.reviewNote)}</textarea><button class="btn btn-primary" id="saveWorkout">Enregistrer la routine</button></section></main>`;
+  const zones=a.reviewPainZones||[],tech=Number(a.reviewTechnique||4);
+  return `<main class="shell coach-shell"><section class="card review-card"><div class="kicker">Séance terminée</div><h1>Check-in rapide</h1><div class="stat-grid"><div class="stat"><div class="stat-value">${duration}</div><div class="stat-label">minutes</div></div><div class="stat"><div class="stat-value">${score}%</div><div class="stat-label">cibles atteintes</div></div></div><div class="review-grid"><div><h3>Effort global · RPE</h3><div class="rpe-row">${[4,5,6,7,8,9].map(n=>`<button class="rpe-btn ${a.reviewRpe===n?'active':''}" data-rpe="${n}">${n}</button>`).join('')}</div></div><div><h3>Marge · RIR</h3><div class="review-choice five">${[0,1,2,3,4].map(n=>`<button class="review-rir ${a.reviewRir===n?'active':''}" data-review-rir="${n}">${n===4?'4+':n}</button>`).join('')}</div></div><div><h3>Qualité technique</h3><div class="review-choice five">${[1,2,3,4,5].map(n=>`<button class="review-technique ${tech===n?'active':''}" data-review-technique="${n}">${n}</button>`).join('')}</div><small class="muted">1 = dégradée · 5 = très propre.</small></div><div><h3>Énergie après</h3><div class="review-choice five">${[1,2,3,4,5].map(n=>`<button class="review-energy ${a.reviewEnergyAfter===n?'active':''}" data-review-energy="${n}">${n}</button>`).join('')}</div></div><div><h3>Durée</h3><div class="review-choice three">${[['long','Trop longue'],['good','Adaptée'],['short','J’avais du temps']].map(([id,l])=>`<button class="review-length ${a.reviewLengthFit===id?'active':''}" data-review-length="${id}">${l}</button>`).join('')}</div></div></div><label class="checkline"><input id="jointDiscomfort" type="checkbox" ${a.reviewDiscomfort?'checked':''}><span><strong>Gêne articulaire ou tendineuse</strong><small>Si oui, sélectionne la zone.</small></span></label><div class="pain-zone-picker review-pain-zones">${RESTRICTION_AREAS.map(([id,l])=>`<button class="pain-zone ${zones.includes(id)?'active':''}" data-review-pain-zone="${id}">${l}</button>`).join('')}</div><label class="field-label">Note facultative</label><textarea class="textarea" id="reviewNote">${esc(a.reviewNote)}</textarea><div class="adaptive-review-note">Le moteur utilise réalisation + RPE + RIR + technique + gêne.</div><button class="btn btn-primary" id="saveWorkout">Enregistrer la séance</button></section></main>`;
+};
+
+saveWorkoutReview=function(){
+  const a=state.active;if(a?.kind==='flexibility')return _saveWorkoutReviewV97();if(!a)return;
+  a.reviewDiscomfort=document.getElementById('jointDiscomfort')?.checked||false;a.reviewNote=document.getElementById('reviewNote')?.value||'';
+  const durationMinutes=activeDurationMinutes(a),counted=a.entries.filter(x=>x.type!=="timer"),hit=counted.filter(x=>x.value>=x.target).length,score=counted.length?Math.round(hit/counted.length*100):100,beforeRank=getRankState().current.id,history=getHistory(),prs=detectPRs(a.entries,history);
+  history.unshift({id:Date.now(),date:new Date().toISOString(),day:a.day,name:a.workout.name,durationMinutes,score,rpe:a.reviewRpe,reviewRir:a.reviewRir,reviewTechnique:Number(a.reviewTechnique||4),energyAfter:a.reviewEnergyAfter,lengthFit:a.reviewLengthFit,jointDiscomfort:a.reviewDiscomfort,painZones:a.reviewPainZones||[],note:a.reviewNote,sessionLength:a.sessionLength||'full',customWorkoutId:a.customWorkoutId||null,trainingCycleId:a.trainingCycleId||null,readiness:{...a.readiness,mode:readinessPlan(a.readiness).mode},cycle:a.cycle,prs,entries:a.entries});setHistory(history.slice(0,1000));if(prs.length)state.prNotice=prs;const afterRank=getRankState();if(afterRank.current.id!==beforeRank)state.rankUpNotice=afterRank.current.name;state.active=null;state.undoSetSnapshot=null;state.view='progress';state.progressTab='overview';render();
+};
+
+function strengthSessionInternalLoad(s){return Math.round(Number(s.durationMinutes||0)*Math.max(1,Number(s.rpe||5)));}
+function activityInternalLoad(a){return Math.round(Number(a.duration||0)*Math.max(1,Number(a.rpe||5)));}
+function trainingWindowStats(start,end=Date.now()){
+  const strength=getHistory().filter(x=>{const d=new Date(x.date).getTime();return d>=start&&d<end;}),manual=getActivities().filter(x=>{const d=new Date(x.date).getTime();return d>=start&&d<end;}),flex=getFlexLogs().filter(x=>{const d=new Date(x.date).getTime();return d>=start&&d<end;}),sportManual=manual.filter(x=>x.type!=='mobility'),manualMobility=manual.filter(x=>x.type==='mobility');
+  return {strength,manual,sportManual,flex,sportLoad:strength.reduce((s,x)=>s+strengthSessionInternalLoad(x),0)+sportManual.reduce((s,x)=>s+activityInternalLoad(x),0),recoveryMinutes:flex.reduce((s,x)=>s+Number(x.durationMinutes||0),0)+manualMobility.reduce((s,x)=>s+Number(x.duration||0),0),sessions:strength.length+sportManual.length};
+}
+totalTrainingStats=function(days=7){const start=Date.now()-days*86400000,w=trainingWindowStats(start),a=activityStats(days),s=strengthVolumeStats(days),unrated=getStravaActivities().filter(x=>new Date(x.start_date||x.start_date_local||0).getTime()>=start&&isRunActivity(x)).length;return {minutes:a.minutes+s.minutes,sessions:a.sessions+s.sessions,load:w.sportLoad,sportLoad:w.sportLoad,recoveryMinutes:w.recoveryMinutes,unratedSessions:unrated,strength:s,activities:a};};
+
+function activityById(id){return getActivities().find(x=>String(x.id)===String(id))||null;}
+renderActivityEditor=function(){const editing=state.activityEditId?activityById(state.activityEditId):null,type=activityType(editing?.type||'running'),date=(editing?.date||new Date().toISOString()).slice(0,10),duration=Number(editing?.duration||30),distance=editing?.distance||'',rpe=Number(editing?.rpe||5),note=editing?.note||'';return shell(`<header class="topbar activity-topbar"><div><div class="brand">${editing?'Modifier l’activité':'Nouvelle activité'}</div><div class="daylabel">Toutes tes disciplines au même endroit</div></div></header><section class="activity-editor activity-editor-premium"><div class="activity-editor-intro"><div class="activity-editor-symbol" id="activityEditorSymbol">${activityUiIcon(type.id)}</div><div><div class="kicker">${editing?'Édition':'Activité'}</div><h1 id="activityEditorTitle">${esc(type.label)}</h1><p>La charge sportive utilise durée × RPE. La mobilité reste séparée comme recovery.</p></div></div><div class="activity-form-section activity-editor-two"><label class="activity-field"><span>Type</span><select id="activityType">${ACTIVITY_TYPES.map(x=>`<option value="${x.id}" ${x.id===type.id?'selected':''}>${x.label}</option>`).join('')}</select></label><label class="activity-field"><span>Date</span><input id="activityDate" type="date" value="${date}"></label></div><div class="activity-metrics-grid"><label class="activity-metric"><span>Durée</span><div><input id="activityDuration" type="number" min="1" value="${duration}"><b>min</b></div></label><label class="activity-metric" id="activityDistanceWrap"><span>Distance</span><div><input id="activityDistance" type="number" min="0" step=".1" value="${distance}"><b id="activityDistanceUnit">${type.metric||'km'}</b></div></label></div><div class="activity-form-section activity-rpe-section"><div class="activity-rpe-head"><div><span>Effort perçu</span><small>1 très facile · 10 maximal</small></div><strong id="activityRpeValue">${rpe}</strong></div><input id="activityRpe" class="activity-rpe-slider" type="range" min="1" max="10" value="${rpe}"></div><div class="activity-form-section"><label class="activity-field"><span>Note</span><textarea id="activityNote" rows="3">${esc(note)}</textarea></label></div><div class="activity-load-preview activity-load-premium"><div><span>${type.id==='mobility'?'Recovery':'Charge sportive'}</span><small>${type.id==='mobility'?'séparée de la charge sportive':'durée × RPE'}</small></div><strong id="activityLoadPreview">${type.id==='mobility'?'—':Math.round(duration*rpe)+' <small>UA</small>'}</strong></div><div class="activity-editor-actions"><button class="btn activity-cancel" id="cancelActivity">Annuler</button><button class="btn activity-save" id="saveActivity">${editing?'Enregistrer':'Ajouter'}</button></div></section>`,'today');};
+
+renderActivityHub=function(){const all=totalTrainingStats(7),prev=trainingWindowStats(Date.now()-14*86400000,Date.now()-7*86400000),s=all.activities,recent=getActivities().slice(0,5),categories=[['Calisthénie / force',all.strength.minutes],...Object.entries(s.rows).filter(([n])=>n!=='Mobilité / étirements').map(([n,v])=>[n,v.minutes])].filter(x=>x[1]>0),max=Math.max(1,...categories.map(x=>x[1])),delta=prev.sportLoad?Math.round((all.sportLoad-prev.sportLoad)/prev.sportLoad*100):null;return `<section class="card activity-hub activity-hub-v1040"><div class="section-head"><div><div class="kicker">Charge sportive · 7 jours</div><h2>${all.sportLoad.toLocaleString('fr-FR')} UA${delta==null?'':` · ${delta>=0?'+':''}${delta}%`}</h2><p class="muted small">${all.sessions} sessions · ${all.recoveryMinutes} min recovery${all.unratedSessions?` · ${all.unratedSessions} Strava sans RPE`:''}</p></div><button class="btn btn-secondary compact" data-open-activity="true">＋ Activité</button></div>${categories.length?`<div class="training-mix">${categories.map(([name,min])=>`<div class="training-mix-row"><div><span>${esc(name)}</span><strong>${Math.round(min)} min</strong></div><div class="training-mix-track"><i style="width:${Math.max(4,Math.round(min/max*100))}%"></i></div></div>`).join('')}</div>`:'<p class="muted small">Ajoute une activité pour construire ta charge sportive.</p>'}${recent.length?`<details class="activity-recent"><summary>Dernières activités manuelles</summary><div>${recent.map(a=>{const x=activityType(a.type);return `<div class="activity-recent-row"><span>${activityUiIcon(x.id)}</span><div><strong>${esc(x.label)}</strong><small>${formatShortDate(a.date)} · ${a.duration} min${a.distance?` · ${a.distance} ${x.metric||'km'}`:''} · RPE ${a.rpe||'—'}</small></div><button class="activity-row-action edit-activity" data-activity-id="${a.id}">Modifier</button><button class="activity-row-action danger delete-activity" data-activity-id="${a.id}">×</button></div>`}).join('')}</div></details>`:''}</section>`;};
+
+function athleteTimelineEvents(limit=8){const rows=[];getHistory().forEach(x=>rows.push({date:x.date,icon:'↟',title:x.name,detail:`${x.durationMinutes||0} min · RPE ${x.rpe||'—'}${x.reviewTechnique?` · technique ${x.reviewTechnique}/5`:''}`}));getActivities().forEach(x=>{const a=activityType(x.type);rows.push({date:x.date,icon:activityUiIcon(a.id),title:a.label,detail:`${x.duration||0} min${x.distance?` · ${x.distance} ${a.metric||'km'}`:''}`});});getFlexLogs().forEach(x=>rows.push({date:x.date,icon:'∿',title:x.name||'Mobilité',detail:`${x.durationMinutes||0} min · confort ${x.comfort||'—'}/5`}));return rows.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,limit);}
+function renderAthleteTimeline(){const rows=athleteTimelineEvents();if(!rows.length)return '';return `<section class="card athlete-timeline"><div class="section-head"><div><div class="kicker">Journal athlète</div><h2>Derniers événements</h2></div><span class="timeline-source-note">multisport</span></div><div class="athlete-timeline-list">${rows.map(x=>`<div><span>${x.icon}</span><div><strong>${esc(x.title)}</strong><small>${esc(x.detail)}</small></div><time>${formatShortDate(x.date)}</time></div>`).join('')}</div></section>`;}
+
+renderTodayUsefulActions=function(){const x=progressWeekStats(),rank=getRankState(),next=rank.next,count=(x.recs?.length||0)+(x.due?.overdue?1:0)+(next?1:0);return `<section class="card today-actions-card"><div class="section-head"><div><div class="kicker">À surveiller</div><h2>Prochaines actions utiles</h2></div><span class="pill">${count}</span></div><div class="progress-watch-list">${x.recs?.length?`<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">◷</span><div><strong>Tests périodiques</strong><small>${x.due.label}</small></div><b>Ouvrir →</b></button>${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.displayName} → ${next.name}</strong><small>${Math.round(rank.readiness*100)}% des exigences du prochain rang</small></div><b>Rangs →</b></button>`:''}</div></section>`;};
+
+const _renderProgressOverviewV1040=renderProgressOverview;
+renderProgressOverview=function(){let html=_renderProgressOverviewV1040();const rank=getRankState(),next=rank.next,readiness=Math.round(rank.readiness*100);html=html.replace(`<h1>${rank.current.name}</h1><p>${rank.current.title} · ${rank.xp.total.toLocaleString('fr-FR')} XP</p>`,`<h1>${rank.displayName}</h1><p>${rank.current.title} · rang basé sur les performances validées</p>`).replace(`<strong>${next?Math.round(rank.xpProgress*100):100}%</strong>`,`<strong>${next?readiness:100}%</strong>`).replace(`style="width:${next?rank.xpProgress*100:100}%"`,`style="width:${next?readiness:100}%"`).replace(`${renderAdaptiveReport()}${renderSmartReminderCard()}`,`${renderAdaptiveReport()}${renderMobilityProgressSummary()}${renderAthleteTimeline()}${renderSmartReminderCard()}`);return html.replace(new RegExp(` · ${rank.xp.total.toLocaleString('fr-FR')} XP`,'g'),'');};
+
+const _renderProgressPerformanceV1040=renderProgressPerformance;
+renderProgressPerformance=function(){const rs=getRankState();let html=_renderProgressPerformanceV1040();html=html.replace('Gamification','Niveau KINETIK').replace(`${rs.current.name} · ${rs.current.title}`,`${rs.displayName} · ${rs.current.title}`).replace('Rangs et Skill Tree restent regroupés dans Skills.','Le rang dépend des barèmes validés, pas de l’ancienneté dans l’application.').replace('Voir Skills & Rangs','Voir Capacités');return html;};
+
+const _bindEventsV1040=bindEvents;
+bindEvents=function(){_bindEventsV1040();document.querySelectorAll('[data-review-technique]').forEach(b=>b.onclick=()=>{state.active.reviewTechnique=Number(b.dataset.reviewTechnique);render();});document.querySelectorAll('[data-open-activity]').forEach(b=>b.onclick=()=>{state.activityEditId=null;state.activityEditor=true;render();});document.querySelectorAll('.edit-activity').forEach(b=>b.onclick=()=>{state.activityEditId=b.dataset.activityId;state.activityEditor=true;render();});document.querySelectorAll('.delete-activity').forEach(b=>b.onclick=()=>{if(confirm('Supprimer cette activité ?')){setActivities(getActivities().filter(x=>String(x.id)!==String(b.dataset.activityId)));render();}});const cancel=document.getElementById('cancelActivity');if(cancel)cancel.onclick=()=>{state.activityEditor=false;state.activityEditId=null;render();};const saveBtn=document.getElementById('saveActivity');if(saveBtn)saveBtn.onclick=()=>{const duration=Number(document.getElementById('activityDuration')?.value||0);if(duration<=0)return;const type=document.getElementById('activityType')?.value||'sport',distance=Number(document.getElementById('activityDistance')?.value||0),rpe=Number(document.getElementById('activityRpe')?.value||5),note=document.getElementById('activityNote')?.value||'',dateValue=document.getElementById('activityDate')?.value;if(state.activityEditId){const rows=getActivities(),i=rows.findIndex(x=>String(x.id)===String(state.activityEditId));if(i>=0){rows[i]={...rows[i],date:dateValue?new Date(`${dateValue}T12:00:00`).toISOString():rows[i].date,type,duration,distance:Math.max(0,distance),rpe:clamp(rpe,1,10),note,load:Math.round(duration*clamp(rpe,1,10))};setActivities(rows);}}else{addActivityLog(type,duration,distance,'rpe',note,rpe);if(dateValue&&dateValue!==new Date().toISOString().slice(0,10)){const rows=getActivities();if(rows[0])rows[0].date=new Date(`${dateValue}T12:00:00`).toISOString();setActivities(rows);}}state.activityEditor=false;state.activityEditId=null;render();};const typeEl=document.getElementById('activityType'),rpeEl=document.getElementById('activityRpe'),durEl=document.getElementById('activityDuration');const sync=()=>{if(!typeEl)return;const type=activityType(typeEl.value),wrap=document.getElementById('activityDistanceWrap'),unit=document.getElementById('activityDistanceUnit'),rpe=Number(rpeEl?.value||5),mins=Number(durEl?.value||0),rv=document.getElementById('activityRpeValue'),title=document.getElementById('activityEditorTitle'),symbol=document.getElementById('activityEditorSymbol'),lp=document.getElementById('activityLoadPreview');if(wrap)wrap.style.display=type.distance?'':'none';if(unit)unit.textContent=type.metric||'km';if(rv)rv.textContent=rpe;if(title)title.textContent=type.label;if(symbol)symbol.textContent=activityUiIcon(type.id);if(lp)lp.innerHTML=type.id==='mobility'?'—':`${Math.round(mins*rpe)} <small>UA</small>`;};if(typeEl)typeEl.onchange=sync;if(rpeEl)rpeEl.oninput=sync;if(durEl)durEl.oninput=sync;sync();};
+
+applyAppTheme();render();};
+};
+
+
+/* ========================================================================== */
+/* V10.50 · Centre d’évaluation KINETIK                                       */
+/* Standard protocols · evidence quality · rank verification · assessment hub */
+/* ========================================================================== */
+STORAGE.assessments = "kinetik_assessments_v1";
+
+const EVIDENCE_LEVELS = {
+  declared:{level:1,label:"Déclaré",short:"Déclaré"},
+  workout:{level:2,label:"Enregistré en séance",short:"Séance"},
+  kinetik:{level:3,label:"Test KINETIK",short:"KINETIK"}
+};
+function getAssessments(){return parse(STORAGE.assessments,[]);}
+function setAssessments(v){save(STORAGE.assessments,v);}
+function evidenceInfo(level){
+  const n=Number(level||0);
+  return n>=3?EVIDENCE_LEVELS.kinetik:n>=2?EVIDENCE_LEVELS.workout:EVIDENCE_LEVELS.declared;
+}
+function assessmentLatest(protocolId){
+  return getAssessments().filter(x=>x.protocolId===protocolId).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;
+}
+function assessmentBest(protocolId){
+  return getAssessments().filter(x=>x.protocolId===protocolId&&Number.isFinite(Number(x.value))).sort((a,b)=>Number(b.value)-Number(a.value)||Number(b.evidenceLevel||0)-Number(a.evidenceLevel||0))[0]||null;
+}
+function assessmentBestForTest(testId){
+  return getAssessments().filter(x=>x.testId===testId&&Number.isFinite(Number(x.value))).sort((a,b)=>Number(b.value)-Number(a.value)||Number(b.evidenceLevel||0)-Number(a.evidenceLevel||0))[0]||null;
+}
+function assessmentBestForExercise(name){
+  return getAssessments().filter(x=>x.exercise===name&&Number.isFinite(Number(x.value))).sort((a,b)=>Number(b.value)-Number(a.value)||Number(b.evidenceLevel||0)-Number(a.evidenceLevel||0))[0]||null;
+}
+function assessmentEvidenceForTest(testId){
+  const a=assessmentBestForTest(testId);
+  const guided=(TEST_GUIDED_EXERCISES[testId]||[]).some(name=>bestMetricDetails(getHistory(),name).value>0)?2:0;
+  const q=bestQuickMetricDetails(TEST_GUIDED_EXERCISES[testId]||[]).value>0?1:0;
+  const legacy=getTests().filter(x=>x.testId===testId).reduce((m,x)=>Math.max(m,x.source==='kinetik'?3:x.source==='workout'?2:1),0);
+  return Math.max(Number(a?.evidenceLevel||0),guided,q,legacy);
+}
+function assessmentEvidenceForExercise(name){
+  const a=assessmentBestForExercise(name),guided=bestMetricDetails(getHistory(),name).value>0?2:0,quick=bestQuickMetricDetails(name).value>0?1:0;
+  return Math.max(Number(a?.evidenceLevel||0),guided,quick);
+}
+
+/* Standardized protocols. Values are internal test standards, not population percentiles. */
+const ASSESSMENT_PROTOCOLS = [
+  {id:"pullups",category:"force",name:"Tractions strictes",kind:"test",testId:"pullups",unit:"reps",duration:7,targetLabel:"Maximum propre",warmup:["3–5 min de montée en température","2 × 5 scapular pull-ups","1–2 séries faciles à 40–60 % du maximum"],criteria:["Départ bras tendus et épaules contrôlées","Menton clairement au-dessus de la barre","Pas de kipping ni impulsion des jambes","Descente contrôlée jusqu’à l’extension"],stop:"Arrête dès que la répétition ne respecte plus les critères."},
+  {id:"dips",category:"force",name:"Dips stricts",kind:"test",testId:"dips",unit:"reps",duration:7,targetLabel:"Maximum propre",warmup:["Mobilité épaules légère","2 × 5 pompes faciles","1–2 séries de dips sous-maximales"],criteria:["Départ coudes verrouillés sans relâcher les épaules","Descente contrôlée, bras au moins parallèle au sol","Retour complet en haut","Pas d’élan des jambes"],stop:"La première répétition raccourcie ou instable termine le test."},
+  {id:"dead_hang",category:"grip",name:"Dead hang",kind:"test",testId:"dead_hang",unit:"sec",duration:5,targetLabel:"Temps propre",warmup:["Poignets et doigts 2 min","2 hangs faciles de 10–15 s"],criteria:["Prise pronation identique à chaque test","Deux mains sur la barre, sans assistance","Pas de contact des pieds au sol","Pas de changement volontaire de prise"],stop:"Arrête si la prise s’ouvre ou si une gêne inhabituelle apparaît."},
+  {id:"towel_hang",category:"grip",name:"Towel hang",kind:"exercise",exercise:"Towel hang",unit:"sec",duration:6,targetLabel:"Temps propre",warmup:["Dead hang léger 15–20 s","Prise serviette progressive"],criteria:["Même serviette et même épaisseur si possible","Deux mains à hauteur comparable","Corps suspendu sans appui au sol","Aucun réajustement majeur de prise"],stop:"Arrête quand une main commence à glisser franchement."},
+  {id:"one_arm_assisted_hang",category:"grip",name:"One-arm assisted hang",kind:"exercise",exercise:"One-arm assisted hang",unit:"sec",duration:7,targetLabel:"Meilleur côté faible",warmup:["2 dead hangs faciles","2 hangs asymétriques courts par côté"],criteria:["Main principale sur la barre","Main d’assistance sur une serviette verticale au même repère à chaque test","Même installation à gauche et à droite","Enregistre le côté le plus faible"],stop:"Arrête dès que l’assistance change fortement ou que l’épaule perd le contrôle."},
+  {id:"chest_to_bar",category:"skills",name:"Chest-to-bar",kind:"exercise",exercise:"Chest-to-bar",unit:"reps",duration:7,targetLabel:"Répétitions propres",warmup:["Scapular pull-ups","2 séries de tractions strictes faciles","2–3 tirages explosifs progressifs"],criteria:["Départ en extension contrôlée","Contact ou hauteur nette du haut de poitrine à la barre","Pas de kipping","Chaque répétition retrouve le même standard"],stop:"Arrête dès que la hauteur chute nettement."},
+  {id:"muscle_up",category:"skills",name:"Muscle-up strict",kind:"exercise",exercise:"Muscle-up strict",unit:"reps",duration:8,targetLabel:"Répétitions strictes",warmup:["Tractions strictes faciles","2–3 chest-to-bar","Transitions assistées légères"],criteria:["Départ en suspension contrôlée","Pas de kip volontaire ni balancement créé pour passer","Passage au-dessus de la barre sans appui externe","Verrouillage contrôlé en haut"],stop:"Arrête avant que le mouvement devienne fortement asymétrique ou kippé."},
+  {id:"handstand_free",category:"skills",name:"Handstand libre",kind:"exercise",exercise:"Handstand libre",unit:"sec",duration:8,targetLabel:"Meilleur maintien",warmup:["Poignets 2–3 min","2 handstands au mur faciles","3–5 entrées progressives"],criteria:["Aucun contact avec un support pendant le chrono","Coudes verrouillés","Contrôle volontaire de la sortie","Chrono à partir de la stabilisation"],stop:"Garde au maximum 3–5 tentatives de qualité."},
+  {id:"l_sit",category:"skills",name:"L-sit",kind:"exercise",exercise:"L-sit",unit:"sec",duration:6,targetLabel:"Maintien propre",warmup:["Compression assise légère","Tuck L-sit court","Échauffement poignets"],criteria:["Coudes verrouillés","Hanches décollées du support","Jambes tendues pour la variante L-sit complète","Pas d’appui des talons"],stop:"Le chrono s’arrête dès que les talons touchent ou que la position s’effondre."},
+  {id:"front_lever",category:"skills",name:"Front lever",kind:"exercise",exercise:"Front lever",unit:"sec",duration:8,targetLabel:"Maintien full",warmup:["Scapular pulls","Tuck lever facile","Progression de levier sous-maximale"],criteria:["Variante full uniquement pour ce protocole","Corps aligné et horizontal","Coudes verrouillés","Pas d’élan d’entrée compté dans le chrono"],stop:"Arrête lorsque les hanches chutent nettement sous la ligne."},
+  {id:"human_flag",category:"skills",name:"Human flag",kind:"exercise",exercise:"Human flag",unit:"sec",duration:8,targetLabel:"Côté le plus faible",warmup:["Épaules et poignets","Side plank","Tuck flag progressif"],criteria:["Full flag pour ce protocole","Corps proche de l’horizontale","Bras stables et contrôlés","Teste les deux côtés et conserve le plus faible"],stop:"Arrête lorsque la ligne n’est plus maintenue."},
+  {id:"hspu_free",category:"skills",name:"HSPU libre",kind:"exercise",exercise:"Handstand push-up libre",unit:"reps",duration:8,targetLabel:"Répétitions propres",warmup:["Handstand facile","Pike push-ups","1–2 HSPU au mur sous-max"],criteria:["Départ et fin en équilibre libre","Amplitude reproductible","Verrouillage complet","Pas de contact avec un mur ou support"],stop:"La première rep assistée ou fortement raccourcie termine le test."},
+  {id:"toes_to_bar",category:"skills",name:"Toes-to-bar",kind:"exercise",exercise:"Toes-to-bar",unit:"reps",duration:6,targetLabel:"Répétitions propres",warmup:["Hollow hold","Hanging knee raises","2–3 reps faciles"],criteria:["Contact des pieds avec la barre","Retour contrôlé","Balancement limité et reproductible","Pas d’impulsion excessive"],stop:"Arrête quand le contact ou le contrôle n’est plus reproductible."},
+  {id:"cooper12",category:"cardio",name:"Test 12 minutes",kind:"test",testId:"cardio12",unit:"m",duration:20,targetLabel:"Distance totale",warmup:["8–10 min faciles","3 accélérations progressives de 15–20 s","2 min faciles avant le départ"],criteria:["Surface ou parcours comparable","12 minutes exactes","Distance mesurée de la même manière à chaque test","Note les conditions si elles sont inhabituelles"],stop:"Le test doit rester volontaire. Arrête en cas de symptôme inhabituel ou malaise."},
+  {id:"run5k",category:"cardio",name:"5 km",kind:"assessment",unit:"min",duration:35,targetLabel:"Temps total",warmup:["10 min faciles","3 accélérations courtes","Départ contrôlé"],criteria:["Distance 5,00 km","Parcours comparable autant que possible","Pas de pause chrono","Note le terrain et les conditions"],stop:"Ce test est facultatif ; ne le place pas dans une semaine déjà très chargée."}
+];
+const ASSESSMENT_CATEGORIES = [
+  {id:"force",label:"Force",description:"Tractions et dips stricts"},
+  {id:"grip",label:"Grip",description:"Suspension et préhension"},
+  {id:"skills",label:"Skills",description:"Contrôle et mouvements avancés"},
+  {id:"mobility",label:"Mobilité",description:"Amplitude et asymétries"},
+  {id:"cardio",label:"Cardio",description:"Endurance mesurable"}
+];
+
+function assessmentProtocol(id){return ASSESSMENT_PROTOCOLS.find(x=>x.id===id)||null;}
+function protocolEvidence(p){
+  if(p.kind==="test")return assessmentEvidenceForTest(p.testId);
+  if(p.kind==="exercise")return assessmentEvidenceForExercise(p.exercise);
+  const a=assessmentLatest(p.id);return Number(a?.evidenceLevel||0);
+}
+function protocolCurrent(p){
+  if(p.kind==="test"){
+    const d=performanceDetailsForTest(p.testId);return {value:Number(d.value||0),source:d.source||null,evidence:assessmentEvidenceForTest(p.testId)};
+  }
+  if(p.kind==="exercise"){
+    const a=assessmentBestForExercise(p.exercise),h=bestMetricDetails(getHistory(),p.exercise),q=bestQuickMetricDetails(p.exercise);
+    const candidates=[
+      {value:Number(a?.value||0),source:a?'Test KINETIK':null,evidence:Number(a?.evidenceLevel||0)},
+      {value:Number(h?.value||0),source:h?.value?'Séance':null,evidence:h?.value?2:0},
+      {value:Number(q?.value||0),source:q?.value?'Déclaré / série libre':null,evidence:q?.value?1:0}
+    ].sort((x,y)=>y.value-x.value||y.evidence-x.evidence);
+    return candidates[0]||{value:0,evidence:0};
+  }
+  const a=assessmentLatest(p.id);return {value:Number(a?.value||0),source:a?evidenceInfo(a.evidenceLevel).label:null,evidence:Number(a?.evidenceLevel||0)};
+}
+function protocolLastValidated(p){
+  const rows=getAssessments().filter(x=>x.protocolId===p.id&&Number(x.evidenceLevel)>=3).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  return rows[0]||null;
+}
+function protocolDue(p){
+  const last=protocolLastValidated(p);if(!last)return true;
+  return Date.now()-new Date(last.date).getTime()>42*86400000;
+}
+function mobilityAssessmentSummary(){
+  const profiles=mobilityProfiles(),assessed=profiles.filter(x=>x.assessed),complete=profiles.filter(x=>x.complete);
+  return {assessed:assessed.length,complete:complete.length,total:profiles.length,avg:assessed.length?Math.round(assessed.reduce((s,x)=>s+x.score,0)/assessed.length):null};
+}
+function assessmentCategoryStatus(id){
+  if(id==="mobility"){
+    const m=mobilityAssessmentSummary();return {tested:m.assessed,total:m.total,verified:m.complete,score:m.avg};
+  }
+  const p=ASSESSMENT_PROTOCOLS.filter(x=>x.category===id),tested=p.filter(x=>protocolCurrent(x).value>0).length,verified=p.filter(x=>protocolEvidence(x)>=3).length;
+  return {tested,total:p.length,verified,score:null};
+}
+function assessmentCoverage(){
+  const cats=ASSESSMENT_CATEGORIES.map(c=>({...c,...assessmentCategoryStatus(c.id)}));
+  const total=cats.reduce((s,x)=>s+x.total,0),tested=cats.reduce((s,x)=>s+x.tested,0),verified=cats.reduce((s,x)=>s+x.verified,0);
+  return {cats,total,tested,verified,pct:total?Math.round(tested/total*100):0,verifiedPct:total?Math.round(verified/total*100):0};
+}
+function protocolGoalWeight(p){
+  const profile=getAthleteProfile(),text=`${profile.primaryGoal||""} ${profile.secondaryGoal||""}`.toLowerCase();
+  let n=0;
+  if(/muscle.?up/.test(text)&&["pullups","chest_to_bar","muscle_up","dead_hang"].includes(p.id))n+=4;
+  if(/handstand|hspu/.test(text)&&["handstand_free","hspu_free"].includes(p.id))n+=4;
+  if(/l.?sit/.test(text)&&["l_sit","toes_to_bar"].includes(p.id))n+=4;
+  if(/front lever/.test(text)&&["pullups","front_lever","dead_hang"].includes(p.id))n+=4;
+  if(/human flag/.test(text)&&["human_flag","pullups","dips"].includes(p.id))n+=4;
+  return n;
+}
+function proofProtocol(proof){
+  if(proof.kind==="test")return ASSESSMENT_PROTOCOLS.find(p=>p.testId===proof.id)||null;
+  if(proof.kind==="exercise")return ASSESSMENT_PROTOCOLS.find(p=>p.exercise===proof.name)||null;
+  return null;
+}
+function assessmentRecommended(){
+  const rs=getRankState(),rankProofs=(rankRuleFor(rs.next)||{}).proofs||[],rankIds=new Set(rankProofs.map(proofProtocol).filter(Boolean).map(p=>p.id));
+  return ASSESSMENT_PROTOCOLS.map(p=>{
+    const cur=protocolCurrent(p),ev=protocolEvidence(p),never=!cur.value,due=protocolDue(p);
+    let priority=(never?30:0)+(due?15:0)+protocolGoalWeight(p)*10+(rankIds.has(p.id)?25:0)+(ev<2?10:ev<3?4:0);
+    return {...p,priority,current:cur,evidence:ev,due};
+  }).sort((a,b)=>b.priority-a.priority).slice(0,4);
+}
+function evidenceMark(level){
+  const e=evidenceInfo(level);
+  return `<span class="assessment-evidence e${e.level}"><i></i>${e.label}</span>`;
+}
+function assessmentMetricLabel(p,current){
+  if(!current?.value)return "Non évalué";
+  return `${current.value} ${p.unit}`;
+}
+function renderAssessmentProtocolRow(p){
+  const current=protocolCurrent(p),last=protocolLastValidated(p),ev=protocolEvidence(p);
+  return `<div class="assessment-protocol-row"><div class="assessment-row-main"><strong>${esc(p.name)}</strong><span>${assessmentMetricLabel(p,current)}${last?` · validé ${formatShortDate(last.date)}`:""}</span></div>${evidenceMark(ev)}<button class="assessment-start" data-assessment-start="${p.id}">${current.value?"Retester":"Évaluer"} →</button></div>`;
+}
+function renderMobilityAssessmentRows(){
+  const profiles=mobilityProfiles();
+  return profiles.map(p=>`<div class="assessment-protocol-row"><div class="assessment-row-main"><strong>${p.label}</strong><span>${p.assessed?`${p.score}/100${p.complete?"":" · partiel"}`:"Non évalué"}</span></div>${evidenceMark(p.complete?2:p.assessed?1:0)}<button class="assessment-start" data-view="flexibility">Ouvrir →</button></div>`).join("");
+}
+function renderAssessmentCenter(){
+  const coverage=assessmentCoverage(),recommended=assessmentRecommended(),rank=getRankState(),next=rank.next;
+  const cat=state.assessmentCategory||"all";
+  return shell(`<header class="topbar assessment-topbar"><div><div class="brand">Évaluation</div><div class="daylabel">Protocoles standardisés · qualité des données · niveau réel</div></div></header>
+  <section class="assessment-hero">
+    <div><div class="kicker">Centre d’évaluation KINETIK</div><h1>${coverage.verifiedPct}% vérifié</h1><p>${coverage.tested}/${coverage.total} repères renseignés · ${coverage.verified} validés avec un protocole KINETIK.</p></div>
+    <div class="assessment-evidence-scale"><div><span>1</span><strong>Déclaré</strong><small>utile comme point de départ</small></div><div><span>2</span><strong>Séance</strong><small>observé dans l’entraînement</small></div><div><span>3</span><strong>KINETIK</strong><small>protocole standardisé</small></div></div>
+  </section>
+
+  <section class="assessment-next">
+    <div class="assessment-section-head"><div><div class="kicker">Bilan recommandé</div><h2>${recommended.length} tests prioritaires</h2></div><p>Priorité calculée à partir de ton objectif, du prochain rang et de la fraîcheur des données.</p></div>
+    <div class="assessment-recommended">${recommended.map((p,i)=>`<button data-assessment-start="${p.id}"><span>0${i+1}</span><div><strong>${esc(p.name)}</strong><small>${p.current.value?`${p.current.value} ${p.unit} · ${evidenceInfo(p.evidence).short}`:"Pas encore évalué"}</small></div><b>≈ ${p.duration} min</b></button>`).join("")}</div>
+  </section>
+
+  ${next?`<section class="assessment-rank-link rank-${rank.current.id}"><div><div class="kicker">Fiabilité du rang</div><h2>${rank.displayName} → ${next.name}</h2><p>Pour les rangs élevés, certains barèmes doivent désormais être confirmés par une séance ou un protocole KINETIK.</p></div><button class="btn btn-secondary compact" data-view="skills">Voir les exigences</button></section>`:""}
+
+  <section class="assessment-categories">
+    <div class="assessment-section-head"><div><div class="kicker">Batterie complète</div><h2>Choisir une capacité</h2></div></div>
+    <div class="assessment-category-tabs"><button class="${cat==="all"?"active":""}" data-assessment-category="all">Tout</button>${ASSESSMENT_CATEGORIES.map(c=>`<button class="${cat===c.id?"active":""}" data-assessment-category="${c.id}">${c.label}</button>`).join("")}</div>
+    <div class="assessment-category-list">${ASSESSMENT_CATEGORIES.filter(c=>cat==="all"||cat===c.id).map(c=>{const s=assessmentCategoryStatus(c.id);return `<details class="assessment-category" ${cat===c.id?"open":""}><summary><div><strong>${c.label}</strong><span>${c.description}</span></div><div class="assessment-category-score"><b>${s.tested}/${s.total}</b><small>${s.verified} vérifiés</small></div></summary><div class="assessment-category-body">${c.id==="mobility"?renderMobilityAssessmentRows():ASSESSMENT_PROTOCOLS.filter(p=>p.category===c.id).map(renderAssessmentProtocolRow).join("")}</div></details>`}).join("")}</div>
+  </section>
+
+  <section class="assessment-method"><div><div class="kicker">Principe</div><h2>Le chiffre ne suffit pas</h2><p>Les rangs et Capacités utilisent toujours la performance réelle, mais KINETIK connaît maintenant la qualité de la preuve. Un athlète expérimenté peut donc progresser immédiatement dans les rangs en passant les barèmes, sans attendre des mois d’utilisation.</p></div><div><strong>Déclaré</strong><span>Saisie ou série libre</span><strong>Séance</strong><span>Performance observée pendant un entraînement</span><strong>Test KINETIK</strong><span>Protocole reproductible et critères respectés</span></div></section>`, "progress");
+}
+function renderAssessmentEditor(){
+  const p=assessmentProtocol(state.assessmentEditor);if(!p)return renderAssessmentCenter();
+  const last=assessmentLatest(p.id),current=protocolCurrent(p);
+  return shell(`<header class="topbar assessment-editor-top"><div><button class="back-btn" id="closeAssessment">← Évaluation</button><div class="daylabel">Protocole standardisé</div></div></header>
+  <section class="assessment-editor">
+    <div class="assessment-editor-head"><div><div class="kicker">${p.category} · ≈ ${p.duration} min</div><h1>${esc(p.name)}</h1><p>${p.targetLabel} · ${p.unit}</p></div>${evidenceMark(current.evidence)}</div>
+    <div class="assessment-protocol">
+      <div><span>01</span><section><h3>Préparation</h3>${p.warmup.map(x=>`<p>${esc(x)}</p>`).join("")}</section></div>
+      <div><span>02</span><section><h3>Critères de validité</h3>${p.criteria.map(x=>`<p>${esc(x)}</p>`).join("")}</section></div>
+      <div><span>03</span><section><h3>Fin du test</h3><p>${esc(p.stop)}</p></section></div>
+    </div>
+    <div class="assessment-result">
+      <div><div class="kicker">Résultat</div><h2>${last?"Nouveau test":"Première référence"}</h2></div>
+      <label><span>${p.targetLabel}</span><div class="assessment-big-input"><input id="assessmentValue" type="number" inputmode="decimal" min="0" step="${p.unit==="reps"?"1":".1"}" value="" placeholder="${current.value||0}"><b>${p.unit}</b></div></label>
+      <label class="assessment-check"><input id="assessmentCriteria" type="checkbox"><span><strong>Les critères ci-dessus ont été respectés</strong><small>Sinon, le résultat peut être conservé comme donnée déclarée mais ne sera pas un Test KINETIK.</small></span></label>
+      <label class="assessment-check"><input id="assessmentConditions" type="checkbox"><span><strong>Conditions reproductibles</strong><small>Installation, variante et mesure identiques à ce protocole.</small></span></label>
+      <label><span>Note <small>optionnel</small></span><textarea id="assessmentNote" rows="3" placeholder="Sensations, matériel, conditions…"></textarea></label>
+      <div class="assessment-editor-actions"><button class="btn btn-outline" id="saveAssessmentDeclared">Enregistrer sans validation</button><button class="btn btn-primary" id="saveAssessmentValidated">Valider le Test KINETIK</button></div>
+    </div>
+    <p class="assessment-safety">Les tests maximaux ne sont jamais obligatoires. Arrête si la technique se dégrade ou en cas de symptôme inhabituel.</p>
+  </section>`, "progress");
+}
+function saveAssessment(validated){
+  const p=assessmentProtocol(state.assessmentEditor),el=document.getElementById("assessmentValue");if(!p||!el)return;
+  const value=Number(el.value);if(!Number.isFinite(value)||value<=0)return;
+  const criteria=document.getElementById("assessmentCriteria")?.checked||false,conditions=document.getElementById("assessmentConditions")?.checked||false;
+  if(validated&&(!criteria||!conditions)){alert("Pour valider un Test KINETIK, confirme les critères de mouvement et les conditions reproductibles.");return;}
+  const level=validated?3:1,source=validated?"kinetik":"declared",note=document.getElementById("assessmentNote")?.value||"",rows=getAssessments();
+  rows.unshift({id:String(Date.now()),date:new Date().toISOString(),protocolId:p.id,category:p.category,kind:p.kind,testId:p.testId||null,exercise:p.exercise||null,value,unit:p.unit,evidenceLevel:level,source,protocolVersion:1,criteria,conditions,note});
+  setAssessments(rows.slice(0,1000));
+  if(p.kind==="test"&&p.testId){
+    const tests=getTests();tests.unshift({id:Date.now()+1,date:new Date().toISOString(),testId:p.testId,value,note,source});setTests(tests.slice(0,500));
+  }
+  state.assessmentEditor=null;state.view="assessment";render();
+}
+
+/* Assessment evidence participates in current performances. */
+const _performanceDetailsForTestV1050=performanceDetailsForTest;
+performanceDetailsForTest=function(id){
+  const old=_performanceDetailsForTestV1050(id),a=assessmentBestForTest(id);
+  const candidate=a?{value:Number(a.value||0),date:a.date,source:evidenceInfo(a.evidenceLevel).label,exercise:null,evidence:Number(a.evidenceLevel||0)}:{value:0,evidence:0};
+  const oldEvidence=assessmentEvidenceForTest(id);
+  return [candidate,{...old,evidence:oldEvidence}].sort((x,y)=>Number(y.value||0)-Number(x.value||0)||Number(y.evidence||0)-Number(x.evidence||0))[0];
+};
+const _bestExerciseValueV1050=bestExerciseValue;
+bestExerciseValue=function(name){
+  const a=assessmentBestForExercise(name);
+  return Math.max(Number(_bestExerciseValueV1050(name)||0),Number(a?.value||0));
+};
+
+/* Upper ranks require stronger evidence, never account age or tenure. */
+["diamond","master","legend"].forEach(id=>{
+  const rule=KINETIK_RANK_RULES[id];if(!rule)return;
+  (rule.proofs||[]).forEach(p=>{if(p.kind==="test"||p.kind==="exercise")p.evidenceMin=id==="diamond"?2:3;});
+});
+function rankProofEvidenceLevel(proof){
+  if(proof.kind==="test")return assessmentEvidenceForTest(proof.id);
+  if(proof.kind==="exercise")return assessmentEvidenceForExercise(proof.name);
+  return proof.kind==="skill"&&skillDoneSafe(proof.id)?2:0;
+}
+rankGateRows=function(rank){
+  const rule=rankRuleFor(rank),caps=capabilityScores(),capMap=Object.fromEntries(caps.map(x=>[x.id,x])),skillPoints=technicalSkillPoints(),mastery=masterySkillCount(),majorMastery=majorMasterySkillCount();
+  const avg=Math.round(caps.reduce((s,x)=>s+(x.assessed?x.score:0),0)/Math.max(1,caps.length)),rows=[];
+  if(rule.avg)rows.push({id:"avg",label:"Moyenne des 6 capacités",current:avg,target:rule.avg,unit:"/100",detail:"les capacités non évaluées comptent comme 0"});
+  Object.entries(rule.caps||{}).forEach(([id,target])=>rows.push({id:`cap-${id}`,label:capMap[id]?.label||id,current:capMap[id]?.assessed?capMap[id].score:0,target,unit:"/100",detail:capMap[id]?.assessed?capMap[id].detail:"non évalué"}));
+  (rule.proofs||[]).forEach((proof,i)=>{
+    const current=rankProofValue(proof),ev=rankProofEvidenceLevel(proof),minEv=Number(proof.evidenceMin||0),valueDone=current>=Number(proof.value||1),evidenceDone=!minEv||ev>=minEv;
+    rows.push({id:`proof-${i}-${proof.kind}`,label:proof.label,current,target:Number(proof.value||1),unit:proof.unit||"",detail:minEv?`${evidenceInfo(ev).label} · preuve requise : ${evidenceInfo(minEv).label}`:(proof.kind==="skill"?"validation technique requise":"barème de performance"),forceDone:valueDone&&evidenceDone,evidence:ev,evidenceMin:minEv});
+  });
+  if(rule.skillPoints)rows.push({id:"skills",label:"Difficulté technique cumulée",current:skillPoints,target:rule.skillPoints,unit:"pts"});
+  if(rule.mastery)rows.push({id:"mastery",label:"Skills de maîtrise",current:mastery,target:rule.mastery,unit:""});
+  if(rule.majorMastery)rows.push({id:"major-mastery",label:"Skills majeurs de maîtrise",current:majorMastery,target:rule.majorMastery,unit:"",detail:"Muscle-up avancé · HSPU libre · Front lever · Human flag"});
+  return rows.map(x=>{const valueProgress=clamp(Number(x.current)/Math.max(1,Number(x.target)),0,1),evidenceProgress=x.evidenceMin?clamp(Number(x.evidence||0)/Number(x.evidenceMin),0,1):1,done=x.forceDone!==undefined?x.forceDone:Number(x.current)>=Number(x.target);return {...x,done,progress:Math.min(valueProgress,evidenceProgress)};});
+};
+
+/* Integrate the center into existing screens. */
+const _renderMoreV1050=renderMore;
+renderMore=function(){
+  let html=_renderMoreV1050();
+  const marker='<button data-view="skills"><span>${uiIcon(\'skills\')}</span><div><strong>Capacités</strong><small>Skills, performances et rang</small></div><b>→</b></button>';
+  if(html.includes(marker))html=html.replace(marker,marker+`<button data-view="assessment"><span>${uiIcon("award")}</span><div><strong>Centre d’évaluation</strong><small>Tests standardisés et qualité des données</small></div><b>→</b></button>`);
+  return html;
+};
+const _renderSkillsV1050=renderSkills;
+renderSkills=function(){
+  let html=_renderSkillsV1050();
+  const marker='<section class="cap-profile-section">';
+  if(html.includes(marker))html=html.replace(marker,`<section class="skills-assessment-link"><div><div class="kicker">Qualité des données</div><strong>Valider mes performances</strong><span>Les rangs élevés demandent des preuves plus solides.</span></div><button class="btn btn-outline compact" data-view="assessment">Centre d’évaluation</button></section>${marker}`);
+  return html;
+};
+const _renderProgressOverviewV1050=renderProgressOverview;
+renderProgressOverview=function(){
+  let html=_renderProgressOverviewV1050(),c=assessmentCoverage(),card=`<section class="assessment-progress-link"><div><div class="kicker">Évaluation</div><h3>${c.verifiedPct}% de la batterie vérifiée</h3><p>${c.verified} protocoles KINETIK validés · ${c.tested}/${c.total} repères renseignés.</p></div><button class="btn btn-outline compact" data-view="assessment">Évaluer →</button></section>`;
+  const marker='<section class="card adaptive-report';
+  const i=html.indexOf(marker);return i>=0?html.slice(0,i)+card+html.slice(i):html+card;
+};
+const _renderTodayUsefulActionsV1050=renderTodayUsefulActions;
+renderTodayUsefulActions=function(){
+  let html=_renderTodayUsefulActionsV1050();
+  html=html.replace(/<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">◷<\/span><div><strong>Tests périodiques<\/strong><small>(.*?)<\/small><\/div><b>Ouvrir →<\/b><\/button>/,`<button class="progress-watch-item" data-view="assessment"><span class="progress-watch-icon">◷</span><div><strong>Centre d’évaluation</strong><small>$1</small></div><b>Évaluer →</b></button>`);
+  return html;
+};
+
+/* Event layer */
+const _bindEventsV1050=bindEvents;
+bindEvents=function(){
+  _bindEventsV1050();
+  document.querySelectorAll("[data-assessment-start]").forEach(b=>b.onclick=()=>{state.assessmentEditor=b.dataset.assessmentStart;render();});
+  document.querySelectorAll("[data-assessment-category]").forEach(b=>b.onclick=()=>{state.assessmentCategory=b.dataset.assessmentCategory;render();});
+  const close=document.getElementById("closeAssessment");if(close)close.onclick=()=>{state.assessmentEditor=null;state.view="assessment";render();};
+  const sd=document.getElementById("saveAssessmentDeclared");if(sd)sd.onclick=()=>saveAssessment(false);
+  const sv=document.getElementById("saveAssessmentValidated");if(sv)sv.onclick=()=>saveAssessment(true);
 };
 
 applyAppTheme();
