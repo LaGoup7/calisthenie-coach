@@ -1887,20 +1887,32 @@ function cycleAiMetricCatalog(objective='',target=''){
     {label:'Dead hang',kind:'test',id:'dead_hang',unit:'sec'}
   ];
 }
+const AI_EVAL_KEY='calisthenieCoach.aiEvaluations.v1';
+function getAiEvaluations(){try{return JSON.parse(localStorage.getItem(AI_EVAL_KEY)||'{}')||{};}catch(e){return {};}}
+function setAiEvaluations(v){localStorage.setItem(AI_EVAL_KEY,JSON.stringify(v||{}));}
+function aiEvaluationFor(id){return getAiEvaluations()[id]||null;}
+function saveAiEvaluation(id,value,meta={}){const all=getAiEvaluations();all[id]={value:Number(value)||0,date:new Date().toISOString(),source:'évaluation guidée',...meta};setAiEvaluations(all);}
+function aiMissingEvaluationTests(objective='',target=''){return cycleAiMetricCatalog(objective,target).filter(m=>{const v=cycleAiMetricValue(m);return !Number(v.value||0)&&v.source!=='évaluation guidée'&&['Chest-to-bar','Tractions explosives'].includes(m.label);});}
+function aiEvaluationUi(objective='',target=''){
+ const missing=aiMissingEvaluationTests(objective,target);
+ if(!missing.length)return '<div class="ai-eval-complete"><strong>Évaluation complète ✓</strong><small>Les prérequis spécifiques utiles sont enregistrés.</small></div>';
+ return `<section class="ai-eval-panel"><div class="ai-eval-head"><div><strong>Compléter mon évaluation</strong><small>${missing.length} test${missing.length>1?'s':''} ciblé${missing.length>1?'s':''} avant la programmation</small></div></div>${missing.map(m=>m.label==='Chest-to-bar'?`<div class="ai-eval-test"><div><b>Chest-to-bar</b><p>Après échauffement, teste uniquement des répétitions strictes propres. Arrête avant l'échec.</p></div><label><span>Meilleur résultat</span><select id="aiEvalChest"><option value="">Choisir…</option><option value="0">0 · pas encore</option><option value="1">1 rep</option><option value="2">2 reps</option><option value="3">3+ reps</option></select></label></div>`:`<div class="ai-eval-test"><div><b>Traction explosive</b><p>Sans élan. Indique la hauteur atteinte proprement. Arrête si tu ressens une gêne.</p></div><label><span>Hauteur atteinte</span><select id="aiEvalExplosive"><option value="">Choisir…</option><option value="1">Menton</option><option value="2">Haut de poitrine</option><option value="3">Bas de poitrine</option><option value="4">Barre sous les pectoraux</option></select></label></div>`).join('')}<p class="ai-eval-note">Ces tests servent à calibrer le programme, pas à établir un record maximal.</p><button type="button" class="btn btn-secondary" id="saveAiEvaluation">Enregistrer l’évaluation</button></section>`;
+}
 function cycleAiMetricValue(m){
-  if(m.kind==='test')return performanceDetailsForTest(m.id);
-  const a=bestMetricDetails(getHistory(),m.id),b=bestQuickMetricDetails(m.id);
-  return Number(b.value||0)>Number(a.value||0)?b:a;
+  const ev=aiEvaluationFor(m.id);
+  if(m.kind==='test'){const base=performanceDetailsForTest(m.id);return ev&&Number(ev.value||0)>=Number(base.value||0)?ev:base;}
+  const a=bestMetricDetails(getHistory(),m.id),b=bestQuickMetricDetails(m.id),best=Number(b.value||0)>Number(a.value||0)?b:a;
+  return ev&&Number(ev.value||0)>=Number(best.value||0)?ev:best;
 }
 function cycleAiDataSnapshot(objective='',target=''){
   const metrics=cycleAiMetricCatalog(objective,target).map(m=>({...m,...cycleAiMetricValue(m)}));
-  const found=metrics.filter(m=>Number(m.value||0)>0).length;
+  const found=metrics.filter(m=>Number(m.value||0)>0||m.source==='évaluation guidée').length;
   const sessions=getHistory().length,quick=getQuickLogs().length;
   return {metrics,found,total:metrics.length,sessions,quick,status:found===metrics.length?'complete':found?'partial':'empty'};
 }
 function cycleAiDataText(objective='',target=''){
   const s=cycleAiDataSnapshot(objective,target);
-  return s.metrics.map(m=>`- ${m.label}: ${Number(m.value||0)>0?`${m.value} ${m.unit}${m.source?` · ${m.source}`:''}`:'aucune donnée'}`).join('\n');
+  return s.metrics.map(m=>`- ${m.label}: ${Number(m.value||0)>0?`${m.detail?m.detail:`${m.value} ${m.unit}`}${m.source?` · ${m.source}`:''}`:m.source==='évaluation guidée'?`0 ${m.unit} · évaluation guidée`:'aucune donnée'}`).join('\n');
 }
 
 function cycleTrainingDays(c){
@@ -1998,7 +2010,7 @@ function cycleAiWeeklySummary(c){
 const AI_ADVANCED_SKILL_RX=/(muscle.?up|front lever|back lever|human flag|planche|handstand push|hspu)/i;
 function cycleAiSafetyAssessment(objective='',target='',opts={}){
   const q=`${objective} ${target}`,snap=cycleAiDataSnapshot(objective,target),advanced=AI_ADVANCED_SKILL_RX.test(q);
-  const missing=snap.metrics.filter(m=>!Number(m.value||0)).map(m=>m.label);
+  const missing=snap.metrics.filter(m=>!Number(m.value||0)&&m.source!=='évaluation guidée').map(m=>m.label);
   const pain=opts.context==='Gêne / douleur à prendre en compte';
   const restart=opts.context==='Reprise après un arrêt';
   const blockers=[];
@@ -2273,7 +2285,7 @@ function renderCycleProgressionEditor(){
 
 <div class="ai-wizard-step" data-ai-step="4">
 <div class="kicker">Étape 4 sur 6</div><h3>Ton niveau actuel</h3>
-<div id="cycleAiDetectedData" class="ai-detected-data"></div>
+<div id="cycleAiDetectedData" class="ai-detected-data"></div><div id="cycleAiEvaluation"></div>
 <div class="ai-source-choice">
 <label class="ai-source-option active"><input type="radio" name="cycleAiSource" value="app" checked><span><strong>Utiliser mes données de l’app</strong><small>Recommandé</small></span></label>
 <label class="ai-source-option"><input type="radio" name="cycleAiSource" value="manual"><span><strong>Renseigner manuellement</strong><small>Si elles ne reflètent pas ton niveau</small></span></label>
@@ -3272,7 +3284,8 @@ function bindEvents(){
     const refreshAiDetected=()=>{
       const box=document.getElementById('cycleAiDetectedData');if(!box)return;
       const s=cycleAiDataSnapshot(aiObjective(),aiTarget()),title=s.status==='complete'?'Données suffisantes':s.status==='partial'?'Données partielles':'Peu de données disponibles';
-      box.innerHTML=`<div class="ai-detected-head"><div><strong>${title}</strong><small>${s.found}/${s.total} indicateurs utiles trouvés · ${s.sessions} séance${s.sessions!==1?'s':''} · ${s.quick} série${s.quick!==1?'s':''} libre${s.quick!==1?'s':''}</small></div><span class="ai-data-status ${s.status}">${s.status==='complete'?'OK':s.status==='partial'?'PARTIEL':'À COMPLÉTER'}</span></div><div class="ai-metric-list">${s.metrics.map(m=>`<div><span>${m.label}</span><strong>${Number(m.value||0)>0?`${m.value} ${m.unit}`:'—'}</strong></div>`).join('')}</div>`;
+      box.innerHTML=`<div class="ai-detected-head"><div><strong>${title}</strong><small>${s.found}/${s.total} indicateurs utiles trouvés · ${s.sessions} séance${s.sessions!==1?'s':''} · ${s.quick} série${s.quick!==1?'s':''} libre${s.quick!==1?'s':''}</small></div><span class="ai-data-status ${s.status}">${s.status==='complete'?'OK':s.status==='partial'?'PARTIEL':'À COMPLÉTER'}</span></div><div class="ai-metric-list">${s.metrics.map(m=>`<div><span>${m.label}</span><strong>${Number(m.value||0)>0?`${m.detail||`${m.value} ${m.unit}`}`:m.source==='évaluation guidée'?'0 · évalué':'—'}</strong></div>`).join('')}</div>`;
+      const evalBox=document.getElementById('cycleAiEvaluation');if(evalBox){evalBox.innerHTML=aiEvaluationUi(aiObjective(),aiTarget());document.getElementById('saveAiEvaluation')?.addEventListener('click',()=>{const chest=document.getElementById('aiEvalChest'),explosive=document.getElementById('aiEvalExplosive');if(chest&&chest.value!=='')saveAiEvaluation('Chest-to-bar',Number(chest.value),{label:'Chest-to-bar',unit:'reps'});if(explosive&&explosive.value!==''){const labels={1:'menton',2:'haut de poitrine',3:'bas de poitrine',4:'barre sous les pectoraux'};saveAiEvaluation('Tractions explosives',Number(explosive.value),{label:'Tractions explosives',unit:'niveau',detail:labels[explosive.value]||''});}refreshAiDetected();});}
     };
     const refreshAiReview=()=>{
       const box=document.getElementById('cycleAiReview');if(!box)return;
@@ -3289,7 +3302,7 @@ function bindEvents(){
     const syncAiContext=()=>{const ctx=document.getElementById('cycleAiContext'),v=ctx?.value||'',b=document.getElementById('cycleAiBreakWrap'),p=document.getElementById('cycleAiPainWrap');if(b){b.hidden=v!=='Reprise après un arrêt';b.style.display=b.hidden?'none':'';}if(p){p.hidden=v!=='Gêne / douleur à prendre en compte';p.style.display=p.hidden?'none':'';}};const ctx=document.getElementById('cycleAiContext');if(ctx)ctx.onchange=syncAiContext;syncAiContext();
     document.getElementById('cycleAiObjective')?.addEventListener('change',refreshAiDetected);
     document.getElementById('cycleAiTarget')?.addEventListener('input',refreshAiDetected);
-    const genAi=document.getElementById('generateCycleAiPrompt');if(genAi)genAi.onclick=()=>{
+    const genAi=document.getElementById('generateCycleAiPrompt');if(genAi)genAi.onclick=()=>{const srcMode=document.querySelector('input[name=cycleAiSource]:checked')?.value||'app',preflight=cycleAiSafetyAssessment(aiObjective(),aiTarget(),{context:document.getElementById('cycleAiContext')?.value||'',painImpact:document.getElementById('cycleAiPainImpact')?.value||''});if(srcMode==='app'&&preflight.needsAssessment){showAiStep(4);refreshAiDetected();setTimeout(()=>document.getElementById('cycleAiEvaluation')?.scrollIntoView({behavior:'smooth',block:'center'}),50);return;}
       const c=trainingCycleById(state.cycleProgressionEditor),goal=(document.getElementById('cycleAiGoal')?.value||'').trim(),opts={
         objective:aiObjective(),target:aiTarget(),secondary:(document.getElementById('cycleAiSecondary')?.value||'').trim(),
         horizon:document.getElementById('cycleAiHorizon')?.value,context:document.getElementById('cycleAiContext')?.value,
