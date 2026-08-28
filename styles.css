@@ -3126,3 +3126,57 @@ body{
     left:-3.5px;
   }
 }
+
+/* v10.73 · Clickable rank in Progression */
+.progress-rank-shortcut{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:max-content;
+  max-width:100%;
+  padding:0;
+  margin:0;
+  border:0;
+  background:transparent;
+  color:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+.progress-rank-shortcut-copy{
+  display:grid;
+}
+.progress-rank-shortcut h1{
+  margin:0!important;
+}
+.progress-rank-shortcut small{
+  margin-top:3px;
+  font-size:.54rem;
+  color:var(--muted);
+  font-weight:650;
+}
+.progress-rank-shortcut>b{
+  font-size:.72rem;
+  color:var(--muted);
+  transition:transform .16s ease,color .16s ease;
+}
+.progress-rank-shortcut:hover>b,
+.progress-rank-shortcut:focus-visible>b{
+  transform:translateX(3px);
+  color:var(--text);
+}
+.progress-rank-shortcut:focus-visible{
+  outline:2px solid color-mix(in srgb,var(--text) 28%,transparent);
+  outline-offset:5px;
+  border-radius:6px;
+}
+.cap-rank-details{
+  scroll-margin-top:calc(var(--safe-top) + 18px);
+}
+@media(max-width:430px){
+  .progress-rank-shortcut{
+    gap:8px;
+  }
+  .progress-rank-shortcut small{
+    font-size:.5rem;
+  }
+}

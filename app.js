@@ -5631,6 +5631,38 @@ renderWeek=function(){
     <section class="planning-days-v1071">${stats.days.map(v1071RenderDay).join('')}</section>`, "week");
 };
 
+
+/* ========================================================================== */
+/* V10.73 · Rank shortcut from Progression                                    */
+/* ========================================================================== */
+const _renderProgressOverviewV1073=renderProgressOverview;
+renderProgressOverview=function(){
+  const rank=getRankState();
+  let html=_renderProgressOverviewV1073();
+  const target=`<h1>${rank.displayName}</h1>`;
+  const replacement=`<button class="progress-rank-shortcut rank-${rank.current.id}" data-open-rank="true" aria-label="Ouvrir le système de rang ${rank.displayName}"><span class="progress-rank-shortcut-copy"><h1>${rank.displayName}</h1><small>Voir le rang et les exigences</small></span><b>→</b></button>`;
+  if(html.includes(target))html=html.replace(target,replacement);
+  return html;
+};
+
+const _bindEventsV1073=bindEvents;
+bindEvents=function(){
+  _bindEventsV1073();
+  document.querySelectorAll('[data-open-rank]').forEach(b=>b.onclick=()=>{
+    const rank=getRankState();
+    state.selectedRankId=rank.current.id;
+    state.view='skills';
+    render();
+    requestAnimationFrame(()=>{
+      const details=document.querySelector('.cap-rank-details');
+      if(details){
+        details.open=true;
+        requestAnimationFrame(()=>details.scrollIntoView({behavior:'smooth',block:'start'}));
+      }
+    });
+  });
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
