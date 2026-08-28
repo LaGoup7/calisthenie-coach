@@ -1914,7 +1914,7 @@ function cycleAiWeeklySummary(c){
 }
 function cycleAiPromptText(c,goal,opts={}){
   const cs=getCycleState(),setup=getEquipmentSetup(),history=getHistory(),records=currentRecords();
-  const equipment=Object.entries(setup).filter(([k,v])=>v===true).map(([k])=>EQUIPMENT_BY_ID[k]?.name||k).join(', ')||'non renseigné';
+  const aiEquipmentNames={powerTower:'Power tower (barre de traction + dips)',parallelBars:'Barres parallèles',pushupHandles:'Poignées de pompes',bands:'Bandes élastiques',anchor:"Point d’ancrage pour bandes",mat:'Tapis',support:'Support / point fixe'};const equipment=Object.entries(setup).filter(([k,v])=>v===true).map(([k])=>EQUIPMENT_BY_ID[k]?.name||aiEquipmentNames[k]||k).join(', ')||'non renseigné';
   const weeks=(cs.plan.weeks||[]).map((w,i)=>{const n=normalizeProgressionWeek(w,i);return `S${i+1}: ${n.name} | volume ${Math.round(n.volumeFactor*100)}% | cible ${Math.round(n.targetFactor*100)}% | RIR ${n.rir} | cardio ${Math.round(n.cardioFactor*100)}% | progression ${n.allowProgress?'oui':'non'}`}).join('\n');
   const autoLevel=cycleAiDataText(opts.objective,opts.target);
   const recText=opts.source==='manual'?`- Niveau déclaré par l’utilisateur: ${opts.manualLevel||'non renseigné'}`:autoLevel;
@@ -1967,13 +1967,34 @@ TA MISSION
 1. Vérifie la cohérence entre l'objectif, le niveau actuel, l'échéance et le programme.
 2. Si une information réellement indispensable manque encore, pose au maximum 3 questions très ciblées avant de finaliser. Ne redemande jamais une information déjà présente ci-dessus.
 3. Analyse les points forts et les limites du cycle actuel pour cet objectif.
-4. Propose un cycle de ${cs.weekCount} semaines avec: phase, volume relatif %, cible reps/holds %, RIR, cardio %, progression automatique oui/non.
-5. Ajoute une section PROGRESSION DES EXERCICES PRIORITAIRES avec des recommandations concrètes de séries, répétitions, holds ou assistance.
+4. Réponds ensuite avec DEUX BLOCS DE CONFIGURATION clairement séparés:
+
+BLOC A — COURBE DU CYCLE
+Propose les ${cs.weekCount} semaines avec: phase, volume relatif %, cible reps/holds %, RIR, cardio %, progression automatique oui/non. Termine ce bloc par un tableau compact S1 à S${cs.weekCount}.
+
+BLOC B — ADAPTATIONS DU PROGRAMME
+Propose uniquement les modifications réellement utiles au programme actuel. Pour chaque modification indique:
+- jour concerné;
+- action: conserver / modifier / remplacer / ajouter / retirer;
+- exercice actuel si applicable;
+- nouvel exercice si applicable;
+- prescription de départ (séries × reps/secondes, assistance si nécessaire);
+- raison courte;
+- semaines concernées ou règle de progression.
+
+5. Ajoute ensuite PROGRESSION DES EXERCICES PRIORITAIRES: décris la progression concrète semaine par semaine des mouvements directement liés à l'objectif.
 6. Identifie les exercices spécifiques à l'objectif absents du programme. N'en ajoute que si cela apporte un bénéfice clair.
 7. Prévois consolidation/deload et gestion de fatigue si pertinent.
 8. Si l'objectif ou l'échéance paraît irréaliste, explique-le et propose une cible intermédiaire mesurable.
+9. Ne modifie pas un exercice sans raison liée à l'objectif, à la récupération ou à la sécurité.
 
-À la fin, fournis un tableau compact S1 à S${cs.weekCount} facilement reportable dans Calisthenie Coach.`;
+FORMAT FINAL OBLIGATOIRE
+Termine par un bloc intitulé CONFIGURATION À REPORTER DANS CALISTHENIE COACH contenant:
+A. le tableau S1 à S${cs.weekCount};
+B. une liste compacte des adaptations sous la forme:
+J4 | REMPLACER | Curl biceps avec bande | Tractions explosives | 3×2 | S1-S3
+J6 | AJOUTER | — | Muscle-up assisté | 3×2 | S1-S3
+Utilise exactement les noms d'exercices du programme quand ils existent.`;
 }
 
 function renderCycleProgressionEditor(){
@@ -2020,7 +2041,7 @@ function renderCycleProgressionEditor(){
 <div class="ai-wizard-step" data-ai-step="5">
 <div class="kicker">Étape 5 sur 5</div><h3>Vérification</h3>
 <div id="cycleAiReview" class="ai-review-box"></div>
-<p class="small muted">Le prompt contiendra également le programme complet, les paramètres des 8 semaines, le matériel et les dernières séances disponibles. Aucune donnée n’est envoyée automatiquement.</p>
+<div class="ai-output-plan"><strong>Ce que ChatGPT devra proposer</strong><div><span>01</span><p><b>Courbe du cycle</b><small>Volume, cible, RIR, cardio et progression S1–S8</small></p></div><div><span>02</span><p><b>Adaptations du programme</b><small>Exercices à conserver, modifier, remplacer ou ajouter</small></p></div><div><span>03</span><p><b>Progression prioritaire</b><small>Prescription concrète semaine par semaine</small></p></div></div><p class="small muted">Le prompt contient aussi le programme complet, le matériel et les dernières séances disponibles. Aucune donnée n’est envoyée automatiquement.</p>
 <button class="btn btn-primary" id="generateCycleAiPrompt">Générer mon prompt</button>
 <div class="cycle-ai-output" id="cycleAiOutput" hidden><div class="cycle-ai-output-head"><strong>Prompt prêt à utiliser</strong><button class="btn btn-primary compact" id="copyCycleAiPrompt">Copier le prompt</button></div><textarea id="cycleAiPrompt" rows="16" readonly></textarea></div>
 </div>
@@ -3010,7 +3031,7 @@ function bindEvents(){
     document.getElementById('cycleAiPrev')?.addEventListener('click',()=>showAiStep(aiStep-1));
     document.querySelectorAll('#cycleAiHorizonChoices .ai-choice').forEach(b=>b.onclick=()=>{document.querySelectorAll('#cycleAiHorizonChoices .ai-choice').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('cycleAiHorizon').value=b.dataset.value;});
     document.querySelectorAll('input[name=cycleAiSource]').forEach(r=>r.onchange=()=>{const manual=document.querySelector('input[name=cycleAiSource]:checked')?.value==='manual',row=document.querySelector('.ai-manual-level');if(row)row.hidden=!manual;document.querySelectorAll('.ai-source-option').forEach(x=>x.classList.toggle('active',!!x.querySelector('input')?.checked));});
-    const ctx=document.getElementById('cycleAiContext');if(ctx)ctx.onchange=()=>{const v=ctx.value,b=document.getElementById('cycleAiBreakWrap'),p=document.getElementById('cycleAiPainWrap');if(b)b.hidden=v!=='Reprise après un arrêt';if(p)p.hidden=v!=='Gêne / douleur à prendre en compte';};
+    const syncAiContext=()=>{const ctx=document.getElementById('cycleAiContext'),v=ctx?.value||'',b=document.getElementById('cycleAiBreakWrap'),p=document.getElementById('cycleAiPainWrap');if(b){b.hidden=v!=='Reprise après un arrêt';b.style.display=b.hidden?'none':'';}if(p){p.hidden=v!=='Gêne / douleur à prendre en compte';p.style.display=p.hidden?'none':'';}};const ctx=document.getElementById('cycleAiContext');if(ctx)ctx.onchange=syncAiContext;syncAiContext();
     document.getElementById('cycleAiObjective')?.addEventListener('change',refreshAiDetected);
     document.getElementById('cycleAiTarget')?.addEventListener('input',refreshAiDetected);
     const genAi=document.getElementById('generateCycleAiPrompt');if(genAi)genAi.onclick=()=>{

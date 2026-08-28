@@ -2429,3 +2429,11 @@ html[data-theme="dark"] .next-exercise-preview-rich,html[data-theme="dark"] .pro
 .ai-metric-list{margin-top:12px;border-top:1px solid var(--line)}.ai-metric-list>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}.ai-metric-list>div:last-child{border-bottom:0}.ai-metric-list span{font-size:.68rem;color:var(--muted)}.ai-metric-list strong{font-size:.69rem}
 .ai-review-box{border-top:1px solid var(--line);margin:4px 0 16px}.ai-review-box>div{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}.ai-review-box span{font-size:.66rem;color:var(--muted)}.ai-review-box strong{font-size:.69rem;text-align:right}
 @media(max-width:560px){.cycle-ai-wizard-v109{padding:16px}.ai-choice-grid{grid-template-columns:1fr}.ai-detected-head{flex-direction:column}.ai-review-box>div{align-items:flex-start}}
+
+/* V10.10 · AI output contract */
+#cycleAiBreakWrap[hidden],#cycleAiPainWrap[hidden]{display:none!important}
+.ai-output-plan{margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.ai-output-plan>strong{display:block;font-size:.72rem;margin-bottom:9px}
+.ai-output-plan>div{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.ai-output-plan>div>span{font-size:.57rem;font-weight:900;color:var(--muted);padding-top:2px}
+.ai-output-plan p{display:grid;gap:2px;margin:0}.ai-output-plan b{font-size:.7rem}.ai-output-plan small{font-size:.62rem;color:var(--muted)}
