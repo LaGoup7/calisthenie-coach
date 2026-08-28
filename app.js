@@ -1943,11 +1943,41 @@ function applyAiScheduleToCycle(cycle,schedule){
   const next={};let i=0;for(let d=0;d<7;d++){if(restSet.has(DAY_NAMES[d]))next[d]={name:"Repos",subtitle:"Récupération complète",duration:0,shortDuration:0,intensity:"Repos",exercises:[]};else next[d]=clone(sourceSessions[i++]||{name:"Séance",subtitle:"Séance personnalisée",duration:45,shortDuration:25,intensity:"Modérée",exercises:[]});}
   cycle.days=next;return cycle;
 }
+
+function aiExerciseLastPerformance(name){
+  const sessions=getHistory().slice().reverse();
+  for(const s of sessions){
+    const entries=(s.entries||[]).filter(x=>x.exercise===name);
+    if(!entries.length)continue;
+    const vals=entries.map(x=>Number(x.value||x.reps||x.seconds||0)).filter(Number.isFinite);
+    const rirs=entries.map(x=>Number(x.rir)).filter(Number.isFinite);
+    return {date:s.date,best:vals.length?Math.max(...vals):0,rir:rirs.length?Math.min(...rirs):null,completed:true};
+  }
+  return null;
+}
+function aiProgressionGate(e,week,row){
+  if(Number(week)<=1)return {allowed:true,reason:''};
+  const prev=(e?.aiProgression||[]).find(r=>Number(r.week)===Number(week)-1);
+  if(!prev)return {allowed:true,reason:''};
+  const perf=aiExerciseLastPerformance(e.name),minRir=Number(row?.minRir??(AI_ADVANCED_SKILL_RX.test(e.name)?3:2));
+  if(!perf)return {allowed:false,row:prev,reason:`S${week}: progression en attente · valide d'abord S${week-1}`};
+  if(perf.rir!=null&&perf.rir<minRir)return {allowed:false,row:prev,reason:`S${week}: maintien · RIR précédent ${perf.rir} < ${minRir}`};
+  return {allowed:true,reason:''};
+}
 function aiWeeklyPrescriptionFor(e,week){
   const rows=Array.isArray(e?.aiProgression)?e.aiProgression:[];
-  const row=rows.find(r=>Number(r.week)===Number(week));
+  let row=rows.find(r=>Number(r.week)===Number(week));
   if(!row)return null;
-  return {sets:Number(row.sets||e.sets||1),target:Number(row.target||e.target||1),type:row.type||e.type,assistance:row.assistance||'',note:row.note||''};
+  const gate=aiProgressionGate(e,week,row);
+  if(!gate.allowed&&gate.row)row=gate.row;
+  return {
+    sets:Number(row.sets||e.sets||1),
+    target:Number(row.target||e.target||1),
+    type:row.type||e.type,
+    assistance:row.assistance||'',
+    note:gate.reason||row.note||'',
+    gated:!gate.allowed
+  };
 }
 function cycleAiWeeklySummary(c){
   let strictPull=0,assistedPull=0,dips=0,cardioMin=0,trainingDays=0;
@@ -1963,6 +1993,35 @@ function cycleAiWeeklySummary(c){
     });
   }
   return `Jours d'entraînement: ${trainingDays}/7\nTractions strictes programmées: ${Math.round(strictPull)} reps/semaine\nTractions assistées programmées: ${Math.round(assistedPull)} reps/semaine\nDips programmés: ${Math.round(dips)} reps/semaine\nCardio Zone 2 programmé: ${Math.round(cardioMin)} min/semaine`;
+}
+
+const AI_ADVANCED_SKILL_RX=/(muscle.?up|front lever|back lever|human flag|planche|handstand push|hspu)/i;
+function cycleAiSafetyAssessment(objective='',target='',opts={}){
+  const q=`${objective} ${target}`,snap=cycleAiDataSnapshot(objective,target),advanced=AI_ADVANCED_SKILL_RX.test(q);
+  const missing=snap.metrics.filter(m=>!Number(m.value||0)).map(m=>m.label);
+  const pain=opts.context==='Gêne / douleur à prendre en compte';
+  const restart=opts.context==='Reprise après un arrêt';
+  const blockers=[];
+  if(pain&&opts.painImpact==='Important')blockers.push('gêne/douleur déclarée importante');
+  if(advanced&&snap.status!=='complete')blockers.push(`prérequis spécifiques incomplets: ${missing.join(', ')||'tests manquants'}`);
+  const needsAssessment=advanced&&snap.status!=='complete';
+  return {advanced,missing,pain,restart,needsAssessment,blockers,status:blockers.length?'assessment':pain||restart||snap.status!=='complete'?'caution':'ready'};
+}
+function cycleAiSafetyText(objective='',target='',opts={}){
+  const a=cycleAiSafetyAssessment(objective,target,opts);
+  return [
+    `Niveau de prudence: ${a.status==='ready'?'standard':a.status==='caution'?'renforcé':'évaluation préalable requise'}`,
+    a.advanced?'Objectif classé: skill avancé / technique':'Objectif classé: base ou skill standard',
+    a.missing.length?`Données/prérequis manquants: ${a.missing.join(', ')}`:'Prérequis mesurés: suffisants pour proposer une progression',
+    a.restart?'Reprise après arrêt: démarrage conservateur, pas de test maximal immédiat, volume initial réduit.':null,
+    a.pain?'Gêne/douleur déclarée: ne pas programmer de progression agressive sur la zone concernée; demander un avis professionnel si douleur importante, persistante ou aggravée.':null
+  ].filter(Boolean).map(x=>`- ${x}`).join('\n');
+}
+function cycleAiPreflightLabel(objective='',target='',opts={}){
+  const a=cycleAiSafetyAssessment(objective,target,opts);
+  if(a.status==='ready')return {tone:'ok',title:'Prêt pour la programmation',text:'Les données disponibles permettent une proposition prudente.'};
+  if(a.needsAssessment)return {tone:'warn',title:'Évaluation préalable recommandée',text:`Il manque ${a.missing.join(', ')}. ChatGPT doit privilégier une phase/test d’évaluation avant une progression agressive.`};
+  return {tone:'warn',title:'Progression conservatrice',text:'Le contexte impose davantage de marge et une progression conditionnelle.'};
 }
 function cycleAiPromptText(c,goal,opts={}){
   const cs=getCycleState(),setup=getEquipmentSetup(),history=getHistory(),records=currentRecords();
@@ -1994,6 +2053,10 @@ ${contextParts.length?contextParts.join('\n'):'Contexte particulier: aucun'}
 NIVEAU ACTUEL
 Source: ${opts.source==='manual'?'saisie manuelle':'données Calisthenie Coach'}
 ${recText}
+
+VALIDATION SÉCURITÉ / PRÉREQUIS
+${cycleAiSafetyText(opts.objective,opts.target,opts)}
+Pour un skill avancé, si les prérequis spécifiques sont incomplets, utilise les premières prescriptions comme évaluation/phase d'apprentissage prudente. Ne suppose jamais qu'un mouvement explosif ou avancé est maîtrisé uniquement à partir d'un nombre de répétitions sur un mouvement de base.
 
 RYTHME HEBDOMADAIRE SOUHAITÉ
 Séances par semaine: ${opts.trainingDays||cycleTrainingDays(c).length}
@@ -2040,7 +2103,7 @@ Propose uniquement les modifications réellement utiles au programme actuel. Pou
 - raison courte;
 - semaines concernées ou règle de progression.
 
-6. Ajoute ensuite PROGRESSION DES EXERCICES PRIORITAIRES: décris la progression concrète semaine par semaine des mouvements directement liés à l'objectif. Pour chaque exercice prioritaire modifié/ajouté, fournis une prescription explicite pour chaque semaine concernée (séries, reps/secondes et assistance éventuelle), afin que l'application ne garde pas une prescription statique pendant 8 semaines.
+6. Ajoute ensuite PROGRESSION DES EXERCICES PRIORITAIRES: décris la progression concrète semaine par semaine des mouvements directement liés à l'objectif. La semaine suivante est une CIBLE CONDITIONNELLE, pas une progression automatique: n'augmente que si la prescription précédente a été validée avec technique propre, RIR suffisant et sans gêne. Sinon maintiens ou réduis. Pour chaque exercice prioritaire modifié/ajouté, fournis une prescription explicite pour chaque semaine concernée.
 7. Identifie les exercices spécifiques à l'objectif absents du programme. N'en ajoute que si cela apporte un bénéfice clair.
 8. Prévois consolidation/deload et gestion de fatigue si pertinent.
 9. Si l'objectif ou l'échéance paraît irréaliste, explique-le et propose une cible intermédiaire mesurable.
@@ -2067,7 +2130,7 @@ Après CONFIGURATION À REPORTER DANS CALISTHENIE COACH, ajoute un unique bloc d
     ]
   },
   "programChanges": [
-    {"day":4,"action":"replace","exercise":"Nom exact actuel","newExercise":"Nom exact bibliothèque","sets":3,"target":2,"type":"reps","weeks":[1,2,3],"reason":"Raison courte","progression":[{"week":1,"sets":3,"target":2,"type":"reps","assistance":"bande moyenne"},{"week":2,"sets":3,"target":3,"type":"reps","assistance":"bande moyenne"}]}
+    {"day":4,"action":"replace","exercise":"Nom exact actuel","newExercise":"Nom exact bibliothèque","sets":3,"target":2,"type":"reps","weeks":[1,2,3],"reason":"Raison courte","progression":[{"week":1,"sets":3,"target":2,"type":"reps","assistance":"bande moyenne","minRir":3},{"week":2,"sets":3,"target":3,"type":"reps","assistance":"bande moyenne","minRir":2}]}
   ]
 }
 Règles JSON:
@@ -2088,6 +2151,8 @@ Règles JSON:
 - weeks est un tableau de numéros de semaines;
 - progression est obligatoire pour chaque action modify/replace/add portant sur un exercice prioritaire et contient une ligne par semaine réellement prescrite;
 - progression.week doit être entre 1 et ${cs.weekCount}; sets et target doivent être positifs; assistance est une courte description libre et peut être vide;
+- minRir est facultatif (0 à 5) et indique le RIR minimal à obtenir sur la prescription précédente pour autoriser l'augmentation; par défaut utilise 2 pour les mouvements de base et 3 pour les skills avancés;
+- une progression hebdomadaire est conditionnelle: si la semaine précédente n'est pas validée proprement, l'application doit pouvoir maintenir la prescription précédente au lieu d'augmenter;
 - les prescriptions de progression sont des cibles finales: l'application les appliquera telles quelles pour l'exercice prioritaire, sans leur appliquer une seconde fois le facteur global de reps/volume;
 - n'ajoute aucune clé non prévue sauf si elle est indispensable.
 Si tu dois d'abord poser des questions parce qu'une donnée indispensable manque, NE FOURNIS PAS ce JSON avant d'avoir reçu les réponses.`;
@@ -2146,7 +2211,7 @@ function validateCycleAiImport(data,sourceCycle){
   (weeks||[]).forEach((w,i)=>{if(Number(w.week)!==i+1)errors.push(`S${i+1}: numéro de semaine invalide.`);for(const k of ['volume','target','cardio']){const v=Number(w[k]);if(!Number.isFinite(v)||v<.4||v>1.5)errors.push(`S${i+1}: ${k} hors limites.`);}const rir=Number(w.rir);if(!Number.isFinite(rir)||rir<0||rir>5)errors.push(`S${i+1}: RIR invalide.`);});
   const allowed=new Set(['keep','modify','replace','add','remove']),types=new Set(['reps','reps_band','hold','timer']);
   (data?.programChanges||[]).forEach((ch,i)=>{const n=i+1,day=Number(ch.day);if(day<1||day>7)errors.push(`Adaptation ${n}: jour invalide.`);if(!allowed.has(ch.action))errors.push(`Adaptation ${n}: action inconnue.`);if(ch.type&&!types.has(ch.type))errors.push(`Adaptation ${n}: type inconnu.`);const dayEx=(cycleDayTemplate(sourceCycle,day-1).exercises||[]).map(x=>x.name);if(['modify','replace','remove'].includes(ch.action)&&!dayEx.includes(ch.exercise))errors.push(`J${day}: exercice actuel introuvable « ${ch.exercise||''} ».`);if(['add','replace'].includes(ch.action)&&ch.newExercise&&!exerciseInfo(ch.newExercise))warnings.push(`J${day}: « ${ch.newExercise} » n'est pas reconnu dans la bibliothèque; vérification nécessaire.`);if(ch.weeks&&!ch.weeks.every(w=>Number(w)>=1&&Number(w)<=8))errors.push(`Adaptation ${n}: semaines invalides.`);
-    if(Array.isArray(ch.progression)){const seen=new Set();ch.progression.forEach(p=>{const wk=Number(p.week);if(wk<1||wk>8||seen.has(wk))errors.push(`Adaptation ${n}: progression hebdomadaire invalide.`);seen.add(wk);if(Number(p.sets)<=0||Number(p.target)<=0)errors.push(`Adaptation ${n}: séries/cible invalides en S${wk}.`);});}
+    if(Array.isArray(ch.progression)){const seen=new Set();ch.progression.forEach(p=>{const wk=Number(p.week);if(wk<1||wk>8||seen.has(wk))errors.push(`Adaptation ${n}: progression hebdomadaire invalide.`);seen.add(wk);if(Number(p.sets)<=0||Number(p.target)<=0)errors.push(`Adaptation ${n}: séries/cible invalides en S${wk}.`);if(p.minRir!=null&&(Number(p.minRir)<0||Number(p.minRir)>5))errors.push(`Adaptation ${n}: minRir invalide en S${wk}.`);});}
     if(['modify','replace','add'].includes(ch.action)&&(!Array.isArray(ch.progression)||!ch.progression.length))warnings.push(`J${day}: aucune progression hebdomadaire détaillée pour « ${ch.newExercise||ch.exercise} »; la prescription restera statique.`);
   });
   return {ok:!errors.length,errors,warnings};
@@ -3212,7 +3277,8 @@ function bindEvents(){
     const refreshAiReview=()=>{
       const box=document.getElementById('cycleAiReview');if(!box)return;
       const source=document.querySelector('input[name=cycleAiSource]:checked')?.value||'app',snap=cycleAiDataSnapshot(aiObjective(),aiTarget());
-      box.innerHTML=`<div><span>Objectif</span><strong>${esc(aiObjective())} · ${esc(aiTarget()||'à préciser')}</strong></div><div><span>Échéance</span><strong>${esc(document.getElementById('cycleAiHorizon')?.value||'Sans date')}</strong></div><div><span>Rythme</span><strong>${esc(document.getElementById('cycleAiTrainingDays')?.value||'6')} séances · repos ${esc(aiDesiredRestDays().join(', ')||'—')}</strong></div><div><span>Niveau</span><strong>${source==='app'?`${snap.found}/${snap.total} indicateurs depuis l’app`:'Saisie manuelle'}</strong></div><div><span>Contexte</span><strong>${esc(document.getElementById('cycleAiContext')?.value||'Aucun')}</strong></div>`;
+      const safety=cycleAiPreflightLabel(aiObjective(),aiTarget(),{context:document.getElementById('cycleAiContext')?.value||'',painImpact:document.getElementById('cycleAiPainImpact')?.value||'',breakDuration:document.getElementById('cycleAiBreakDuration')?.value||''});
+      box.innerHTML=`<div><span>Objectif</span><strong>${esc(aiObjective())} · ${esc(aiTarget()||'à préciser')}</strong></div><div><span>Échéance</span><strong>${esc(document.getElementById('cycleAiHorizon')?.value||'Sans date')}</strong></div><div><span>Rythme</span><strong>${esc(document.getElementById('cycleAiTrainingDays')?.value||'6')} séances · repos ${esc(aiDesiredRestDays().join(', ')||'—')}</strong></div><div><span>Niveau</span><strong>${source==='app'?`${snap.found}/${snap.total} indicateurs depuis l’app`:'Saisie manuelle'}</strong></div><div><span>Contexte</span><strong>${esc(document.getElementById('cycleAiContext')?.value||'Aucun')}</strong></div><div class="ai-safety-review ${safety.tone}"><span>Sécurité</span><strong>${esc(safety.title)}</strong><small>${esc(safety.text)}</small></div>`;
     };
     document.getElementById('cycleAiNext')?.addEventListener('click',()=>{if(aiStep===1&&!aiTarget()){document.getElementById('cycleAiTarget')?.focus();return;}if(aiStep===3&&!aiSyncTrainingSchedule())return;showAiStep(aiStep+1);});
     document.getElementById('cycleAiPrev')?.addEventListener('click',()=>showAiStep(aiStep-1));

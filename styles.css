@@ -2459,3 +2459,8 @@ html[data-theme="dark"] .next-exercise-preview-rich,html[data-theme="dark"] .pro
 /* V10.12.2 · importer feedback */
 .ai-import-loading{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .ai-import-loading strong{font-size:.72rem}.ai-import-loading p{margin:5px 0 0;font-size:.63rem;color:var(--muted)}
+
+/* v10.13 · coaching safety layer */
+.ai-safety-review{grid-column:1/-1;border-top:1px solid var(--line);padding-top:10px!important}
+.ai-safety-review small{display:block;margin-top:4px;color:var(--muted);line-height:1.45}
+.ai-safety-review.warn strong{font-weight:750}
