@@ -2816,3 +2816,43 @@ body{
     width:min(620px,calc(100% - var(--safe-left) - var(--safe-right) - 16px))!important;
   }
 }
+
+
+/* v10.32 · Final Mobility audit + cleaner Today */
+.today-primary-actions{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin:14px 0 18px!important;
+}
+.today-primary-actions>.cockpit-card,
+.today-primary-actions>.cockpit-card:first-child{
+  grid-column:auto!important;
+  display:grid!important;
+  align-content:center!important;
+  min-width:0!important;
+  min-height:86px!important;
+  padding:13px 14px!important;
+  gap:4px!important;
+}
+.today-primary-actions>.cockpit-card:first-child small{margin-left:0!important}
+.today-primary-actions .rank-cockpit{text-align:left;cursor:pointer}
+.today-primary-actions .today-action-card{cursor:pointer}
+.today-primary-actions .cockpit-card>span{width:20px;height:20px;display:grid;place-items:center}
+.today-primary-actions .cockpit-card strong{font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.today-primary-actions .cockpit-card small{font-size:.61rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.today-details{margin-bottom:16px}
+#mobilityAssessment{scroll-margin-top:calc(var(--safe-top) + 10px)}
+.mob-priority-side small{line-height:1.35}
+.mob-chart-empty{border-bottom:1px solid var(--line)}
+.mob-profile-bars>div.unassessed b{color:var(--muted)}
+.mob-status-line strong{overflow-wrap:anywhere}
+@media(max-width:430px){
+  .today-primary-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;margin-top:12px!important}
+  .today-primary-actions>.cockpit-card,
+  .today-primary-actions>.cockpit-card:first-child{min-height:78px!important;padding:10px 9px!important;border-radius:17px!important}
+  .today-primary-actions .cockpit-card strong{font-size:.73rem}
+  .today-primary-actions .cockpit-card small{font-size:.52rem}
+  .today-primary-actions .cockpit-card>span{width:18px;height:18px}
+  .today-mobility{margin-top:2px}
+}

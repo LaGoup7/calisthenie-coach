@@ -505,18 +505,18 @@ const FLEX_ROUTINES = [
 ];
 
 const MOBILITY_TESTS = [
-  {id:"ankle_left", zone:"ankles", side:"Gauche", name:"Knee-to-wall gauche", short:"Cheville G", unit:"cm", target:10, note:"Distance gros orteil → mur, talon au sol.", min:0, step:.1},
-  {id:"ankle_right", zone:"ankles", side:"Droite", name:"Knee-to-wall droite", short:"Cheville D", unit:"cm", target:10, note:"Même protocole à droite.", min:0, step:.1},
-  {id:"hip_ir_left", zone:"hips", side:"Gauche", name:"Rotation interne hanche gauche", short:"Hanche G", unit:"°", target:35, note:"Mesure en position 90/90 avec bassin stable.", min:0, step:1},
-  {id:"hip_ir_right", zone:"hips", side:"Droite", name:"Rotation interne hanche droite", short:"Hanche D", unit:"°", target:35, note:"Même protocole à droite.", min:0, step:1},
-  {id:"forward_fold", zone:"posterior", name:"Flexion avant", short:"Chaîne postérieure", unit:"cm", target:0, note:"0 = doigts aux orteils. Positif = au-delà, négatif = avant les orteils.", min:-50, step:.5},
-  {id:"deep_squat", zone:"hips", name:"Deep squat confortable", short:"Squat profond", unit:"sec", target:60, note:"Test fonctionnel : talons au sol, position stable et confortable.", min:0, step:1},
-  {id:"shoulder_flex_left", zone:"shoulders", side:"Gauche", name:"Flexion épaule gauche", short:"Épaule G", unit:"°", target:170, note:"Bras au-dessus de la tête sans compensation lombaire.", min:0, step:1},
-  {id:"shoulder_flex_right", zone:"shoulders", side:"Droite", name:"Flexion épaule droite", short:"Épaule D", unit:"°", target:170, note:"Même protocole à droite.", min:0, step:1},
-  {id:"thoracic_rotation_left", zone:"thorax", side:"Gauche", name:"Rotation thoracique gauche", short:"Thorax G", unit:"°", target:45, note:"Rotation assise ou quadrupédie, bassin stable.", min:0, step:1},
-  {id:"thoracic_rotation_right", zone:"thorax", side:"Droite", name:"Rotation thoracique droite", short:"Thorax D", unit:"°", target:45, note:"Même protocole à droite.", min:0, step:1},
-  {id:"wrist_extension_left", zone:"wrists", side:"Gauche", name:"Extension poignet gauche", short:"Poignet G", unit:"°", target:70, note:"Coude tendu, paume en appui, mesure sans douleur.", min:0, step:1},
-  {id:"wrist_extension_right", zone:"wrists", side:"Droite", name:"Extension poignet droite", short:"Poignet D", unit:"°", target:70, note:"Même protocole à droite.", min:0, step:1}
+  {id:"ankle_left", zone:"ankles", side:"Gauche", name:"Knee-to-wall gauche", short:"Cheville G", unit:"cm", target:10, max:25, note:"Distance gros orteil → mur, talon au sol.", min:0, step:.1},
+  {id:"ankle_right", zone:"ankles", side:"Droite", name:"Knee-to-wall droite", short:"Cheville D", unit:"cm", target:10, max:25, note:"Même protocole à droite.", min:0, step:.1},
+  {id:"hip_ir_left", zone:"hips", side:"Gauche", name:"Rotation interne hanche gauche", short:"Hanche G", unit:"°", target:35, max:90, note:"Mesure en position 90/90 avec bassin stable.", min:0, step:1},
+  {id:"hip_ir_right", zone:"hips", side:"Droite", name:"Rotation interne hanche droite", short:"Hanche D", unit:"°", target:35, max:90, note:"Même protocole à droite.", min:0, step:1},
+  {id:"forward_fold", zone:"posterior", name:"Flexion avant", short:"Chaîne postérieure", unit:"cm", target:0, max:30, note:"0 = doigts aux orteils. Positif = au-delà, négatif = avant les orteils.", min:-50, step:.5},
+  {id:"deep_squat", zone:"hips", name:"Deep squat confortable", short:"Squat profond", unit:"sec", target:60, max:300, score:false, note:"Test fonctionnel : talons au sol, position stable et confortable.", min:0, step:1},
+  {id:"shoulder_flex_left", zone:"shoulders", side:"Gauche", name:"Flexion épaule gauche", short:"Épaule G", unit:"°", target:170, max:210, note:"Bras au-dessus de la tête sans compensation lombaire.", min:0, step:1},
+  {id:"shoulder_flex_right", zone:"shoulders", side:"Droite", name:"Flexion épaule droite", short:"Épaule D", unit:"°", target:170, max:210, note:"Même protocole à droite.", min:0, step:1},
+  {id:"thoracic_rotation_left", zone:"thorax", side:"Gauche", name:"Rotation thoracique gauche", short:"Thorax G", unit:"°", target:45, max:90, note:"Rotation assise ou quadrupédie, bassin stable.", min:0, step:1},
+  {id:"thoracic_rotation_right", zone:"thorax", side:"Droite", name:"Rotation thoracique droite", short:"Thorax D", unit:"°", target:45, max:90, note:"Même protocole à droite.", min:0, step:1},
+  {id:"wrist_extension_left", zone:"wrists", side:"Gauche", name:"Extension poignet gauche", short:"Poignet G", unit:"°", target:70, max:110, note:"Coude tendu, paume en appui, mesure sans douleur.", min:0, step:1},
+  {id:"wrist_extension_right", zone:"wrists", side:"Droite", name:"Extension poignet droite", short:"Poignet D", unit:"°", target:70, max:110, note:"Même protocole à droite.", min:0, step:1}
 ];
 
 
@@ -2524,7 +2524,7 @@ function uiIcon(name, cls="ui-icon") {
 function shell(content, activeTab=state.view) {
   const navTab=activeTab==='custom'?'week':['today','week','flexibility','progress'].includes(activeTab)?activeTab:((activeTab==='athlete'||activeTab==='more'||activeTab==='settings'||activeTab==='profile'||activeTab==='skills'||activeTab==='measurements')?'athlete':'athlete');
   return `<main class="shell">${content}</main>
-  <button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une série rapide"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>
+  ${activeTab==='today'?'':`<button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une série rapide"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`}
   ${renderQuickLogModal()}
   <nav class="bottom-nav bottom-nav-simple" aria-label="Navigation principale">
     <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>${uiIcon('today')}</span>Aujourd'hui</button>
@@ -2663,7 +2663,7 @@ function renderActivityHub(){
   const all=totalTrainingStats(7),m=totalTrainingStats(30),s=all.activities;
   const categories=[['Calisthénie / force',all.strength.minutes],...Object.entries(s.rows).map(([n,v])=>[n,v.minutes])].filter(x=>x[1]>0);
   const max=Math.max(1,...categories.map(x=>x[1]));
-  return `<section class="card activity-hub"><div class="section-head"><div><div class="kicker">Charge globale · 7 jours</div><h2>${Math.floor(all.minutes/60)} h ${String(all.minutes%60).padStart(2,'0')} d'entraînement</h2><p class="muted small">${all.sessions} sessions · charge interne ${Math.round(all.load)} UA</p></div><button type="button" class="btn btn-secondary compact" id="openActivityLog">＋ Activité</button></div>
+  return `<section class="card activity-hub"><div class="section-head"><div><div class="kicker">Charge globale · 7 jours</div><h2>${Math.floor(all.minutes/60)} h ${String(all.minutes%60).padStart(2,'0')} d'entraînement</h2><p class="muted small">${all.sessions} sessions · charge interne ${Math.round(all.load)} UA</p></div></div>
   ${categories.length?`<div class="training-mix">${categories.map(([name,min])=>`<div class="training-mix-row"><div><span>${esc(name)}</span><strong>${Math.round(min)} min</strong></div><div class="training-mix-track"><i style="width:${Math.max(4,Math.round(min/max*100))}%"></i></div></div>`).join('')}</div>`:'<p class="muted small">Tes activités apparaîtront ici pour visualiser la répartition de ton volume.</p>'}
   <div class="activity-month"><span>30 jours</span><strong>${Math.floor(m.minutes/60)} h ${String(m.minutes%60).padStart(2,'0')} · ${m.sessions} sessions</strong></div></section>`;
 }
@@ -2709,11 +2709,15 @@ function renderToday() {
   const recent=history.filter(h=>new Date(h.date).getTime()>=seven),weeklyMinutes=recent.reduce((a,h)=>a+(h.durationMinutes||0),0);
   const rank=getRankState(),warning=dailyQuickLoadWarning(),todayEquipment=[...new Set((w.exercises||[]).flatMap(e=>equipmentForExercise(e.name)))];
   const baseToday=workoutTemplateForDay(day),activeCycle=getActiveTrainingCycle();
-  const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p><div class="rest-reward-note"><strong>+10 XP récupération</strong><span>Le bonus sera validé demain si aucune séance, micro-série de renforcement ou course de 15 min+ n'est enregistrée aujourd'hui.</span></div></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment today-equipment-visual"><strong>Matériel prévu</strong><div class="today-equipment-grid">${todayEquipment.map(x=>`<div class="today-equipment-item"><span class="today-equipment-icon" aria-hidden="true">${equipmentVisualIcon(x)}</span><span>${esc(x)}</span></div>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
+  const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span></div>${todayEquipment.length?`<div class="today-equipment today-equipment-visual"><strong>Matériel prévu</strong><div class="today-equipment-grid">${todayEquipment.map(x=>`<div class="today-equipment-item"><span class="today-equipment-icon" aria-hidden="true">${equipmentVisualIcon(x)}</span><span>${esc(x)}</span></div>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">KINETIK</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
-    <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>${uiIcon('add')}</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card rank-cockpit rank-${rank.current.id}"><strong>${rank.current.name}</strong><small>${rank.next?`${rankProgressText(rank.next,rank.nextEval)} vers ${rank.next.name}`:`${rank.xp.total.toLocaleString('fr-FR')} XP · rang maximal`}</small></div><div class="cockpit-card"><span>${uiIcon('clock')}</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
-    ${renderTodayMobilityPrompt()}${renderActivityHub()}${renderDailyVolumeCard()}${renderTodayUsefulActions()}${program}`, 'today');
+    <section class="today-cockpit today-primary-actions">
+      <button class="cockpit-card rank-cockpit rank-${rank.current.id}" data-view="skills"><span>${uiIcon('award')}</span><strong>${rank.displayName||rank.current.name}</strong><small>${rank.next?`${Math.round(rank.readiness*100)}% vers ${rank.next.name}`:'Rang maximal'}</small></button>
+      <button class="cockpit-card today-action-card" data-open-quick-log="true"><span>${uiIcon('add')}</span><strong>Ajouter</strong><small>Série libre</small></button>
+      <button class="cockpit-card today-action-card" data-open-activity="true"><span>${uiIcon('spark')}</span><strong>Activité</strong><small>Course, vélo, boxe…</small></button>
+    </section>
+    ${program}${renderTodayMobilityPrompt()}${renderActivityHub()}${renderDailyVolumeCard()}${renderTodayUsefulActions()}`, 'today');
 }
 function renderWeekExercise(e, i) {
   const rest = e.rest > 0 ? ` · repos ${fmtTime(e.rest)}` : '';
@@ -2800,7 +2804,7 @@ function renderFlexResearch(){
   return `<details class="card flex-research"><summary><div><div class="kicker">Base scientifique</div><strong>Comment la page Flex est pilotée</strong><small>Dose, timing, intensité et transfert vers la calisthénie</small></div><span>⌄</span></summary><div class="flex-research-body"><div class="research-rule"><b>1</b><p><strong>Pour gagner de l'amplitude :</strong> l'étirement statique répété fonctionne. Une méta-analyse de 189 études observe un plateau des gains autour de 4 min cumulées par séance et 10 min/semaine, sans avantage clair à multiplier la fréquence si le volume total est comparable.</p></div><div class="research-rule"><b>2</b><p><strong>Avant une séance de force :</strong> privilégie mobilité/dynamique. Les longs étirements statiques sont mieux placés après la séance ou dans une routine dédiée lorsqu'on veut éviter une baisse aiguë de performance.</p></div><div class="research-rule"><b>3</b><p><strong>La force compte aussi :</strong> le renforcement réalisé avec une grande amplitude peut améliorer le ROM. L'app ne sépare donc pas artificiellement « mobilité » et contrôle actif.</p></div><div class="research-rule"><b>4</b><p><strong>Intensité :</strong> recherche une tension tolérable, pas la douleur. La valeur ${getFlexConfig().intensityMin}–${getFlexConfig().intensityMax}/10 est ta zone de coaching actuelle et reste modifiable.</p></div><div class="source-links"><a href="https://pubmed.ncbi.nlm.nih.gov/39614059/" target="_blank" rel="noopener">Méta-analyse dose stretching</a><a href="https://pubmed.ncbi.nlm.nih.gov/39787531/" target="_blank" rel="noopener">Force & flexibilité</a><a href="https://pubmed.ncbi.nlm.nih.gov/42539555/" target="_blank" rel="noopener">Timing chez sportifs</a></div></div></details>`;
 }
 function renderFlexSettings(){
-  const cfg=getFlexConfig();return `<details class="card parameter-details flex-settings"><summary><div><div class="kicker">Réglages</div><strong>Mes cibles de flexibilité</strong><small>Minutes, fréquence, intensité et tests</small></div><span>⌄</span></summary><div class="parameter-body"><div class="parameter-grid"><label><span>Flex dédiée / semaine (min)</span><input class="mini-input" id="flexWeeklyMinutes" type="number" min="0" step="5" value="${cfg.weeklyMinutesTarget}"></label><label><span>Routines / semaine</span><input class="mini-input" id="flexSessionsTarget" type="number" min="0" max="7" value="${cfg.sessionsTarget}"></label><label><span>Tension min /10</span><input class="mini-input" id="flexIntensityMin" type="number" min="0" max="10" value="${cfg.intensityMin}"></label><label><span>Tension max /10</span><input class="mini-input" id="flexIntensityMax" type="number" min="0" max="10" value="${cfg.intensityMax}"></label></div><h3>Cibles par zone</h3><div class="target-editor-list">${FLEX_ZONES.map(z=>{const t=cfg.zoneTargets[z];return `<div class="target-editor-row flex-target-row"><strong>${z}</strong><label><span>Min</span><input class="mini-input flex-zone-input" data-zone="${z}" data-bound="min" type="number" min="0" step="0.5" value="${t.min}"></label><label><span>Max</span><input class="mini-input flex-zone-input" data-zone="${z}" data-bound="max" type="number" min="0" step="0.5" value="${t.max}"></label><label><span>Séances</span><input class="mini-input flex-zone-input" data-zone="${z}" data-bound="sessions" type="number" min="0" max="7" value="${t.sessions}"></label></div>`}).join('')}</div><h3>Objectifs de tests</h3><div class="parameter-grid">${MOBILITY_TESTS.map(t=>`<label><span>${t.name}</span><input class="mini-input flex-test-target" data-test-target="${t.id}" type="number" step="${t.step}" value="${cfg.testTargets[t.id]}"></label>`).join('')}<label><span>Écart cheville max (cm)</span><input class="mini-input" id="ankleSymmetryMax" type="number" min="0" step="0.1" value="${cfg.ankleSymmetryMax}"></label></div><div class="parameter-actions"><button class="btn btn-primary" id="saveFlexConfig">Enregistrer</button><button class="btn btn-outline" id="resetFlexConfig">Valeurs par défaut</button></div></div></details>`;
+  const cfg=getFlexConfig();return `<details class="card parameter-details flex-settings"><summary><div><div class="kicker">Réglages</div><strong>Préférences mobilité</strong><small>Dosage, intensité et repères avancés</small></div><span>⌄</span></summary><div class="parameter-body"><div class="parameter-grid"><label><span>Mobilité dédiée / semaine (min)</span><input class="mini-input" id="flexWeeklyMinutes" type="number" min="0" step="5" value="${cfg.weeklyMinutesTarget}"></label><label><span>Routines / semaine</span><input class="mini-input" id="flexSessionsTarget" type="number" min="0" max="7" value="${cfg.sessionsTarget}"></label><label><span>Tension min /10</span><input class="mini-input" id="flexIntensityMin" type="number" min="0" max="10" value="${cfg.intensityMin}"></label><label><span>Tension max /10</span><input class="mini-input" id="flexIntensityMax" type="number" min="0" max="10" value="${cfg.intensityMax}"></label></div><h3>Cibles par zone</h3><div class="target-editor-list">${FLEX_ZONES.map(z=>{const t=cfg.zoneTargets[z];return `<div class="target-editor-row flex-target-row"><strong>${z}</strong><label><span>Min</span><input class="mini-input flex-zone-input" data-zone="${z}" data-bound="min" type="number" min="0" step="0.5" value="${t.min}"></label><label><span>Max</span><input class="mini-input flex-zone-input" data-zone="${z}" data-bound="max" type="number" min="0" step="0.5" value="${t.max}"></label><label><span>Séances</span><input class="mini-input flex-zone-input" data-zone="${z}" data-bound="sessions" type="number" min="0" max="7" value="${t.sessions}"></label></div>`}).join('')}</div><h3>Objectifs de tests</h3><div class="parameter-grid">${MOBILITY_TESTS.map(t=>`<label><span>${t.name}</span><input class="mini-input flex-test-target" data-test-target="${t.id}" type="number" step="${t.step}" value="${cfg.testTargets[t.id]}"></label>`).join('')}<label><span>Écart cheville max (cm)</span><input class="mini-input" id="ankleSymmetryMax" type="number" min="0" step="0.1" value="${cfg.ankleSymmetryMax}"></label></div><div class="parameter-actions"><button class="btn btn-primary" id="saveFlexConfig">Enregistrer</button><button class="btn btn-outline" id="resetFlexConfig">Valeurs par défaut</button></div></div></details>`;
 }
 function saveFlexConfigFromDom(){
   const cfg=getFlexConfig();cfg.weeklyMinutesTarget=Math.max(0,Number(document.getElementById('flexWeeklyMinutes')?.value||cfg.weeklyMinutesTarget));cfg.sessionsTarget=clamp(Number(document.getElementById('flexSessionsTarget')?.value||cfg.sessionsTarget),0,7);cfg.intensityMin=clamp(Number(document.getElementById('flexIntensityMin')?.value||cfg.intensityMin),0,10);cfg.intensityMax=clamp(Number(document.getElementById('flexIntensityMax')?.value||cfg.intensityMax),cfg.intensityMin,10);cfg.ankleSymmetryMax=Math.max(0,Number(document.getElementById('ankleSymmetryMax')?.value||cfg.ankleSymmetryMax));document.querySelectorAll('.flex-zone-input').forEach(el=>{const z=el.dataset.zone,b=el.dataset.bound;if(cfg.zoneTargets[z])cfg.zoneTargets[z][b]=Math.max(0,Number(el.value||0));});FLEX_ZONES.forEach(z=>{if(cfg.zoneTargets[z].max<cfg.zoneTargets[z].min)cfg.zoneTargets[z].max=cfg.zoneTargets[z].min;cfg.zoneTargets[z].sessions=clamp(cfg.zoneTargets[z].sessions,0,7);});document.querySelectorAll('.flex-test-target').forEach(el=>{if(el.dataset.testTarget in cfg.testTargets)cfg.testTargets[el.dataset.testTarget]=Number(el.value||0);});setFlexConfig(cfg);state.quickToast='Cibles Flex enregistrées';render();
@@ -2830,19 +2834,22 @@ function mobilityTestScore(def,value){
 }
 function mobilityZoneProfile(zone){
   const defs=zone.tests.map(id=>MOBILITY_TESTS.find(t=>t.id===id)).filter(Boolean);
-  const rows=defs.map(def=>({def,value:latestMobilityValue(def.id)}));
+  const scoredDefs=defs.filter(d=>d.score!==false);
+  const rows=scoredDefs.map(def=>({def,value:latestMobilityValue(def.id)}));
   const scored=rows.map(x=>({...x,score:mobilityTestScore(x.def,x.value)})).filter(x=>x.score!=null);
-  if(!scored.length)return {...zone,score:null,assessed:false,asymmetry:null,latest:null};
+  const functional=defs.filter(d=>d.score===false).map(def=>({def,value:latestMobilityValue(def.id)}));
+  if(!scored.length)return {...zone,score:null,assessed:false,complete:false,asymmetry:null,asymmetryUnit:null,latest:null,functional};
   let score=scored.reduce((s,x)=>s+x.score,0)/scored.length;
   const sides=scored.filter(x=>x.def.side);
-  let asymmetry=null;
+  let asymmetry=null,asymmetryUnit=null;
   if(sides.length>=2){
     const a=sides[0],b=sides[1],target=Math.max(1,Number(a.def.target||1));
-    asymmetry=Math.abs(Number(a.value)-Number(b.value));
+    asymmetry=Math.abs(Number(a.value)-Number(b.value));asymmetryUnit=a.def.unit;
     score-=Math.min(15,(asymmetry/target)*45);
   }
+  const complete=scored.length===scoredDefs.length;
   const latestDate=getMobilityTests().filter(x=>defs.some(d=>d.id===x.testId)).map(x=>new Date(x.date).getTime()).filter(Number.isFinite);
-  return {...zone,score:Math.round(clamp(score,0,100)),assessed:true,asymmetry,latest:latestDate.length?new Date(Math.max(...latestDate)):null};
+  return {...zone,score:Math.round(clamp(score,0,100)),assessed:true,complete,asymmetry,asymmetryUnit,latest:latestDate.length?new Date(Math.max(...latestDate)):null,functional};
 }
 function mobilityProfiles(){return MOBILITY_ZONES.map(mobilityZoneProfile);}
 function mobilityGoalWeights(){
@@ -2858,16 +2865,31 @@ function mobilityGoalWeights(){
   if(/boxe|boxing/.test(text))add(['thorax','hips','ankles'],2);
   return weights;
 }
-function mobilityPriority(){
-  const profiles=mobilityProfiles(),weights=mobilityGoalWeights(),balance=weeklyFlexBalance();
+function mobilityContextWeights(day=todayDay()){
+  const weights={...mobilityGoalWeights()};
+  let w=null;try{w=workoutTemplateForDay(day);}catch(e){}
+  const text=`${w?.name||''} ${w?.subtitle||''} ${(w?.exercises||[]).map(e=>e.name).join(' ')}`.toLowerCase();
+  const add=(ids,n)=>ids.forEach(id=>weights[id]=(weights[id]||0)+n);
+  if(/handstand|hspu|pike/.test(text))add(['wrists','shoulders','thorax'],1.5);
+  if(/muscle.?up|traction|pull|front lever/.test(text))add(['shoulders','thorax'],1);
+  if(/squat|pistol|fente|jamb|leg/.test(text))add(['ankles','hips','posterior'],1);
+  if(/l.?sit|compression|ischio/.test(text))add(['posterior','hips'],1);
+  return weights;
+}
+function mobilityPriority(day=todayDay()){
+  const profiles=mobilityProfiles(),weights=mobilityContextWeights(day),balance=weeklyFlexBalance();
+  const assessed=profiles.filter(p=>p.assessed);
+  const maxGoal=Math.max(0,...Object.values(weights));
+  if(!assessed.length&&maxGoal<=0)return {id:null,label:'À évaluer',assessed:false,complete:false,score:null,routine:'reset-10',impact:[],priorityScore:0,reason:'assessment'};
   const zoneDose={ankles:balance.zones['Chevilles']?.minutes||0,hips:(balance.zones['Hanches']?.minutes||0)+(balance.zones['Fléchisseurs hanche']?.minutes||0),posterior:balance.zones['Ischios']?.minutes||0,shoulders:balance.zones['Épaules']?.minutes||0,thorax:balance.zones['Thorax']?.minutes||0,wrists:balance.zones['Poignets']?.minutes||0};
   const ranked=profiles.map(p=>{
-    const need=p.assessed?(100-p.score):45;
-    const goal=weights[p.id]*11;
+    const need=p.assessed?(100-p.score):(maxGoal>0?32:0);
+    const goal=(weights[p.id]||0)*11;
     const recentPenalty=Math.min(18,zoneDose[p.id]*2.5);
-    return {...p,priorityScore:need+goal-recentPenalty,goalWeight:weights[p.id],recentDose:zoneDose[p.id]};
-  }).sort((a,b)=>b.priorityScore-a.priorityScore);
-  return ranked[0]||profiles[0];
+    const incompleteBonus=p.assessed&&!p.complete?8:0;
+    return {...p,priorityScore:need+goal+incompleteBonus-recentPenalty,goalWeight:weights[p.id]||0,recentDose:zoneDose[p.id],reason:p.assessed?'measure':goal>0?'goal':'assessment'};
+  }).filter(p=>p.assessed||p.goalWeight>0).sort((a,b)=>b.priorityScore-a.priorityScore);
+  return ranked[0]||{id:null,label:'À évaluer',assessed:false,complete:false,score:null,routine:'reset-10',impact:[],priorityScore:0,reason:'assessment'};
 }
 function mobilityObjectiveImpact(zone){
   const p=typeof getAthleteProfile==='function'?getAthleteProfile():{},goal=p.primaryGoal||'tes objectifs';
@@ -2875,13 +2897,13 @@ function mobilityObjectiveImpact(zone){
   return relevant?`Cette zone influence directement ton objectif « ${esc(goal)} ».`:`Cette zone contribue à la qualité générale du mouvement.`;
 }
 function targetedFlexRoutine(day=todayDay()){
-  const p=mobilityPriority();
-  return flexRoutineById(p?.routine||([2,3,5].includes(day)?'upper-15':'lower-18'));
+  const p=mobilityPriority(day);
+  return flexRoutineById(p?.id?p.routine:'reset-10');
 }
 function recommendedFlexRoutine(day=todayDay()){
-  const p=mobilityPriority(),profile=typeof getAthleteProfile==='function'?getAthleteProfile():{},isRest=(profile.restDays||[]).includes(day)||!(preparedWorkout(day)?.exercises||[]).length;
-  if(isRest)return flexRoutineById("reset-10");
-  return flexRoutineById(p?.routine||"reset-10");
+  const p=mobilityPriority(day),profile=typeof getAthleteProfile==='function'?getAthleteProfile():{},isRest=(profile.restDays||[]).includes(day)||!(preparedWorkout(day)?.exercises||[]).length;
+  if(isRest||!p?.id)return flexRoutineById("reset-10");
+  return flexRoutineById(p.routine||"reset-10");
 }
 function mobilityRoutineMode(day=todayDay()){
   const profile=typeof getAthleteProfile==='function'?getAthleteProfile():{},isRest=(profile.restDays||[]).includes(day)||!(preparedWorkout(day)?.exercises||[]).length;
@@ -2911,11 +2933,13 @@ function renderMobilityAssessment(){
 }
 function renderMobilityProfile(){
   const profiles=mobilityProfiles();
-  return `<section class="mob-profile"><div class="mob-section-head"><div><div class="kicker">Ton profil</div><h2>Mobilité fonctionnelle</h2></div><p>Le score reflète la distance à une amplitude fonctionnelle, pas un niveau athlétique absolu.</p></div><div class="mob-profile-bars">${profiles.map(p=>`<div class="${p.assessed?'':'unassessed'}"><div><strong>${p.label}</strong><small>${p.assessed?(p.asymmetry!=null?`asymétrie ${p.asymmetry.toFixed(1)}`:'mesuré'):'à évaluer'}</small></div><div class="mob-track"><i style="width:${p.assessed?p.score:0}%"></i></div><b>${p.assessed?p.score:'—'}</b></div>`).join('')}</div></section>`;
+  return `<section class="mob-profile"><div class="mob-section-head"><div><div class="kicker">Ton profil</div><h2>Mobilité fonctionnelle</h2></div><p>Le score reflète la distance à une amplitude fonctionnelle, pas un niveau athlétique absolu.</p></div><div class="mob-profile-bars">${profiles.map(p=>`<div class="${p.assessed?'':'unassessed'}"><div><strong>${p.label}</strong><small>${p.assessed?(p.asymmetry!=null?`asymétrie ${p.asymmetry.toFixed(1)} ${p.asymmetryUnit||''}`:(p.complete?'mesuré':'évaluation partielle')):'à évaluer'}</small></div><div class="mob-track"><i style="width:${p.assessed?p.score:0}%"></i></div><b>${p.assessed?p.score:'—'}</b></div>`).join('')}</div></section>`;
 }
 function renderTodayMobilityPrompt(){
   const p=mobilityPriority(),r=recommendedFlexRoutine(),mode=mobilityRoutineMode();
-  return `<section class="today-mobility"><div><span>${uiIcon('flex')}</span><div><strong>${mode} mobilité · ${r.duration} min</strong><small>${p?.assessed?`Priorité ${p.label} · ${p.score}/100`:`Priorité ${p?.label||'à évaluer'}`}</small></div></div><button class="btn btn-outline compact" data-view="flexibility">Voir</button></section>`;
+  if(!p?.id)return `<section class="today-mobility"><div><span>${uiIcon('flex')}</span><div><strong>Mobilité · profil à évaluer</strong><small>Quelques tests suffisent pour personnaliser les routines.</small></div></div><button class="btn btn-outline compact" data-view="flexibility">Évaluer</button></section>`;
+  const stateText=p.assessed?`Priorité ${p.label} · ${p.complete?p.score+'/100':'évaluation partielle'}`:`À évaluer pour ${p.label.toLowerCase()}`;
+  return `<section class="today-mobility"><div><span>${uiIcon('flex')}</span><div><strong>${mode} mobilité · ${r.duration} min</strong><small>${stateText}</small></div></div><button class="btn btn-outline compact" data-view="flexibility">Voir</button></section>`;
 }
 function renderMobilityProgressSummary(){
   const profiles=mobilityProfiles().filter(x=>x.assessed),p=mobilityPriority();
@@ -2932,21 +2956,21 @@ function renderFlexibility(){
   return shell(`<header class="topbar mobility-topbar"><div><div class="brand">Mobilité</div><div class="daylabel">Amplitude · contrôle · souplesse</div></div></header>
     <section class="mob-status-line">
       <div><span>Zones évaluées</span><strong>${assessed.length}/${MOBILITY_ZONES.length}</strong></div>
-      <div><span>Priorité</span><strong>${priority?.label||'À évaluer'}</strong></div>
+      <div><span>Priorité</span><strong>${priority?.id?priority.label:'À évaluer'}</strong></div>
       <div><span>Plus forte</span><strong>${strong?.label||'—'}</strong></div>
       <div><span>Objectif lié</span><strong>${esc(goal)}</strong></div>
     </section>
 
     <section class="mob-today">
-      <div class="mob-today-copy"><div class="kicker">Aujourd'hui · ${mode}</div><h1>${recommended.name}</h1><p>${mode==='Recovery'?'Routine douce compatible avec une journée de repos.':`Priorité ${priority?.label?.toLowerCase()||'générale'} selon tes mesures, ton objectif et le travail récent.`}</p><div class="mob-today-meta"><span>${recommended.duration} min</span><span>${recommended.focus}</span><span>tension ${cfg.intensityMin}–${cfg.intensityMax}/10</span></div></div><button class="btn btn-primary start-flex" data-flex="${recommended.id}">Commencer</button>
+      <div class="mob-today-copy"><div class="kicker">Aujourd'hui · ${priority?.id?mode:'Point de départ'}</div><h1>${priority?.id?recommended.name:'Évalue ta mobilité'}</h1><p>${!priority?.id?'KINETIK ne choisit pas arbitrairement une zone faible. Enregistre quelques tests pour obtenir une priorité réelle.':mode==='Recovery'?'Routine douce compatible avec une journée de repos.':priority.assessed?`Priorité ${priority.label.toLowerCase()} selon tes mesures, ton objectif et le travail récent.`:`Routine orientée ${priority.label.toLowerCase()} d'après ton objectif ; mesure cette zone pour confirmer.`}</p>${priority?.id?`<div class="mob-today-meta"><span>${recommended.duration} min</span><span>${recommended.focus}</span><span>tension ${cfg.intensityMin}–${cfg.intensityMax}/10</span></div>`:''}</div>${priority?.id?`<button class="btn btn-primary start-flex" data-flex="${recommended.id}">Commencer</button>`:`<button class="btn btn-primary" id="openMobilityAssessment">Faire l'évaluation</button>`}
       <details class="mob-change-routine"><summary>Changer de format</summary><div><button class="mob-routine-option start-flex" data-flex="reset-10"><strong>Recovery</strong><span>≈ 10 min · doux</span></button><button class="mob-routine-option start-flex" data-flex="${targeted.id}"><strong>Ciblée</strong><span>≈ ${targeted.duration} min · ${priority?.label||targeted.focus}</span></button><button class="mob-routine-option start-flex" data-flex="full-25"><strong>Complète</strong><span>≈ 25 min · corps entier</span></button></div></details>
     </section>
 
     ${renderMobilityProfile()}
 
     <section class="mob-priority">
-      <div><div class="kicker">Priorité actuelle</div><h2>${priority?.label||'Évaluation nécessaire'} ${priority?.assessed?`· ${priority.score}/100`:''}</h2><p>${priority?mobilityObjectiveImpact(priority):'Évalue quelques zones pour personnaliser la recommandation.'}</p></div>
-      <div class="mob-priority-side"><span>Impact possible</span><strong>${(priority?.impact||[]).slice(0,3).join(' · ')||'Mouvement général'}</strong>${priority?.asymmetry!=null?`<small>Asymétrie mesurée · ${priority.asymmetry.toFixed(1)}</small>`:''}<button class="btn btn-secondary compact start-flex" data-flex="${priority?.routine||targeted.id}">Travailler cette zone</button></div>
+      <div><div class="kicker">Priorité actuelle</div><h2>${priority?.id?priority.label:'Évaluation nécessaire'} ${priority?.assessed?`· ${priority.score}/100`:''}</h2><p>${priority?.id?mobilityObjectiveImpact(priority):'Commence par les tests les plus pertinents. KINETIK établira ensuite une priorité à partir des mesures réelles.'}</p></div>
+      <div class="mob-priority-side"><span>Impact possible</span><strong>${(priority?.impact||[]).slice(0,3).join(' · ')||'À déterminer après évaluation'}</strong>${priority?.asymmetry!=null?`<small>Asymétrie mesurée · ${priority.asymmetry.toFixed(1)} ${priority.asymmetryUnit||''}</small>`:''}${priority?.id?`<button class="btn btn-secondary compact start-flex" data-flex="${priority.routine||targeted.id}">Travailler cette zone</button>`:`<button class="btn btn-secondary compact" id="openMobilityAssessmentSecondary">Évaluer</button>`}</div>
     </section>
 
     <section class="mob-progress">
@@ -2954,14 +2978,14 @@ function renderFlexibility(){
       ${renderMobilityChart(chartZone)}
     </section>
 
-    ${renderMobilityAssessment()}
+    ${renderMobilityAssessment().replace('class="mob-lower-section"','class="mob-lower-section" id="mobilityAssessment"')}
 
     <details class="mob-lower-section"><summary><div><div class="kicker">Historique</div><strong>${logs.length} routine${logs.length>1?'s':''} enregistrée${logs.length>1?'s':''}</strong></div><span>⌄</span></summary><div class="mob-lower-content">${logs.length?`<div class="mob-history">${logs.slice(0,8).map(l=>`<div><span>${formatDate(l.date)}</span><strong>${esc(l.name)}</strong><span>${l.durationMinutes} min</span><span>confort ${l.comfort||'—'}/5</span></div>`).join('')}</div>`:'<p class="muted">Ta première routine apparaîtra ici.</p>'}</div></details>
     ${renderFlexResearch()}
     ${renderFlexSettings()}
     <div class="flex-safety-line"><span>✓</span><p><strong>Sécurité :</strong> tension ${cfg.intensityMin}–${cfg.intensityMax}/10. Stop en cas de douleur vive, pincement, engourdissement ou sensation électrique.</p></div>`,"flexibility");
 }
-function saveMobilityTest(id){const def=MOBILITY_TESTS.find(x=>x.id===id),el=document.getElementById(`mob_${id}`);if(!def||!el||el.value==='')return;const value=Number(el.value);if(!Number.isFinite(value))return;const arr=getMobilityTests();arr.unshift({id:Date.now(),date:new Date().toISOString(),testId:id,value});setMobilityTests(arr.slice(0,400));render();}
+function saveMobilityTest(id){const def=MOBILITY_TESTS.find(x=>x.id===id),el=document.getElementById(`mob_${id}`);if(!def||!el||el.value==='')return;const value=Number(el.value);if(!Number.isFinite(value)||value<Number(def.min??-Infinity)||(def.max!=null&&value>Number(def.max)))return;const arr=getMobilityTests();arr.unshift({id:Date.now(),date:new Date().toISOString(),testId:id,value});setMobilityTests(arr.slice(0,400));render();}
 
 function allExerciseNames(){const names=new Set(EXERCISE_LIBRARY.map(e=>e.name));Object.values(workouts).forEach(w=>w.exercises.forEach(e=>names.add(e.name)));FLEX_ROUTINES.forEach(r=>r.exercises.forEach(e=>names.add(e.name)));return [...names].sort((a,b)=>a.localeCompare(b,'fr'));}
 function tutorialStats(){const names=allExerciseNames(), exact=names.filter(n=>tutorialFor(n).exact).length;return {total:names.length,exact};}
@@ -4024,7 +4048,7 @@ function bindEvents(){
     const eq=getEquipmentSetup();document.querySelectorAll('.athlete-equipment-check').forEach(x=>eq[x.dataset.equipmentId]=x.checked);setEquipmentSetup(eq);
     state.athleteProfileEditor=false;render();
   };
-  const openActivity=document.getElementById('openActivityLog');if(openActivity)openActivity.onclick=()=>{state.activityEditor=true;render();};
+  const openActivity=document.getElementById('openActivityLog');if(openActivity)openActivity.onclick=()=>{state.activityEditor=true;render();};document.querySelectorAll('[data-open-activity]').forEach(b=>b.onclick=()=>{state.activityEditor=true;render();});
   const cancelActivity=document.getElementById('cancelActivity');if(cancelActivity)cancelActivity.onclick=()=>{state.activityEditor=false;render();};
   const saveActivity=document.getElementById('saveActivity');if(saveActivity)saveActivity.onclick=()=>{const duration=Number(document.getElementById('activityDuration')?.value||0);if(duration<=0)return;addActivityLog(document.getElementById('activityType')?.value||'sport',duration,Number(document.getElementById('activityDistance')?.value||0),'rpe',document.getElementById('activityNote')?.value||'',Number(document.getElementById('activityRpe')?.value||5));state.activityEditor=false;render();};
   const activityTypeEl=document.getElementById('activityType'),activityRpe=document.getElementById('activityRpe'),activityDuration=document.getElementById('activityDuration');
@@ -4246,6 +4270,7 @@ function bindEvents(){
   document.querySelectorAll('[data-body-period]').forEach(b=>b.onclick=()=>{state.bodyPeriod=b.dataset.bodyPeriod;render();});
   document.querySelectorAll('[data-body-metric]').forEach(b=>b.onclick=()=>{state.bodyMetric=b.dataset.bodyMetric;state.bodyCompareMetric='none';render();});
   document.querySelectorAll('[data-mobility-zone]').forEach(b=>b.onclick=()=>{state.mobilityChartZone=b.dataset.mobilityZone;render();});
+  ['openMobilityAssessment','openMobilityAssessmentSecondary'].forEach(id=>{const b=document.getElementById(id);if(b)b.onclick=()=>{const d=document.getElementById('mobilityAssessment');if(d){d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'});}};});
   const bodyCompareMetric=document.getElementById('bodyCompareMetric');if(bodyCompareMetric)bodyCompareMetric.onchange=()=>{state.bodyCompareMetric=bodyCompareMetric.value;render();};
   const bodyFrom=document.getElementById('bodyPeriodFrom');if(bodyFrom)bodyFrom.onchange=()=>{state.bodyPeriodFrom=bodyFrom.value;render();};
   const bodyTo=document.getElementById('bodyPeriodTo');if(bodyTo)bodyTo.onchange=()=>{state.bodyPeriodTo=bodyTo.value;render();};
