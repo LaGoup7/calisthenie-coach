@@ -4692,6 +4692,9 @@ bindEvents=function(){
   const remEnabled=document.getElementById('remindersEnabled');if(remEnabled)remEnabled.onchange=()=>{const p=getReminderPrefs();p.enabled=remEnabled.checked;setReminderPrefs(p);render();};
   document.querySelectorAll('.reminder-toggle').forEach(el=>el.onchange=()=>{const p=getReminderPrefs();p[el.dataset.reminder]=el.checked;setReminderPrefs(p);render();});
   const theme=document.getElementById('appTheme');if(theme)theme.onchange=()=>{const p=getPrefs();p.appTheme=theme.value;setPrefs(p);
+applyAppTheme();render();};
+};
+
 /* ========================================================================== */
 /* V10.40 · Intelligence foundation                                           */
 /* ========================================================================== */
@@ -4754,10 +4757,6 @@ renderProgressPerformance=function(){const rs=getRankState();let html=_renderPro
 
 const _bindEventsV1040=bindEvents;
 bindEvents=function(){_bindEventsV1040();document.querySelectorAll('[data-review-technique]').forEach(b=>b.onclick=()=>{state.active.reviewTechnique=Number(b.dataset.reviewTechnique);render();});document.querySelectorAll('[data-open-activity]').forEach(b=>b.onclick=()=>{state.activityEditId=null;state.activityEditor=true;render();});document.querySelectorAll('.edit-activity').forEach(b=>b.onclick=()=>{state.activityEditId=b.dataset.activityId;state.activityEditor=true;render();});document.querySelectorAll('.delete-activity').forEach(b=>b.onclick=()=>{if(confirm('Supprimer cette activité ?')){setActivities(getActivities().filter(x=>String(x.id)!==String(b.dataset.activityId)));render();}});const cancel=document.getElementById('cancelActivity');if(cancel)cancel.onclick=()=>{state.activityEditor=false;state.activityEditId=null;render();};const saveBtn=document.getElementById('saveActivity');if(saveBtn)saveBtn.onclick=()=>{const duration=Number(document.getElementById('activityDuration')?.value||0);if(duration<=0)return;const type=document.getElementById('activityType')?.value||'sport',distance=Number(document.getElementById('activityDistance')?.value||0),rpe=Number(document.getElementById('activityRpe')?.value||5),note=document.getElementById('activityNote')?.value||'',dateValue=document.getElementById('activityDate')?.value;if(state.activityEditId){const rows=getActivities(),i=rows.findIndex(x=>String(x.id)===String(state.activityEditId));if(i>=0){rows[i]={...rows[i],date:dateValue?new Date(`${dateValue}T12:00:00`).toISOString():rows[i].date,type,duration,distance:Math.max(0,distance),rpe:clamp(rpe,1,10),note,load:Math.round(duration*clamp(rpe,1,10))};setActivities(rows);}}else{addActivityLog(type,duration,distance,'rpe',note,rpe);if(dateValue&&dateValue!==new Date().toISOString().slice(0,10)){const rows=getActivities();if(rows[0])rows[0].date=new Date(`${dateValue}T12:00:00`).toISOString();setActivities(rows);}}state.activityEditor=false;state.activityEditId=null;render();};const typeEl=document.getElementById('activityType'),rpeEl=document.getElementById('activityRpe'),durEl=document.getElementById('activityDuration');const sync=()=>{if(!typeEl)return;const type=activityType(typeEl.value),wrap=document.getElementById('activityDistanceWrap'),unit=document.getElementById('activityDistanceUnit'),rpe=Number(rpeEl?.value||5),mins=Number(durEl?.value||0),rv=document.getElementById('activityRpeValue'),title=document.getElementById('activityEditorTitle'),symbol=document.getElementById('activityEditorSymbol'),lp=document.getElementById('activityLoadPreview');if(wrap)wrap.style.display=type.distance?'':'none';if(unit)unit.textContent=type.metric||'km';if(rv)rv.textContent=rpe;if(title)title.textContent=type.label;if(symbol)symbol.textContent=activityUiIcon(type.id);if(lp)lp.innerHTML=type.id==='mobility'?'—':`${Math.round(mins*rpe)} <small>UA</small>`;};if(typeEl)typeEl.onchange=sync;if(rpeEl)rpeEl.oninput=sync;if(durEl)durEl.oninput=sync;sync();};
-
-applyAppTheme();render();};
-};
-
 
 /* ========================================================================== */
 /* V10.50 · Centre d’évaluation KINETIK                                       */
@@ -5046,6 +5045,328 @@ bindEvents=function(){
   const close=document.getElementById("closeAssessment");if(close)close.onclick=()=>{state.assessmentEditor=null;state.view="assessment";render();};
   const sd=document.getElementById("saveAssessmentDeclared");if(sd)sd.onclick=()=>saveAssessment(false);
   const sv=document.getElementById("saveAssessmentValidated");if(sv)sv.onclick=()=>saveAssessment(true);
+};
+
+
+/* ========================================================================== */
+/* V10.60 · Progression Intelligence                                          */
+/* Athlete State · limiting factor · readiness · plateau · cross-sport coach  */
+/* ========================================================================== */
+
+/* Fix evidence lookup for Quick Logs: TEST_GUIDED_EXERCISES stores arrays. */
+assessmentEvidenceForTest=function(testId){
+  const a=assessmentBestForTest(testId),names=TEST_GUIDED_EXERCISES[testId]||[];
+  const guided=names.some(name=>Number(bestMetricDetails(getHistory(),name)?.value||0)>0)?2:0;
+  const quick=names.some(name=>Number(bestQuickMetricDetails(name)?.value||0)>0)?1:0;
+  const legacy=getTests().filter(x=>x.testId===testId).reduce((m,x)=>Math.max(m,x.source==='kinetik'?3:x.source==='workout'?2:1),0);
+  return Math.max(Number(a?.evidenceLevel||0),guided,quick,legacy);
+};
+
+function v1060DateMs(x){const n=new Date(x||0).getTime();return Number.isFinite(n)?n:0;}
+function v1060MetricEvents(rx){
+  const rows=[];
+  getHistory().forEach(s=>(s.entries||[]).forEach(e=>{if(rx.test(String(e.exercise||'')))rows.push({date:s.date,value:Number(e.value||0),source:'workout',rpe:Number(s.rpe||0),rir:Number(s.reviewRir??NaN),technique:Number(s.reviewTechnique||0),discomfort:!!s.jointDiscomfort});}));
+  getQuickLogs().forEach(q=>{const n=String(q.exercise||q.name||'');if(rx.test(n))rows.push({date:q.date,value:Number(q.value||0),source:'declared'});});
+  getAssessments().forEach(a=>{const n=String(a.exercise||assessmentProtocol(a.protocolId)?.name||'');if(rx.test(n))rows.push({date:a.date,value:Number(a.value||0),source:'assessment',evidence:Number(a.evidenceLevel||0)});});
+  getTests().forEach(x=>{const d=TEST_DEFS.find(t=>t.id===x.testId);if(d&&rx.test(String(d.name||'')))rows.push({date:x.date,value:Number(x.value||0),source:x.source||'declared',evidence:x.source==='kinetik'?3:x.source==='workout'?2:1});});
+  return rows.filter(x=>x.value>0&&v1060DateMs(x.date)).sort((a,b)=>v1060DateMs(a.date)-v1060DateMs(b.date));
+}
+function v1060BestPeriod(rx,days=30,offsetDays=0){
+  const end=Date.now()-offsetDays*86400000,start=end-days*86400000,rows=v1060MetricEvents(rx).filter(x=>{const d=v1060DateMs(x.date);return d>=start&&d<end;});
+  return rows.length?Math.max(...rows.map(x=>x.value)):0;
+}
+function v1060TrendLabel(cur,prev,step=1){
+  if(!cur&&!prev)return {id:'unknown',label:'À mesurer',symbol:'—'};
+  if(cur&&!prev)return {id:'baseline',label:'Référence créée',symbol:'•'};
+  const d=cur-prev;
+  if(d>=step)return {id:'up',label:'En progression',symbol:'↗'};
+  if(d<=-step)return {id:'down',label:'En baisse',symbol:'↘'};
+  return {id:'stable',label:'Stable',symbol:'→'};
+}
+function v1060EvidenceLabel(level){
+  if(level>=2.5)return {id:'high',label:'Élevée'};
+  if(level>=1.5)return {id:'medium',label:'Moyenne'};
+  if(level>0)return {id:'low',label:'Faible'};
+  return {id:'none',label:'À construire'};
+}
+function v1060AssessmentQuality(){
+  const c=assessmentCoverage(),score=Math.round(c.pct*.4+c.verifiedPct*.6);
+  return {score,coverage:c,confidence:v1060EvidenceLabel(score>=75?3:score>=45?2:score>0?1:0)};
+}
+function v1060ForceState(days=30){
+  const pull=v1060BestPeriod(/tractions strictes|pull.?ups?/i,days,0),pullPrev=v1060BestPeriod(/tractions strictes|pull.?ups?/i,days,days);
+  const dips=v1060BestPeriod(/\bdips?\b/i,days,0),dipsPrev=v1060BestPeriod(/\bdips?\b/i,days,days);
+  const p=v1060TrendLabel(pull,pullPrev,1),d=v1060TrendLabel(dips,dipsPrev,1);
+  let trend=p.id==='up'||d.id==='up'?{id:'up',label:'En progression',symbol:'↗'}:(p.id==='unknown'&&d.id==='unknown'?{id:'unknown',label:'À mesurer',symbol:'—'}:{id:'stable',label:'Stable',symbol:'→'});
+  const evidence=Math.max(assessmentEvidenceForTest('pullups'),assessmentEvidenceForTest('dips'));
+  return {id:'force',label:'Force',value:trend.label,symbol:trend.symbol,tone:trend.id,detail:pull||d?`${pull||'—'} tractions · ${dips||'—'} dips`:'Aucune référence',confidence:v1060EvidenceLabel(evidence)};
+}
+function v1060SkillsState(){
+  const tree=primarySkillTree(),p=skillTreeProgress(tree),recent=getAssessments().filter(x=>x.category==='skills'&&Date.now()-v1060DateMs(x.date)<=30*86400000);
+  const value=p.pct>=75?'Avancé':p.pct>=40?'En construction':p.pct>0?'Fondations':'À évaluer';
+  return {id:'skills',label:'Skills',value,symbol:recent.length?'↗':p.pct?'→':'—',tone:recent.length?'up':p.pct?'stable':'unknown',detail:`${tree.name} · ${p.pct}%`,confidence:v1060EvidenceLabel(recent.reduce((m,x)=>Math.max(m,Number(x.evidenceLevel||0)),0))};
+}
+function v1060MobilityTrend(){
+  const deltas=[];
+  for(const def of MOBILITY_TESTS.filter(x=>x.score!==false)){
+    const rows=getMobilityTests().filter(x=>x.testId===def.id).sort((a,b)=>v1060DateMs(a.date)-v1060DateMs(b.date));
+    if(rows.length<2)continue;
+    const a=mobilityTestScore(def,rows[rows.length-2].value),b=mobilityTestScore(def,rows[rows.length-1].value);
+    if(a!=null&&b!=null)deltas.push(b-a);
+  }
+  const profiles=mobilityProfiles(),assessed=profiles.filter(x=>x.assessed),avg=assessed.length?Math.round(assessed.reduce((s,x)=>s+x.score,0)/assessed.length):null,delta=deltas.length?deltas.reduce((s,x)=>s+x,0)/deltas.length:null;
+  const trend=delta==null?(avg!=null?{id:'stable',label:'Référence créée',symbol:'•'}:{id:'unknown',label:'À évaluer',symbol:'—'}):delta>=3?{id:'up',label:'En progression',symbol:'↗'}:delta<=-3?{id:'down',label:'À surveiller',symbol:'↘'}:{id:'stable',label:'Stable',symbol:'→'};
+  const complete=profiles.filter(x=>x.complete).length;
+  return {id:'mobility',label:'Mobilité',value:trend.label,symbol:trend.symbol,tone:trend.id,detail:avg==null?'Aucune évaluation':`${avg}/100 · ${assessed.length}/${profiles.length} zones`,confidence:v1060EvidenceLabel(complete>=4?2:assessed.length?1:0)};
+}
+function v1060CardioState(days=30){
+  const cooper=getAssessments().filter(x=>x.protocolId==='cooper12').sort((a,b)=>v1060DateMs(a.date)-v1060DateMs(b.date));
+  const run5=getAssessments().filter(x=>x.protocolId==='run5k').sort((a,b)=>v1060DateMs(a.date)-v1060DateMs(b.date));
+  let trend={id:'unknown',label:'À évaluer',symbol:'—'},detail='Aucun test cardio',evidence=0;
+  if(cooper.length){const cur=Number(cooper.at(-1).value||0),prev=Number(cooper.at(-2)?.value||0);trend=v1060TrendLabel(cur,prev,50);detail=`12 min · ${cur} m`;evidence=Number(cooper.at(-1).evidenceLevel||0);}
+  else if(run5.length){const cur=Number(run5.at(-1).value||0),prev=Number(run5.at(-2)?.value||0);trend=prev?(cur<=prev-.2?{id:'up',label:'En progression',symbol:'↗'}:Math.abs(cur-prev)<.2?{id:'stable',label:'Stable',symbol:'→'}:{id:'down',label:'À surveiller',symbol:'↘'}):{id:'baseline',label:'Référence créée',symbol:'•'};detail=`5 km · ${cur} min`;evidence=Number(run5.at(-1).evidenceLevel||0);}
+  else {
+    const start=Date.now()-days*86400000,acts=getActivities().filter(a=>v1060DateMs(a.date)>=start&&['running','cycling','swimming','rowing','crossfit','hyrox','sport'].includes(a.type));
+    if(acts.length)trend={id:'baseline',label:'Actif',symbol:'•'},detail=`${acts.length} activité${acts.length>1?'s':''} / ${days} j`,evidence=1;
+  }
+  return {id:'cardio',label:'Cardio',value:trend.label,symbol:trend.symbol,tone:trend.id,detail,confidence:v1060EvidenceLabel(evidence)};
+}
+function v1060LoadState(){
+  const cur=trainingWindowStats(Date.now()-7*86400000,Date.now()),prev=trainingWindowStats(Date.now()-14*86400000,Date.now()-7*86400000),delta=prev.sportLoad?Math.round((cur.sportLoad-prev.sportLoad)/prev.sportLoad*100):null;
+  const tone=delta==null?'unknown':delta>35?'warn':delta<-25?'down':'stable';
+  return {id:'load',label:'Charge',value:delta==null?'Référence en cours':`${delta>=0?'+':''}${delta}%`,symbol:delta==null?'—':delta>25?'↗':delta<-15?'↘':'→',tone,detail:`${cur.sportLoad.toLocaleString('fr-FR')} UA · 7 j`,delta,current:cur,previous:prev,confidence:v1060EvidenceLabel(cur.sessions>=3?2:cur.sessions?1:0)};
+}
+function v1060AthleteState(days=30){
+  const q=v1060AssessmentQuality();
+  return {
+    days,
+    force:v1060ForceState(days),
+    skills:v1060SkillsState(),
+    mobility:v1060MobilityTrend(),
+    cardio:v1060CardioState(days),
+    load:v1060LoadState(),
+    data:{id:'data',label:'Données',value:`${q.score}%`,symbol:q.score>=70?'✓':'○',tone:q.score>=70?'up':q.score>=35?'stable':'unknown',detail:`${q.coverage.verified} tests KINETIK vérifiés`,confidence:q.confidence}
+  };
+}
+
+function v1060MobilityFactor(id,label){
+  const p=mobilityProfiles().find(x=>x.id===id);
+  return {label,score:p?.assessed?p.score:null,detail:p?.assessed?`${p.score}/100${p.complete?'':' · partiel'}`:'Non évalué',confidence:p?.complete?2:p?.assessed?1:0,type:'mobility',id};
+}
+function v1060TestFactor(label,testId,target){
+  const v=Number(performanceValueForTest(testId)||0),e=assessmentEvidenceForTest(testId);
+  return {label,score:v?Math.min(100,Math.round(v/target*100)):null,detail:v?`${v} / ${target}`:'Non évalué',confidence:e,type:'test',id:testId};
+}
+function v1060ExerciseFactor(label,name,target){
+  const v=Number(bestExerciseValue(name)||0),e=assessmentEvidenceForExercise(name);
+  return {label,score:v?Math.min(100,Math.round(v/target*100)):null,detail:v?`${v} / ${target}`:'Non évalué',confidence:e,type:'exercise',id:name};
+}
+function v1060CapabilityFactor(label,id,target=70){
+  const c=capabilityScores().find(x=>x.id===id);
+  return {label,score:c?.assessed?Math.min(100,Math.round(c.score/target*100)):null,detail:c?.assessed?`${c.score}/100 KINETIK`:'Non évalué',confidence:c?.assessed?1:0,type:'capability',id};
+}
+function v1060GoalFactors(){
+  const g=String(getAthleteProfile().primaryGoal||'').toLowerCase();
+  if(/muscle.?up/.test(g))return [
+    v1060TestFactor('Force de tirage','pullups',10),
+    v1060ExerciseFactor('Tirage haut','Chest-to-bar',5),
+    v1060CapabilityFactor('Explosivité','explosive',60),
+    v1060TestFactor('Poussée / dips','dips',12),
+    v1060TestFactor('Grip de base','dead_hang',60),
+    v1060MobilityFactor('shoulders','Mobilité épaules')
+  ];
+  if(/handstand|hspu/.test(g))return [
+    v1060TestFactor('Base inversée','wall_handstand',60),
+    v1060ExerciseFactor('Équilibre libre','Handstand libre',30),
+    v1060MobilityFactor('wrists','Extension poignets'),
+    v1060MobilityFactor('shoulders','Flexion épaules'),
+    v1060CapabilityFactor('Poussée verticale','push',60)
+  ];
+  if(/l.?sit/.test(g))return [
+    v1060CapabilityFactor('Core','core',60),
+    v1060MobilityFactor('posterior','Chaîne postérieure'),
+    v1060MobilityFactor('hips','Hanches'),
+    v1060ExerciseFactor('L-sit','L-sit',20)
+  ];
+  if(/front lever/.test(g))return [
+    v1060CapabilityFactor('Tirage','pull',70),
+    v1060CapabilityFactor('Core','core',60),
+    v1060CapabilityFactor('Grip','grip',60),
+    v1060ExerciseFactor('Front lever','Front lever',10)
+  ];
+  if(/human flag/.test(g))return [
+    v1060CapabilityFactor('Tirage','pull',65),
+    v1060CapabilityFactor('Poussée','push',65),
+    v1060CapabilityFactor('Core','core',60),
+    v1060CapabilityFactor('Équilibre','balance',55),
+    v1060ExerciseFactor('Human flag','Human flag',10)
+  ];
+  const caps=capabilityScores().filter(x=>x.assessed).map(x=>({label:x.label,score:x.score,detail:`${x.score}/100 KINETIK`,confidence:1,type:'capability',id:x.id}));
+  return caps;
+}
+function v1060GoalLimiter(){
+  const factors=v1060GoalFactors(),known=factors.filter(x=>x.score!=null),missing=factors.filter(x=>x.score==null);
+  const limiter=known.sort((a,b)=>a.score-b.score)[0]||null;
+  const evidence=known.length?known.reduce((s,x)=>s+Number(x.confidence||0),0)/known.length:0;
+  return {limiter,missing,factors,confidence:v1060EvidenceLabel(evidence)};
+}
+
+function v1060RecentExternalSport(hours=30){
+  const start=Date.now()-hours*3600000,rows=getActivities().filter(a=>v1060DateMs(a.date)>=start&&a.type!=='mobility'),load=rows.reduce((s,a)=>s+activityInternalLoad(a),0),maxRpe=rows.reduce((m,a)=>Math.max(m,Number(a.rpe||0)),0),minutes=rows.reduce((s,a)=>s+Number(a.duration||0),0);
+  const hard=rows.some(a=>Number(a.rpe||0)>=8&&Number(a.duration||0)>=45)||load>=450;
+  const elevated=!hard&&(load>=300||rows.some(a=>Number(a.rpe||0)>=7&&Number(a.duration||0)>=60));
+  return {rows,load,maxRpe,minutes,mode:hard?'high':elevated?'elevated':'normal'};
+}
+function v1060ReadinessState(){
+  const ext=v1060RecentExternalSport(),load=v1060LoadState(),recentStrength=getHistory().filter(s=>Date.now()-v1060DateMs(s.date)<=72*3600000).slice(0,3);
+  const avgRpe=recentStrength.length?recentStrength.reduce((s,x)=>s+Number(x.rpe||0),0)/recentStrength.length:0,avgTech=recentStrength.filter(x=>x.reviewTechnique).length?recentStrength.filter(x=>x.reviewTechnique).reduce((s,x)=>s+Number(x.reviewTechnique||0),0)/recentStrength.filter(x=>x.reviewTechnique).length:null;
+  const reasons=[];let score=0;
+  if(ext.mode==='high'){score+=2;reasons.push(`${ext.minutes} min de sport externe récent · charge ${ext.load} UA`);}
+  else if(ext.mode==='elevated'){score+=1;reasons.push(`activité externe soutenue dans les ${30} dernières heures`);}
+  if(load.delta!=null&&load.delta>35){score+=1;reasons.push(`charge 7 j en hausse de ${load.delta}%`);}
+  if(avgRpe>=8){score+=1;reasons.push(`RPE récent élevé (${avgRpe.toFixed(1)})`);}
+  if(avgTech!=null&&avgTech<3.5){score+=1;reasons.push(`qualité technique récente moyenne (${avgTech.toFixed(1)}/5)`);}
+  if(recentStrength.some(x=>x.jointDiscomfort)){score+=1;reasons.push('gêne signalée sur une séance récente');}
+  const mode=score>=3?'reduced':score>=1?'prudent':'good';
+  return {mode,label:mode==='reduced'?'Allégée':mode==='prudent'?'Prudente':'Bonne',reasons:reasons.length?reasons:['charge et retours récents compatibles avec le programme'],external:ext,load,avgRpe,avgTech};
+}
+function v1060GoalPriorityRegex(){
+  const g=String(getAthleteProfile().primaryGoal||'').toLowerCase();
+  if(/muscle.?up/.test(g))return /tractions strictes|chest-to-bar|traction.*explos|muscle.?up/i;
+  if(/handstand|hspu/.test(g))return /handstand|hspu|pike push/i;
+  if(/l.?sit/.test(g))return /l.?sit|hanging knee|toes-to-bar|hollow/i;
+  if(/front lever/.test(g))return /front lever|tractions strictes|row/i;
+  if(/human flag/.test(g))return /human flag|side plank|tractions|dips/i;
+  return /$a/;
+}
+function v1060MultisportAdjustment(){
+  const r=v1060ReadinessState(),ext=r.external;
+  if(ext.mode!=='high')return {mode:ext.mode==='elevated'?'note':'normal',label:ext.mode==='elevated'?'Charge externe à considérer':'Aucune adaptation multisport',reason:ext.mode==='elevated'?`Sport externe récent : ${ext.minutes} min · ${ext.load} UA.`:'',setFactor:1};
+  return {mode:'reduce-accessories',label:'Accessoires légèrement réduits',reason:`Sport externe intense dans les 30 dernières heures : ${ext.minutes} min · ${ext.load} UA. Les mouvements prioritaires restent inchangés.`,setFactor:.8};
+}
+const _preparedWorkoutV1060=preparedWorkout;
+preparedWorkout=function(day,readiness=null,sessionLength="full"){
+  const w=_preparedWorkoutV1060(day,readiness,sessionLength);
+  if(Number(day)!==Number(todayDay())||sessionLength==='short'||!w?.exercises?.length)return w;
+  if(readiness&&readinessPlan(readiness).mode!=='normal')return w;
+  const a=v1060MultisportAdjustment();if(a.mode!=='reduce-accessories'){w.coachAdaptation=a;return w;}
+  const keep=v1060GoalPriorityRegex();let mainSeen=0,changed=0;
+  w.exercises=w.exercises.map(e=>{
+    if((e.phase||'main')!=='main'||e.type==='timer')return e;
+    mainSeen++;
+    if(mainSeen<=2||keep.test(String(e.name||''))||Number(e.sets||0)<3)return e;
+    changed++;return {...e,sets:Math.max(2,Number(e.sets||1)-1),coachAdjusted:true,prescriptionStatus:e.prescriptionStatus==='progress'?'maintain':e.prescriptionStatus,prescriptionNote:`${e.prescriptionNote||''}${e.prescriptionNote?' · ':''}1 série retirée après charge multisport élevée.`};
+  });
+  if(changed){w.duration=Math.max(20,Number(w.duration||45)-changed*3);w.coachAdaptation={...a,changed};}
+  return w;
+};
+
+function v1060PlateauCandidate(){
+  const g=String(getAthleteProfile().primaryGoal||'').toLowerCase();
+  const candidates=/muscle.?up|front lever/.test(g)?['Tractions strictes','Chest-to-bar']:/handstand|hspu/.test(g)?['Handstand libre','Dips']:/l.?sit/.test(g)?['L-sit','Hanging knee raises']:/human flag/.test(g)?['Tractions strictes','Dips']:['Tractions strictes','Dips'];
+  for(const name of candidates){
+    const sessions=exerciseSessions(name,20).filter(x=>Date.now()-v1060DateMs(x.session.date)<=56*86400000).sort((a,b)=>v1060DateMs(a.session.date)-v1060DateMs(b.session.date));
+    if(sessions.length<5)continue;
+    const span=v1060DateMs(sessions.at(-1).session.date)-v1060DateMs(sessions[0].session.date);if(span<21*86400000)continue;
+    const best=s=>Math.max(...s.entries.map(e=>Number(e.value||0))),half=Math.floor(sessions.length/2),first=Math.max(...sessions.slice(0,half).map(best)),last=Math.max(...sessions.slice(half).map(best));
+    const recent=sessions.slice(-3),rir=recent.map(x=>Number(x.session.reviewRir)).filter(Number.isFinite),tech=recent.map(x=>Number(x.session.reviewTechnique)).filter(Number.isFinite),goodMargin=rir.length>=2&&rir.reduce((a,b)=>a+b,0)/rir.length>=2,goodTech=tech.length>=2&&tech.reduce((a,b)=>a+b,0)/tech.length>=4,noPain=recent.every(x=>!x.session.jointDiscomfort);
+    if(last<=first*1.03&&goodMargin&&goodTech&&noPain)return {name,first,last,weeks:Math.round(span/604800000),reason:`${name} stable sur ~${Math.round(span/604800000)} semaines malgré une marge et une technique correctes.`};
+  }
+  return null;
+}
+function v1060BodySignal(days=90){
+  const rows=getBodyLogs().filter(x=>Date.now()-v1060DateMs(x.date)<=days*86400000).sort((a,b)=>v1060DateMs(a.date)-v1060DateMs(b.date));
+  if(rows.length<2)return null;
+  const first=rows[0],last=rows.at(-1),w0=Number(first.weight),w1=Number(last.weight),wa0=Number(first.waist),wa1=Number(last.waist);
+  if(![w0,w1,wa0,wa1].every(Number.isFinite))return null;
+  const dw=w1-w0,dwa=wa1-wa0,force=v1060ForceState(Math.min(days,45));
+  if(Math.abs(dw)<=1.5&&dwa<=-1.5&&force.tone==='up')return {id:'recomp',label:'Recomposition possible',detail:`Poids ${dw>=0?'+':''}${dw.toFixed(1)} kg · taille ${dwa.toFixed(1)} cm · force en progression.`};
+  if(dw>0&&dw<=2.5&&dwa<=0&&force.tone==='up')return {id:'recomp',label:'Évolution corporelle favorable possible',detail:`Poids +${dw.toFixed(1)} kg, taille stable/en baisse et performances en hausse.`};
+  return null;
+}
+function v1060NextBestChoice(){
+  const readiness=v1060ReadinessState(),lim=v1060GoalLimiter(),plateau=v1060PlateauCandidate(),quality=v1060AssessmentQuality();
+  if(readiness.mode==='reduced')return {id:'recover',label:'Respecter la séance allégée',detail:readiness.reasons[0]||'Charge récente élevée.',action:'today'};
+  const importantMissing=lim.missing.find(x=>x.type==='test'||x.type==='exercise'||x.type==='mobility');
+  if(importantMissing&&quality.score<70)return {id:'assess',label:`Évaluer ${importantMissing.label.toLowerCase()}`,detail:'Cette donnée manque pour confirmer le facteur limitant de ton objectif.',action:'assessment'};
+  if(plateau)return {id:'plateau',label:`Revoir la progression · ${plateau.name}`,detail:plateau.reason,action:'performance'};
+  if(lim.limiter&&lim.limiter.score<55)return {id:'focus',label:`Prioriser ${lim.limiter.label.toLowerCase()}`,detail:`C’est actuellement la dimension la moins avancée parmi les facteurs mesurés de ton objectif.`,action:'today'};
+  return {id:'continue',label:'Continuer le cycle actuel',detail:'Aucun signal enregistré ne justifie actuellement un changement important du programme.',action:'today'};
+}
+function v1060PrimaryExerciseDecision(){
+  const w=preparedWorkout(todayDay()),keep=v1060GoalPriorityRegex();
+  const mains=(w.exercises||[]).filter(e=>(e.phase||'main')==='main'&&e.type!=='timer');
+  const e=mains.find(x=>keep.test(String(x.name||'')))||mains[0]||null;
+  if(!e)return {workout:w,exercise:null,label:'Recovery / mobilité',detail:'Aucune séance de force planifiée aujourd’hui.'};
+  const status=e.prescriptionStatus==='progress'?'Progression':e.prescriptionStatus==='recover'?'Allégé':e.prescriptionStatus==='maintain'?'Maintien':'Prescription';
+  return {workout:w,exercise:e,label:`${status} · ${e.name}`,detail:e.prescriptionNote||`${e.sets} × ${e.target} prévu aujourd’hui.`};
+}
+function v1060InsightDecision(days=30){
+  const s=v1060AthleteState(days),r=v1060ReadinessState(),lim=v1060GoalLimiter(),plateau=v1060PlateauCandidate(),body=v1060BodySignal(),next=v1060NextBestChoice();
+  let title='Progression en construction',tone='neutral',text=next.detail;
+  if(r.mode==='reduced'){title='Charge récente à absorber';tone='warn';text='KINETIK conserve les mouvements prioritaires mais réduit les accessoires lorsque la charge multisport récente est élevée.';}
+  else if(plateau){title='Progression ralentie détectée';tone='warn';text=plateau.reason;}
+  else if(s.force.tone==='up'&&s.load.delta!=null&&s.load.delta<=25){title='Progression cohérente';tone='good';text='Les performances de force progressent sans hausse rapide de la charge sportive enregistrée.';}
+  else if(s.load.delta!=null&&s.load.delta>35){title='Charge en hausse rapide';tone='warn';text=`La charge sportive des 7 derniers jours est ${s.load.delta}% au-dessus des 7 jours précédents. Ce signal sert à ajuster le volume, pas à prédire une blessure.`;}
+  else if(lim.limiter){title=`Priorité · ${lim.limiter.label}`;tone='neutral';text=`${lim.limiter.detail}. ${lim.missing.length?'Certaines dimensions restent à évaluer.':'Les principaux facteurs de ton objectif sont renseignés.'}`;}
+  return {title,tone,text,state:s,readiness:r,limiter:lim,plateau,body,next};
+}
+function renderV1060StateItem(x){
+  return `<div class="athlete-state-item ${x.tone||''}"><div><span>${x.label}</span><strong>${x.symbol} ${x.value}</strong></div><small>${esc(x.detail)}</small></div>`;
+}
+renderAdaptiveReport=function(){
+  const days=state.reportPeriod==='90d'?90:30,i=v1060InsightDecision(days),s=i.state,lim=i.limiter.limiter,conf=i.limiter.confidence;
+  return `<section class="card adaptive-report intelligence-report ${i.tone}">
+    <div class="section-head"><div><div class="kicker">Lecture KINETIK</div><h2>${i.title}</h2></div><div class="report-tabs"><button data-report-period="30d" class="${days===30?'active':''}">30 j</button><button data-report-period="90d" class="${days===90?'active':''}">90 j</button></div></div>
+    <p class="intelligence-lead">${i.text}</p>
+    <div class="athlete-state-grid">${[s.force,s.skills,s.mobility,s.cardio,s.load,s.data].map(renderV1060StateItem).join('')}</div>
+    <div class="intelligence-lower">
+      <div class="intelligence-limiter"><span>Facteur limitant · ${esc(getAthleteProfile().primaryGoal||'objectif actuel')}</span><strong>${lim?esc(lim.label):'Données insuffisantes'}</strong><small>${lim?`${esc(lim.detail)} · confiance ${conf.label.toLowerCase()}`:'Passe quelques évaluations pour identifier une priorité crédible.'}</small></div>
+      <div class="intelligence-readiness mode-${i.readiness.mode}"><span>Disponibilité estimée</span><strong>${i.readiness.label}</strong><small>${esc(i.readiness.reasons[0]||'')}</small></div>
+    </div>
+    <div class="next-best-choice"><div><span>Prochain meilleur choix</span><strong>${esc(i.next.label)}</strong><small>${esc(i.next.detail)}</small></div><button class="btn btn-outline compact" ${i.next.action==='assessment'?'data-view="assessment"':i.next.action==='performance'?'data-progress-tab="performance"':'data-view="today"'}>Ouvrir →</button></div>
+    ${i.plateau?`<div class="intelligence-signal warn"><strong>Plateau possible</strong><span>${esc(i.plateau.reason)}</span></div>`:''}
+    ${i.body?`<div class="intelligence-signal good"><strong>${esc(i.body.label)}</strong><span>${esc(i.body.detail)}</span></div>`:''}
+    <p class="muted small">Lecture descriptive basée sur les données KINETIK. La disponibilité et les tendances ne sont ni un diagnostic ni une prédiction de blessure.</p>
+  </section>`;
+};
+
+function renderTodayCoachStrip(){
+  const d=v1060PrimaryExerciseDecision(),r=v1060ReadinessState(),lim=v1060GoalLimiter(),a=d.workout?.coachAdaptation,next=v1060NextBestChoice();
+  return `<section class="today-coach-strip mode-${r.mode}">
+    <div class="today-coach-main"><div class="kicker">Coach du jour</div><strong>${esc(d.label)}</strong><span>${esc(d.detail)}</span></div>
+    <div class="today-coach-side"><span>Disponibilité</span><strong>${r.label}</strong>${a&&a.mode!=='normal'?`<small>${esc(a.label)}</small>`:lim.limiter?`<small>Focus · ${esc(lim.limiter.label)}</small>`:''}</div>
+    ${a?.mode==='reduce-accessories'?`<div class="today-coach-adaptation"><span>Adaptation multisport</span><strong>${esc(a.reason)}</strong></div>`:''}
+  </section>`;
+}
+const _renderTodayV1060=renderToday;
+renderToday=function(){
+  let html=_renderTodayV1060(),marker='<section class="today-cockpit today-primary-actions">';
+  return html.includes(marker)?html.replace(marker,renderTodayCoachStrip()+marker):html;
+};
+
+const _renderWeekV1060=renderWeek;
+renderWeek=function(){
+  let html=_renderWeekV1060(),a=v1060MultisportAdjustment(),r=v1060ReadinessState();
+  if(a.mode==='normal'&&r.mode==='good')return html;
+  const banner=`<section class="planning-coach-banner mode-${r.mode}"><div><div class="kicker">Adaptation du jour</div><strong>${a.mode==='reduce-accessories'?a.label:r.label}</strong><span>${esc(a.reason||r.reasons[0]||'')}</span></div><small>Seule la séance d’aujourd’hui est adaptée automatiquement.</small></section>`;
+  const marker='<div class="week-heatmap">';
+  return html.includes(marker)?html.replace(marker,banner+marker):html;
+};
+
+const _renderSkillsV1060=renderSkills;
+renderSkills=function(){
+  let html=_renderSkillsV1060(),lim=v1060GoalLimiter(),quality=v1060AssessmentQuality();
+  const section=`<section class="cap-intelligence-link"><div><div class="kicker">Lecture objectif</div><strong>${lim.limiter?`Facteur limitant · ${esc(lim.limiter.label)}`:'Facteur limitant à confirmer'}</strong><span>${lim.limiter?`${esc(lim.limiter.detail)} · confiance ${lim.confidence.label.toLowerCase()}`:`${quality.score}% de qualité de données globale`}</span></div><button class="btn btn-outline compact" data-view="assessment">${lim.missing.length?'Compléter les tests':'Vérifier'}</button></section>`;
+  const marker='<section class="cap-profile-section">';
+  return html.includes(marker)?html.replace(marker,section+marker):html;
+};
+
+/* Final event layer for intelligence actions */
+const _bindEventsV1060=bindEvents;
+bindEvents=function(){
+  _bindEventsV1060();
+  document.querySelectorAll('.next-best-choice [data-progress-tab]').forEach(b=>b.onclick=()=>{state.view='progress';state.progressTab=b.dataset.progressTab||'performance';render();});
 };
 
 applyAppTheme();
