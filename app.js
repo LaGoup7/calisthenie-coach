@@ -425,7 +425,7 @@ function renderStravaToday(w){
 function renderStravaProfile(){
   const st=state.stravaStatus,meta=getStravaMeta(),acts=getStravaActivities().filter(isRunActivity).slice(0,5);
   if(!st.checked)return `<section class="card strava-card"><h2>Strava</h2><p class="muted">Vérification…</p></section>`;
-  if(!st.connected)return `<section class="card strava-card"><div class="strava-head"><div><div class="kicker">Course</div><h2>Connexion Strava</h2></div><span class="strava-wordmark">STRAVA</span></div><p class="muted small">Synchronise tes courses pour valider le cardio prévu par Calisthénie Coach. Les identifiants Strava restent côté serveur Vercel.</p>${state.stravaMessage?`<div class="coach-note recover">${esc(state.stravaMessage)}</div>`:''}<div class="strava-actions"><a class="btn btn-primary" href="/api/strava/auth">Connecter avec Strava</a><a class="btn btn-outline" href="/api/strava/health" target="_blank" rel="noopener">Diagnostic</a></div></section>`;
+  if(!st.connected)return `<section class="card strava-card"><div class="strava-head"><div><div class="kicker">Course</div><h2>Connexion Strava</h2></div><span class="strava-wordmark">STRAVA</span></div><p class="muted small">Synchronise tes courses pour valider le cardio prévu par KINETIK. Les identifiants Strava restent côté serveur Vercel.</p>${state.stravaMessage?`<div class="coach-note recover">${esc(state.stravaMessage)}</div>`:''}<div class="strava-actions"><a class="btn btn-primary" href="/api/strava/auth">Connecter avec Strava</a><a class="btn btn-outline" href="/api/strava/health" target="_blank" rel="noopener">Diagnostic</a></div></section>`;
   const athlete=st.athlete?`${st.athlete.firstname||''} ${st.athlete.lastname||''}`.trim():'';
   return `<section class="card strava-card"><div class="strava-head"><div><div class="kicker">Connecté</div><h2>${athlete||'Strava'}</h2></div><span class="strava-wordmark">STRAVA</span></div>${meta.lastSync?`<p class="muted small">Dernière synchronisation : ${formatDate(meta.lastSync)}</p>`:''}${acts.length?`<div class="strava-activity-list">${renderStravaRunRows(acts)}</div>`:'<p class="muted small">Synchronise pour importer tes dernières courses.</p>'}<div class="strava-actions"><button class="btn btn-primary" id="syncStrava">Synchroniser les courses</button><button class="btn btn-outline" id="disconnectStrava">Déconnecter</button></div></section>`;
 }
@@ -1302,7 +1302,7 @@ async function exportBackup(){
     if(!row.photoId||photos[row.photoId])continue;
     try{const blob=await getPhoto(row.photoId);if(blob)photos[row.photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',row.photoId,e);}
   }
-  const backup={app:'Calisthenie Coach',schema:1,version:'10.1',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:1,version:'10.1',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1311,7 +1311,7 @@ async function importBackupFile(file){
   if(!file)return;
   let backup;
   try{backup=JSON.parse(await file.text());}catch{alert('Ce fichier n’est pas un JSON valide.');return;}
-  if(!backup||backup.app!=='Calisthenie Coach'||!backup.data||typeof backup.data!=='object'){alert('Ce fichier ne semble pas être une sauvegarde Calisthénie Coach valide.');return;}
+  if(!backup||backup.app!=='KINETIK'||!backup.data||typeof backup.data!=='object'){alert('Ce fichier ne semble pas être une sauvegarde KINETIK valide.');return;}
   if(!confirm('Restaurer cette sauvegarde ? Les données actuelles de ce navigateur seront remplacées.'))return;
   try{
     Object.entries(STORAGE).forEach(([name,key])=>{if(Object.prototype.hasOwnProperty.call(backup.data,name)){const value=backup.data[name];if(value===null||value===undefined)localStorage.removeItem(key);else save(key,value);}});
@@ -2071,7 +2071,7 @@ Résultat visé: ${opts.target||'non précisé'}
 ${contextParts.length?contextParts.join('\n'):'Contexte particulier: aucun'}
 
 NIVEAU ACTUEL
-Source: ${opts.source==='manual'?'saisie manuelle':'données Calisthenie Coach'}
+Source: ${opts.source==='manual'?'saisie manuelle':'données KINETIK'}
 ${recText}
 
 VALIDATION SÉCURITÉ / PRÉREQUIS
@@ -2263,7 +2263,7 @@ function createCycleFromAiImport(data,sourceCycle){
 }
 function renderCycleProgressionEditor(){
   const id=state.cycleProgressionEditor,c=trainingCycleById(id),d=state.cycleProgressionDraft||progressionPlanForCycle(c),templates=Object.entries(PROGRESSION_TEMPLATE_DEFS),goals=['Équilibré','Reprise','Force','Muscle / volume','Skills'];
-  return `<main class="shell progression-builder-shell"><section class="card progression-builder-head"><button class="back-btn" id="closeProgressionEditor">← Mes séances</button><div class="kicker">${esc(c.name)} · Progression</div><h1>Comment ce cycle doit-il progresser ?</h1><p class="muted">Choisis le niveau de contrôle qui te convient. Le planning des exercices reste dans le cycle ; cette page décide comment sa difficulté évolue.</p><section class="cycle-ai-wizard-v109">
+  return `<main class="shell progression-builder-shell"><section class="card progression-builder-head"><button class="back-btn" id="closeProgressionEditor">← Programmes</button><div class="kicker">${esc(c.name)} · Progression</div><h1>Comment ce cycle doit-il progresser ?</h1><p class="muted">Choisis le niveau de contrôle qui te convient. Le planning des exercices reste dans le cycle ; cette page décide comment sa difficulté évolue.</p><section class="cycle-ai-wizard-v109">
 <div class="cycle-ai-copy"><div class="cycle-ai-icon">✦</div><div><strong>Assistant de cycle</strong><p>Quelques étapes suffisent. L’app utilise d’abord les informations qu’elle connaît et ne te demande que ce qui manque.</p></div></div>
 <div class="ai-wizard-progress"><span class="active" data-ai-dot="1"></span><span data-ai-dot="2"></span><span data-ai-dot="3"></span><span data-ai-dot="4"></span><span data-ai-dot="5"></span><span data-ai-dot="6"></span></div>
 
@@ -2336,8 +2336,9 @@ function renderCustomSessions(){
   if(state.cycleProgressionEditor)return renderCycleProgressionEditor();
   if(state.customSessionEditor)return renderCustomSessionEditor();
   const list=getCustomWorkouts(),cycles=allTrainingCycles(false),active=getActiveTrainingCycle();
-  return shell(`<header class="topbar"><div><div class="brand">Mes séances</div><div class="daylabel">Cycles hebdomadaires et séances libres</div></div><div class="topbar-actions"><button class="btn btn-secondary compact" id="newCustomSession">＋ Séance</button><button class="btn btn-primary compact" id="newTrainingCycle">＋ Cycle</button></div></header>
-    <section class="cycle-page-intro"><div><div class="kicker">Cycle actif</div><h1>${esc(active.name)}</h1><p class="muted">La page Semaine et la séance du jour utilisent automatiquement ce cycle.</p></div></section>
+  return shell(`<header class="topbar"><div><div class="brand">Planning</div><div class="daylabel">Cycles hebdomadaires et séances libres</div></div><div class="topbar-actions"><button class="btn btn-secondary compact" id="newCustomSession">＋ Séance</button><button class="btn btn-primary compact" id="newTrainingCycle">＋ Cycle</button></div></header>
+    ${renderPlanningTabs('programs')}
+    <section class="cycle-page-intro"><div><div class="kicker">Cycle actif</div><h1>${esc(active.name)}</h1><p class="muted">Le calendrier et la séance du jour utilisent automatiquement ce cycle.</p></div></section>
     <section class="training-cycle-list">${cycles.map(renderTrainingCycleCard).join('')}</section>
     ${renderCycleHeatmap(16)}
     <section class="custom-free-head"><div><div class="kicker">Hors cycle</div><h2>Séances libres</h2><p class="muted small">Pour un entraînement ponctuel qui ne remplace pas ton planning hebdomadaire.</p></div><button class="btn btn-secondary compact" id="newCustomSession2">＋ Nouvelle séance</button></section>
@@ -2346,7 +2347,7 @@ function renderCustomSessions(){
 }
 function renderCustomSessionEditor(){
   const w=state.customSessionDraft||defaultCustomWorkout(),names=customExerciseNames(),quality=customSessionQuality(w),ct=state.cycleDayTarget,cycle=ct?trainingCycleById(ct.cycleId):null;
-  return `<main class="shell custom-editor-shell"><section class="card editor-card"><button class="back-btn" id="closeCustomEditor">← Mes séances</button><div class="kicker">${ct?`${esc(cycle.name)} · ${DAY_NAMES[ct.day]}`:'Éditeur de séance'}</div><h1>${ct?'Modifier la journée':w.id?'Modifier une séance':'Créer une séance'}</h1><p class="muted">Ajoute, remplace, supprime et réordonne librement les exercices. Le contrôle ci-dessous te signale si tu oublies une phase essentielle.</p><label class="field-label">Nom</label><input class="big-input custom-session-meta" data-custom-meta="name" value="${esc(w.name||'')}"><label class="field-label">Description</label><input class="url-input custom-session-meta" data-custom-meta="subtitle" value="${esc(w.subtitle||'')}"><div class="custom-quality"><span class="${quality.warmup?'ok':'warn'}">${quality.warmup?'✓':'!'} Échauffement</span><span class="${quality.cardio?'ok':'warn'}">${quality.cardio?'✓':'!'} Cardio</span><span class="${quality.cooldown?'ok':'warn'}">${quality.cooldown?'✓':'!'} Étirements</span><span>${quality.groups} zones</span><span>${quality.equipment} équipements</span></div><div class="custom-builder-head"><strong>Exercices</strong><button class="btn btn-secondary compact" id="addCustomExercise">＋ Ajouter</button></div><div class="custom-builder-list">${(w.exercises||[]).map((e,i)=>`<article class="custom-builder-row" data-custom-index="${i}"><div class="custom-builder-number">${i+1}</div><div class="custom-builder-main"><select class="select custom-exercise-name" data-custom-index="${i}">${names.map(n=>`<option value="${esc(n)}" ${n===e.name?'selected':''}>${n}</option>`).join('')}</select><div class="custom-builder-grid"><label><span>Phase</span><select class="select custom-ex-field" data-custom-index="${i}" data-key="phase">${['warmup','main','cardio','cooldown'].map(ph=>`<option value="${ph}" ${ph===(e.phase||'main')?'selected':''}>${phaseLabel(ph)}</option>`).join('')}</select></label>${ct?`<label class="cycle-express-toggle"><span>Express</span><input class="custom-ex-bool" data-custom-index="${i}" data-key="express" type="checkbox" ${e.express?'checked':''}><small>Inclure dans la séance courte</small></label>`:''}<label><span>Séries</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="sets" type="number" min="1" max="10" value="${Number(e.sets||1)}"></label><label><span>${e.type==='timer'||e.type?.startsWith('hold')?'Secondes':'Répétitions'}</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="target" type="number" min="1" value="${Number(e.target||1)}"></label><label><span>Repos (s)</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="rest" type="number" min="0" value="${Number(e.rest||0)}"></label></div><div class="custom-row-info"><span>${esc(equipmentForExercise(e.name).join(' · ')||exerciseInfo(e.name)?.equipment||'Sans matériel')}</span><span>${esc((exerciseInfo(e.name)?.muscles||[]).join(' · '))}</span></div>${(()=>{const a=exerciseAdaptation(e.name);return !a.equipment.available?`<div class="custom-setup-warning"><strong>⚠ Matériel manquant</strong><span>${esc(missingEquipmentLabels(a.equipment).join(', '))}</span>${a.suggestion?`<small>Variante proposée : ${esc(a.suggestion)}</small>`:''}</div>`:a.restriction.restricted?`<div class="custom-setup-warning"><strong>⚠ Zone à ménager</strong>${a.suggestion?`<small>Variante proposée : ${esc(a.suggestion)}</small>`:''}</div>`:''})()}</div><div class="custom-row-actions"><button class="icon-btn move-custom-up" data-custom-index="${i}" aria-label="Monter">↑</button><button class="icon-btn move-custom-down" data-custom-index="${i}" aria-label="Descendre">↓</button><button class="icon-btn remove-custom-ex" data-custom-index="${i}" aria-label="Supprimer">×</button></div></article>`).join('')}</div><div class="custom-editor-summary"><span>≈ ${estimateWorkoutMinutes(w)} min</span><span>${(w.exercises||[]).length} étapes</span></div><button class="btn btn-primary" id="saveCustomSession">Enregistrer la séance</button></section></main>`;
+  return `<main class="shell custom-editor-shell"><section class="card editor-card"><button class="back-btn" id="closeCustomEditor">← Programmes</button><div class="kicker">${ct?`${esc(cycle.name)} · ${DAY_NAMES[ct.day]}`:'Éditeur de séance'}</div><h1>${ct?'Modifier la journée':w.id?'Modifier une séance':'Créer une séance'}</h1><p class="muted">Ajoute, remplace, supprime et réordonne librement les exercices. Le contrôle ci-dessous te signale si tu oublies une phase essentielle.</p><label class="field-label">Nom</label><input class="big-input custom-session-meta" data-custom-meta="name" value="${esc(w.name||'')}"><label class="field-label">Description</label><input class="url-input custom-session-meta" data-custom-meta="subtitle" value="${esc(w.subtitle||'')}"><div class="custom-quality"><span class="${quality.warmup?'ok':'warn'}">${quality.warmup?'✓':'!'} Échauffement</span><span class="${quality.cardio?'ok':'warn'}">${quality.cardio?'✓':'!'} Cardio</span><span class="${quality.cooldown?'ok':'warn'}">${quality.cooldown?'✓':'!'} Étirements</span><span>${quality.groups} zones</span><span>${quality.equipment} équipements</span></div><div class="custom-builder-head"><strong>Exercices</strong><button class="btn btn-secondary compact" id="addCustomExercise">＋ Ajouter</button></div><div class="custom-builder-list">${(w.exercises||[]).map((e,i)=>`<article class="custom-builder-row" data-custom-index="${i}"><div class="custom-builder-number">${i+1}</div><div class="custom-builder-main"><select class="select custom-exercise-name" data-custom-index="${i}">${names.map(n=>`<option value="${esc(n)}" ${n===e.name?'selected':''}>${n}</option>`).join('')}</select><div class="custom-builder-grid"><label><span>Phase</span><select class="select custom-ex-field" data-custom-index="${i}" data-key="phase">${['warmup','main','cardio','cooldown'].map(ph=>`<option value="${ph}" ${ph===(e.phase||'main')?'selected':''}>${phaseLabel(ph)}</option>`).join('')}</select></label>${ct?`<label class="cycle-express-toggle"><span>Express</span><input class="custom-ex-bool" data-custom-index="${i}" data-key="express" type="checkbox" ${e.express?'checked':''}><small>Inclure dans la séance courte</small></label>`:''}<label><span>Séries</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="sets" type="number" min="1" max="10" value="${Number(e.sets||1)}"></label><label><span>${e.type==='timer'||e.type?.startsWith('hold')?'Secondes':'Répétitions'}</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="target" type="number" min="1" value="${Number(e.target||1)}"></label><label><span>Repos (s)</span><input class="mini-input custom-ex-field" data-custom-index="${i}" data-key="rest" type="number" min="0" value="${Number(e.rest||0)}"></label></div><div class="custom-row-info"><span>${esc(equipmentForExercise(e.name).join(' · ')||exerciseInfo(e.name)?.equipment||'Sans matériel')}</span><span>${esc((exerciseInfo(e.name)?.muscles||[]).join(' · '))}</span></div>${(()=>{const a=exerciseAdaptation(e.name);return !a.equipment.available?`<div class="custom-setup-warning"><strong>⚠ Matériel manquant</strong><span>${esc(missingEquipmentLabels(a.equipment).join(', '))}</span>${a.suggestion?`<small>Variante proposée : ${esc(a.suggestion)}</small>`:''}</div>`:a.restriction.restricted?`<div class="custom-setup-warning"><strong>⚠ Zone à ménager</strong>${a.suggestion?`<small>Variante proposée : ${esc(a.suggestion)}</small>`:''}</div>`:''})()}</div><div class="custom-row-actions"><button class="icon-btn move-custom-up" data-custom-index="${i}" aria-label="Monter">↑</button><button class="icon-btn move-custom-down" data-custom-index="${i}" aria-label="Descendre">↓</button><button class="icon-btn remove-custom-ex" data-custom-index="${i}" aria-label="Supprimer">×</button></div></article>`).join('')}</div><div class="custom-editor-summary"><span>≈ ${estimateWorkoutMinutes(w)} min</span><span>${(w.exercises||[]).length} étapes</span></div><button class="btn btn-primary" id="saveCustomSession">Enregistrer la séance</button></section></main>`;
 }
 function syncCustomDraftFromDom(){
   const d=state.customSessionDraft;if(!d)return;
@@ -2426,28 +2427,27 @@ function uiIcon(name, cls="ui-icon") {
 }
 
 function shell(content, activeTab=state.view) {
-  const navTab=['today','week','progress'].includes(activeTab)?activeTab:'more';
+  const navTab=activeTab==='custom'?'week':['today','week','progress'].includes(activeTab)?activeTab:'more';
   return `<main class="shell">${content}</main>
   <button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une série rapide"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>
   ${renderQuickLogModal()}
   <nav class="bottom-nav bottom-nav-simple" aria-label="Navigation principale">
     <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>${uiIcon('today')}</span>Aujourd'hui</button>
-    <button class="nav-btn ${navTab==='week'?'active':''}" data-view="week"><span>${uiIcon('week')}</span>Semaine</button>
-    <button class="nav-btn ${navTab==='progress'?'active':''}" data-view="progress"><span>${uiIcon('progress')}</span>Progrès</button>
-    <button class="nav-btn ${navTab==='more'?'active':''}" data-view="more"><span>${uiIcon('more')}</span>Plus</button>
+    <button class="nav-btn ${navTab==='week'?'active':''}" data-view="week"><span>${uiIcon('week')}</span>Planning</button>
+    <button class="nav-btn ${navTab==='progress'?'active':''}" data-view="progress"><span>${uiIcon('progress')}</span>Progression</button>
+    <button class="nav-btn ${navTab==='more'?'active':''}" data-view="more"><span>${uiIcon('more')}</span>Profil</button>
   </nav>`;
 }
 
 function renderMore(){
   const logs=getBodyLogs(),latest=logs[0];
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.4</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Profil</div><div class="daylabel">Préférences, données et configuration de KINETIK</div></div></header>
     <section class="more-grid more-grid-six">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">${uiIcon('flex')}</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">${uiIcon('skills')}</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
       <button class="card more-tile" id="openExerciseLibrary"><span class="more-icon">${uiIcon('exercises')}</span><div><strong>Exercices</strong><small>${visibleExerciseLibrary().length} mouvements & progressions</small></div></button>
-      <button class="card more-tile" data-view="custom"><span class="more-icon">${uiIcon('sessions')}</span><div><strong>Mes séances</strong><small>Cycles & entraînements personnalisés</small></div></button>
       <button class="card more-tile" data-view="measurements"><span class="more-icon">${uiIcon('measurements')}</span><div><strong>Mesures</strong><small>${latest?(latest.weight?latest.weight+' kg · ':'')+(latest.waist?latest.waist+' cm taille':'Dernier relevé enregistré'):'Poids, mensurations & évolution'}</small></div></button>
-      <button class="card more-tile" data-view="profile"><span class="more-icon">${uiIcon('profile')}</span><div><strong>Profil</strong><small>Réglages, sauvegarde & préférences</small></div></button>
+      <button class="card more-tile" data-view="profile"><span class="more-icon">${uiIcon('profile')}</span><div><strong>Réglages</strong><small>Sauvegarde, préférences & données</small></div></button>
     </section>
     <details class="today-details"><summary><div><div class="kicker">Détails</div><strong>Progression, rang & coach adaptatif</strong></div><span>⌄</span></summary><div class="details-stack">${renderCycleMini()}${renderRankMini()}${renderProgressionRecommendations()}</div></details>
     ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}
@@ -2498,8 +2498,24 @@ function renderActivityHub(){
   ${categories.length?`<div class="training-mix">${categories.map(([name,min])=>`<div class="training-mix-row"><div><span>${esc(name)}</span><strong>${Math.round(min)} min</strong></div><div class="training-mix-track"><i style="width:${Math.max(4,Math.round(min/max*100))}%"></i></div></div>`).join('')}</div>`:'<p class="muted small">Tes activités apparaîtront ici pour visualiser la répartition de ton volume.</p>'}
   <div class="activity-month"><span>30 jours</span><strong>${Math.floor(m.minutes/60)} h ${String(m.minutes%60).padStart(2,'0')} · ${m.sessions} sessions</strong></div></section>`;
 }
+function activityUiIcon(id){
+  const icons={running:'↗',cycling:'◇',swimming:'≈',crossfit:'✦',hyrox:'H',walking:'⌁',rowing:'⇆',mobility:'∿',sport:'＋'};
+  return icons[id]||'＋';
+}
 function renderActivityEditor(){
-  return shell(`<header class="topbar"><div><div class="brand">Ajouter une activité</div><div class="daylabel">Tout ton entraînement, au même endroit</div></div></header><section class="card activity-editor"><label><span>Activité</span><select id="activityType">${ACTIVITY_TYPES.map(x=>`<option value="${x.id}">${x.label}</option>`).join('')}</select></label><div class="activity-editor-grid"><label><span>Durée</span><div class="input-with-unit"><input id="activityDuration" type="number" min="1" step="1" value="30"><b>min</b></div></label><label id="activityDistanceWrap"><span>Distance <small>optionnel</small></span><div class="input-with-unit"><input id="activityDistance" type="number" min="0" step=".1" placeholder="0"><b id="activityDistanceUnit">km</b></div></label></div><label><span>Effort perçu · RPE <b id="activityRpeValue">5/10</b></span><input id="activityRpe" type="range" min="1" max="10" step="1" value="5"><small class="activity-rpe-help">1 très facile · 5 modéré · 8 difficile · 10 maximal</small></label><label><span>Note <small>optionnel</small></span><textarea id="activityNote" rows="3" placeholder="Ex. technique piscine, sortie vallonnée, WOD jambes…"></textarea></label><div class="activity-load-preview"><span>Charge estimée</span><strong id="activityLoadPreview">150 UA</strong><small>durée × RPE · permet de comparer des sports différents</small></div><div class="editor-actions"><button type="button" class="btn btn-secondary" id="cancelActivity">Annuler</button><button type="button" class="btn btn-primary" id="saveActivity">Enregistrer</button></div></section>`,'today');
+  return shell(`<header class="topbar activity-topbar"><div><div class="brand">Nouvelle activité</div><div class="daylabel">Ajoute une session à ton volume global</div></div></header>
+  <section class="activity-editor activity-editor-premium">
+    <div class="activity-editor-intro"><div class="activity-editor-symbol" id="activityEditorSymbol">↗</div><div><div class="kicker">Activité</div><h1 id="activityEditorTitle">Course</h1><p>Enregistre l'essentiel. KINETIK calcule automatiquement ta charge.</p></div></div>
+    <div class="activity-form-section"><label class="activity-field activity-field-main"><span>Type d'activité</span><select id="activityType">${ACTIVITY_TYPES.map(x=>`<option value="${x.id}">${x.label}</option>`).join('')}</select></label></div>
+    <div class="activity-metrics-grid">
+      <label class="activity-metric"><span>Durée</span><div><input id="activityDuration" type="number" min="1" step="1" value="30"><b>min</b></div></label>
+      <label class="activity-metric" id="activityDistanceWrap"><span>Distance <small>optionnel</small></span><div><input id="activityDistance" type="number" min="0" step=".1" placeholder="0"><b id="activityDistanceUnit">km</b></div></label>
+    </div>
+    <div class="activity-form-section activity-rpe-section"><div class="activity-rpe-head"><div><span>Effort perçu</span><small>À quel point la séance était exigeante ?</small></div><strong id="activityRpeValue">5</strong></div><input id="activityRpe" class="activity-rpe-slider" type="range" min="1" max="10" step="1" value="5"><div class="activity-rpe-scale"><span>1<br><small>Très facile</small></span><span>5<br><small>Modéré</small></span><span>8<br><small>Difficile</small></span><span>10<br><small>Maximal</small></span></div></div>
+    <div class="activity-form-section"><label class="activity-field"><span>Note <small>optionnel</small></span><textarea id="activityNote" rows="3" placeholder="Sensations, contenu de séance, terrain…"></textarea></label></div>
+    <div class="activity-load-preview activity-load-premium"><div><span>Charge de la session</span><small>Durée × effort perçu</small></div><strong id="activityLoadPreview">150 <small>UA</small></strong></div>
+    <div class="activity-editor-actions"><button type="button" class="btn activity-cancel" id="cancelActivity">Annuler</button><button type="button" class="btn activity-save" id="saveActivity">Enregistrer l'activité</button></div>
+  </section>`,'today');
 }
 function renderTodayUsefulActions(){
   const x=progressWeekStats(),rank=getRankState(),next=rank.next;
@@ -2526,7 +2542,7 @@ function renderToday() {
   const baseToday=workoutTemplateForDay(day),activeCycle=getActiveTrainingCycle();
   const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p><div class="rest-reward-note"><strong>+10 XP récupération</strong><span>Le bonus sera validé demain si aucune séance, micro-série de renforcement ou course de 15 min+ n'est enregistrée aujourd'hui.</span></div></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span><span class="pill">Cardio ${Math.round(cardioTargetSeconds(w)/60)} min</span></div>${todayEquipment.length?`<div class="today-equipment today-equipment-visual"><strong>Matériel prévu</strong><div class="today-equipment-grid">${todayEquipment.map(x=>`<div class="today-equipment-item"><span class="today-equipment-icon" aria-hidden="true">${equipmentVisualIcon(x)}</span><span>${esc(x)}</span></div>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
-  return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
+  return shell(`<header class="topbar"><div><div class="brand">KINETIK</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
     <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>${uiIcon('add')}</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card rank-cockpit rank-${rank.current.id}"><strong>${rank.current.name}</strong><small>${rank.next?`${rankProgressText(rank.next,rank.nextEval)} vers ${rank.next.name}`:`${rank.xp.total.toLocaleString('fr-FR')} XP · rang maximal`}</small></div><div class="cockpit-card"><span>${uiIcon('clock')}</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
     ${renderActivityHub()}${renderDailyVolumeCard()}${renderTodayUsefulActions()}${program}`, 'today');
 }
@@ -2549,12 +2565,19 @@ function renderWeekExercise(e, i) {
   </div>`;
 }
 
+function renderPlanningTabs(active='calendar'){
+  return `<div class="planning-tabs" role="tablist" aria-label="Planning">
+    <button type="button" class="${active==='calendar'?'active':''}" data-view="week">Calendrier</button>
+    <button type="button" class="${active==='programs'?'active':''}" data-view="custom">Programmes</button>
+  </div>`;
+}
 function renderWeek() {
   const order = [1,2,3,4,5,6,0];
   const dayNow = todayDay();
   const audit=programAudit();
   const activeCycle=getActiveTrainingCycle();
-  return shell(`<header class="topbar"><div><div class="brand">Semaine</div><div class="daylabel">${esc(activeCycle.name)} · ${audit.cardioMinutes} min cardio · Complet / Express</div></div><button class="btn btn-outline compact" data-view="custom">Changer de cycle</button></header>
+  return shell(`<header class="topbar"><div><div class="brand">Planning</div><div class="daylabel">${esc(activeCycle.name)} · séances, activités et récupération</div></div></header>
+    ${renderPlanningTabs('calendar')}
     <div class="week-heatmap">${renderCycleHeatmap(16)}</div>
     <section class="week-list">${order.map(day=>{
       const w=preparedWorkout(day), isToday=day===dayNow, expanded=state.expandedWeekDay===day;
@@ -3133,7 +3156,7 @@ function renderProgressHistory(){
 }
 function renderProgress() {
   const content=state.progressTab==='performance'?renderProgressPerformance():state.progressTab==='volume'?renderProgressVolume():state.progressTab==='history'?renderProgressHistory():renderProgressOverview();
-  return shell(`<header class="topbar progress-topbar"><div><div class="brand">Progrès</div><div class="daylabel">Comprendre ce qui avance, puis explorer le détail si nécessaire</div></div></header>
+  return shell(`<header class="topbar progress-topbar"><div><div class="brand">Progression</div><div class="daylabel">Performances, charge, volume et évolution</div></div></header>
     ${renderProgressTabs()}
     <div class="progress-hub-content">${content}</div>`, "progress");
 }
@@ -3300,7 +3323,7 @@ function bindEvents(){
   const cancelActivity=document.getElementById('cancelActivity');if(cancelActivity)cancelActivity.onclick=()=>{state.activityEditor=false;render();};
   const saveActivity=document.getElementById('saveActivity');if(saveActivity)saveActivity.onclick=()=>{const duration=Number(document.getElementById('activityDuration')?.value||0);if(duration<=0)return;addActivityLog(document.getElementById('activityType')?.value||'sport',duration,Number(document.getElementById('activityDistance')?.value||0),'rpe',document.getElementById('activityNote')?.value||'',Number(document.getElementById('activityRpe')?.value||5));state.activityEditor=false;render();};
   const activityTypeEl=document.getElementById('activityType'),activityRpe=document.getElementById('activityRpe'),activityDuration=document.getElementById('activityDuration');
-  const syncActivityEditor=()=>{if(!activityTypeEl)return;const type=activityType(activityTypeEl.value),wrap=document.getElementById('activityDistanceWrap'),unit=document.getElementById('activityDistanceUnit'),rpe=Number(activityRpe?.value||5),mins=Number(activityDuration?.value||0);if(wrap)wrap.style.display=type.distance?'':'none';if(unit)unit.textContent=type.metric||'km';const rv=document.getElementById('activityRpeValue');if(rv)rv.textContent=`${rpe}/10`;const lp=document.getElementById('activityLoadPreview');if(lp)lp.textContent=`${Math.round(mins*rpe)} UA`;};
+  const syncActivityEditor=()=>{if(!activityTypeEl)return;const type=activityType(activityTypeEl.value),wrap=document.getElementById('activityDistanceWrap'),unit=document.getElementById('activityDistanceUnit'),rpe=Number(activityRpe?.value||5),mins=Number(activityDuration?.value||0);if(wrap)wrap.style.display=type.distance?'':'none';if(unit)unit.textContent=type.metric||'km';const rv=document.getElementById('activityRpeValue');if(rv)rv.textContent=rpe;const title=document.getElementById('activityEditorTitle'),symbol=document.getElementById('activityEditorSymbol');if(title)title.textContent=type.label;if(symbol)symbol.textContent=activityUiIcon(type.id);const lp=document.getElementById('activityLoadPreview');if(lp)lp.innerHTML=`${Math.round(mins*rpe)} <small>UA</small>`;};
   if(activityTypeEl){activityTypeEl.onchange=syncActivityEditor;activityRpe.oninput=syncActivityEditor;activityDuration.oninput=syncActivityEditor;syncActivityEditor();}
   document.querySelectorAll('[data-progress-tab]').forEach(b=>b.onclick=()=>{state.progressTab=b.dataset.progressTab;state.selectedHistoryId=null;render();});
   document.querySelectorAll('[data-today-progress]').forEach(b=>b.onclick=()=>{state.view='progress';state.progressTab=b.dataset.todayProgress||'performance';state.selectedHistoryId=null;render();});
@@ -3308,7 +3331,7 @@ function bindEvents(){
   document.querySelectorAll('[data-open-quick-log]').forEach(b=>b.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();});
   const closeQuick=document.getElementById('closeQuickLog');if(closeQuick)closeQuick.onclick=()=>{state.quickEditor=false;state.quickToast=null;render();};
   document.querySelectorAll('#syncStrava').forEach(b=>b.onclick=syncStravaActivities);
-  const disconnectS=document.getElementById('disconnectStrava');if(disconnectS)disconnectS.onclick=()=>{if(confirm('Déconnecter Strava de Calisthénie Coach ?'))disconnectStrava();};
+  const disconnectS=document.getElementById('disconnectStrava');if(disconnectS)disconnectS.onclick=()=>{if(confirm('Déconnecter Strava de KINETIK ?'))disconnectStrava();};
   const presetBand=(index,name)=>document.querySelector(`[data-quick-preset="${index}"] .band-choice.active`)?.dataset.bandLabel||lastBandForExercise(name)||defaultBandForExercise(name);
   document.querySelectorAll('.quick-add').forEach(b=>b.onclick=()=>{const name=decodeURIComponent(b.dataset.quickName),type=b.dataset.quickType,index=b.dataset.quickPresetIndex,band=type==='reps_band'?presetBand(index,name):null;addQuickLog(name,Number(b.dataset.quickValue),type,band);});
   document.querySelectorAll('.quick-exact-add').forEach(b=>b.onclick=()=>{const input=document.getElementById(`quickExact_${b.dataset.quickExactIndex}`),value=Number(input?.value||0),name=decodeURIComponent(b.dataset.quickName),type=b.dataset.quickType,index=b.dataset.quickPresetIndex,band=type==='reps_band'?presetBand(index,name):null;if(value>0)addQuickLog(name,value,type,band);});

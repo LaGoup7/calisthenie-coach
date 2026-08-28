@@ -2516,3 +2516,28 @@ html[data-theme="dark"] .next-exercise-preview-rich,html[data-theme="dark"] .pro
 .training-mix{display:grid;gap:11px;margin-top:15px}.training-mix-row>div:first-child{display:flex;justify-content:space-between;gap:12px;font-size:.76rem;margin-bottom:5px}.training-mix-row span{color:var(--muted)}.training-mix-track{height:5px;background:var(--line);overflow:hidden;border-radius:4px}.training-mix-track i{display:block;height:100%;background:currentColor;opacity:.72;border-radius:4px}
 .activity-rpe-help{display:block;color:var(--muted);font-size:.68rem;margin-top:5px}.activity-load-preview{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;margin:4px 0 16px;display:grid;grid-template-columns:1fr auto;gap:3px 12px}.activity-load-preview span{font-size:.72rem;color:var(--muted)}.activity-load-preview strong{font-size:1rem}.activity-load-preview small{grid-column:1/-1;color:var(--muted);font-size:.66rem}
 .activity-editor input[type=range]{width:100%}
+
+/* v10.20 · KINETIK activity composer */
+.activity-editor-premium{max-width:680px;margin:18px auto 28px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:0;overflow:hidden}
+.activity-editor-intro{display:flex;align-items:center;gap:15px;padding:22px 24px 18px;border-bottom:1px solid var(--line)}
+.activity-editor-intro h1{font-size:1.55rem;letter-spacing:-.04em;margin:2px 0 3px}.activity-editor-intro p{margin:0;color:var(--muted);font-size:.75rem}
+.activity-editor-symbol{width:48px;height:48px;display:grid;place-items:center;border:1px solid var(--line);border-radius:14px;font-size:1.25rem;font-weight:800;flex:0 0 48px}
+.activity-form-section{padding:18px 24px;border-bottom:1px solid var(--line)}
+.activity-field{margin:0!important}.activity-field>span,.activity-metric>span,.activity-rpe-head span{display:block;font-size:.69rem!important;text-transform:uppercase;letter-spacing:.055em;font-weight:760;margin-bottom:7px!important}
+.activity-field select,.activity-field textarea{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--bg);font:inherit;box-sizing:border-box}
+.activity-field-main select{font-weight:720}
+.activity-metrics-grid{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
+.activity-metric{padding:18px 24px;margin:0!important}.activity-metric+label{border-left:1px solid var(--line)}
+.activity-metric>div{display:flex;align-items:baseline;gap:7px}.activity-metric input{min-width:0;width:100%;border:0;background:transparent;font-size:1.65rem;font-weight:760;letter-spacing:-.04em;padding:2px 0;outline:none}.activity-metric b{font-size:.7rem;color:var(--muted)}
+.activity-rpe-head{display:flex;align-items:center;justify-content:space-between;gap:16px}.activity-rpe-head span{margin-bottom:3px!important}.activity-rpe-head small{display:block;color:var(--muted);font-size:.7rem}.activity-rpe-head>strong{font-size:1.75rem;letter-spacing:-.05em}
+.activity-rpe-slider{width:100%;margin:17px 0 7px}.activity-rpe-scale{display:grid;grid-template-columns:repeat(4,1fr);font-size:.68rem;font-weight:700}.activity-rpe-scale span:nth-child(2),.activity-rpe-scale span:nth-child(3){text-align:center}.activity-rpe-scale span:last-child{text-align:right}.activity-rpe-scale small{font-size:.6rem;color:var(--muted);font-weight:500}
+.activity-load-premium{margin:0!important;padding:18px 24px!important;border:0!important;display:flex!important;align-items:center;justify-content:space-between;background:var(--bg)}.activity-load-premium span{font-size:.72rem!important;font-weight:730;color:var(--text)!important}.activity-load-premium small{display:block!important;color:var(--muted);font-size:.62rem!important;margin-top:2px}.activity-load-premium>strong{font-size:1.55rem!important;letter-spacing:-.04em}.activity-load-premium>strong small{display:inline!important;font-size:.65rem!important}
+.activity-editor-actions{display:grid;grid-template-columns:1fr 2fr;gap:10px;padding:18px 24px}.activity-editor-actions .btn{min-height:48px;border-radius:12px}.activity-cancel{background:transparent;border:1px solid var(--line)}.activity-save{background:var(--text);color:var(--bg);border:1px solid var(--text);font-weight:760}
+@media(max-width:560px){.activity-editor-premium{border-radius:18px}.activity-editor-intro,.activity-form-section,.activity-metric,.activity-editor-actions,.activity-load-premium{padding-left:17px!important;padding-right:17px!important}.activity-metrics-grid{grid-template-columns:1fr}.activity-metric+label{border-left:0;border-top:1px solid var(--line)}.activity-editor-actions{grid-template-columns:1fr}.activity-cancel{order:2}}
+
+/* v10.21 · navigation architecture */
+.planning-tabs{display:flex;gap:22px;align-items:center;margin:4px 2px 18px;border-bottom:1px solid var(--line)}
+.planning-tabs button{appearance:none;border:0;background:transparent;padding:10px 0 11px;color:var(--muted);font:inherit;font-size:.78rem;font-weight:720;cursor:pointer;position:relative}
+.planning-tabs button.active{color:var(--text)}
+.planning-tabs button.active:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:currentColor;border-radius:2px}
+@media(max-width:560px){.planning-tabs{gap:18px;margin-bottom:14px}.planning-tabs button{font-size:.76rem}}
