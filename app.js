@@ -3286,32 +3286,107 @@ function trainingYearsEvidence(){
   return Math.max(declared,tracked);
 }
 const KINETIK_RANK_RULES={
-  // Construction : accessible à un pratiquant régulier.
-  bronze:{xp:0,sessions:0,weeks:0,avg:0,caps:{},skillPoints:0,mastery:0,majorMastery:0,years:0},
-  silver:{xp:700,sessions:15,weeks:3,avg:12,caps:{pull:14,push:13,grip:15},skillPoints:0,mastery:0,majorMastery:0,years:0},
-  gold:{xp:2400,sessions:45,weeks:9,avg:22,caps:{pull:24,push:24,grip:23,core:8},skillPoints:7,mastery:0,majorMastery:0,years:0},
-
-  // Athlète intermédiaire / avancé : les points faibles commencent à bloquer.
-  platinum:{xp:6500,sessions:110,weeks:22,avg:34,caps:{pull:38,push:35,grip:34,core:25,balance:20,explosive:20},skillPoints:20,mastery:0,majorMastery:0,years:.5},
-  diamond:{xp:13000,sessions:220,weeks:44,avg:50,caps:{pull:52,push:50,grip:48,core:42,balance:35,explosive:42},skillPoints:48,mastery:1,majorMastery:0,years:1},
-
-  // Maître est déjà exceptionnel : plusieurs années et aucune grosse faiblesse.
-  master:{xp:26000,sessions:450,weeks:85,avg:67,caps:{pull:68,push:65,grip:62,core:58,balance:55,explosive:65},skillPoints:90,mastery:3,majorMastery:1,years:2.5},
-
-  // Légende = quasi hors-échelle.
-  // La règle est volontairement conçue pour ne pas être atteinte par simple ancienneté.
+  // Les rangs sont des niveaux de capacité démontrée.
+  // Aucune ancienneté, XP, durée d'utilisation ou nombre de séances n'est requis.
+  bronze:{
+    avg:0,caps:{},skillPoints:0,mastery:0,majorMastery:0,proofs:[]
+  },
+  silver:{
+    avg:0,
+    caps:{pull:14,push:13,grip:15},
+    skillPoints:0,mastery:0,majorMastery:0,
+    proofs:[
+      {kind:'test',id:'pullups',value:5,label:'5 tractions strictes',unit:'reps'},
+      {kind:'test',id:'dips',value:8,label:'8 dips stricts',unit:'reps'},
+      {kind:'test',id:'dead_hang',value:45,label:'Dead hang 45 s',unit:'s'}
+    ]
+  },
+  gold:{
+    avg:0,
+    caps:{pull:24,push:24,grip:23,core:8},
+    skillPoints:6,mastery:0,majorMastery:0,
+    proofs:[
+      {kind:'test',id:'pullups',value:8,label:'8 tractions strictes',unit:'reps'},
+      {kind:'test',id:'dips',value:12,label:'12 dips stricts',unit:'reps'},
+      {kind:'test',id:'dead_hang',value:60,label:'Dead hang 60 s',unit:'s'},
+      {kind:'skill',id:'tuck-10',value:1,label:'Tuck L-sit 10 s',unit:''}
+    ]
+  },
+  platinum:{
+    avg:30,
+    caps:{pull:38,push:35,grip:34,core:25,balance:20,explosive:20},
+    skillPoints:18,mastery:0,majorMastery:0,
+    proofs:[
+      {kind:'test',id:'pullups',value:12,label:'12 tractions strictes',unit:'reps'},
+      {kind:'test',id:'dips',value:15,label:'15 dips stricts',unit:'reps'},
+      {kind:'test',id:'dead_hang',value:90,label:'Dead hang 90 s',unit:'s'},
+      {kind:'exercise',name:'Chest-to-bar',value:3,label:'3 chest-to-bar propres',unit:'reps'},
+      {kind:'test',id:'wall_handstand',value:60,label:'Handstand au mur 60 s',unit:'s'},
+      {kind:'skill',id:'tuck-20',value:1,label:'Tuck L-sit 20 s',unit:''}
+    ]
+  },
+  diamond:{
+    avg:48,
+    caps:{pull:52,push:50,grip:48,core:42,balance:35,explosive:42},
+    skillPoints:45,mastery:1,majorMastery:0,
+    proofs:[
+      {kind:'test',id:'pullups',value:15,label:'15 tractions strictes',unit:'reps'},
+      {kind:'test',id:'dips',value:20,label:'20 dips stricts',unit:'reps'},
+      {kind:'test',id:'dead_hang',value:120,label:'Dead hang 120 s',unit:'s'},
+      {kind:'exercise',name:'Towel hang',value:30,label:'Towel hang 30 s',unit:'s'},
+      {kind:'exercise',name:'Chest-to-bar',value:5,label:'5 chest-to-bar propres',unit:'reps'},
+      {kind:'exercise',name:'Muscle-up strict',value:1,label:'1 muscle-up strict',unit:'rep'},
+      {kind:'exercise',name:'Handstand libre',value:5,label:'Handstand libre 5 s',unit:'s'},
+      {kind:'skill',id:'lsit-10',value:1,label:'L-sit 10 s',unit:''}
+    ]
+  },
+  master:{
+    avg:66,
+    caps:{pull:70,push:68,grip:65,core:58,balance:55,explosive:68},
+    skillPoints:90,mastery:3,majorMastery:1,
+    proofs:[
+      {kind:'test',id:'pullups',value:20,label:'20 tractions strictes',unit:'reps'},
+      {kind:'test',id:'dips',value:30,label:'30 dips stricts',unit:'reps'},
+      {kind:'test',id:'dead_hang',value:180,label:'Dead hang 180 s',unit:'s'},
+      {kind:'exercise',name:'Towel hang',value:45,label:'Towel hang 45 s',unit:'s'},
+      {kind:'exercise',name:'One-arm assisted hang',value:15,label:'One-arm assisted hang 15 s / côté',unit:'s'},
+      {kind:'exercise',name:'Muscle-up strict',value:3,label:'3 muscle-ups stricts',unit:'reps'},
+      {kind:'exercise',name:'Handstand libre',value:30,label:'Handstand libre 30 s',unit:'s'},
+      {kind:'skill',id:'hspu-wall',value:1,label:'Handstand push-up au mur',unit:''},
+      {kind:'skill',id:'lever-oneleg',value:1,label:'One-leg front lever',unit:''},
+      {kind:'skill',id:'flag-tuck',value:1,label:'Tuck human flag',unit:''},
+      {kind:'skill',id:'lsit-20',value:1,label:'L-sit 20 s',unit:''}
+    ]
+  },
   legend:{
-    xp:60000,
-    sessions:1000,
-    weeks:150,
     avg:90,
     caps:{pull:88,push:85,grip:82,core:82,balance:82,explosive:85},
-    skillPoints:160,
-    mastery:5,
-    majorMastery:3,
-    years:4
+    skillPoints:160,mastery:5,majorMastery:3,
+    proofs:[
+      {kind:'test',id:'pullups',value:25,label:'25 tractions strictes',unit:'reps'},
+      {kind:'test',id:'dips',value:40,label:'40 dips stricts',unit:'reps'},
+      {kind:'test',id:'dead_hang',value:240,label:'Dead hang 240 s',unit:'s'},
+      {kind:'exercise',name:'Towel hang',value:60,label:'Towel hang 60 s',unit:'s'},
+      {kind:'exercise',name:'One-arm assisted hang',value:25,label:'One-arm assisted hang 25 s / côté',unit:'s'},
+      {kind:'exercise',name:'Chest-to-bar',value:8,label:'8 chest-to-bar propres',unit:'reps'},
+      {kind:'exercise',name:'Muscle-up strict',value:10,label:'10 muscle-ups stricts',unit:'reps'},
+      {kind:'skill',id:'hspu-free',value:1,label:'Handstand push-up libre',unit:''},
+      {kind:'exercise',name:'Handstand libre',value:60,label:'Handstand libre 60 s',unit:'s'},
+      {kind:'exercise',name:'Front lever',value:10,label:'Front lever 10 s',unit:'s'},
+      {kind:'exercise',name:'Human flag',value:10,label:'Human flag 10 s / côté',unit:'s'},
+      {kind:'exercise',name:'L-sit',value:30,label:'L-sit 30 s',unit:'s'},
+      {kind:'exercise',name:'Toes-to-bar',value:10,label:'10 toes-to-bar propres',unit:'reps'},
+      {kind:'skill',id:'pistol-5',value:1,label:'5 pistol squats par jambe',unit:''}
+    ]
   }
 };
+function rankProofValue(proof){
+  if(!proof)return 0;
+  if(proof.kind==='test')return Number(performanceValueForTest(proof.id)||0);
+  if(proof.kind==='exercise')return Number(bestExerciseValue(proof.name)||0);
+  if(proof.kind==='skill')return skillDoneSafe(proof.id)?1:0;
+  return 0;
+}
 function xpSummary(){
   const history=getHistory(),training=history.reduce((sum,s)=>sum+sessionXP(s),0);
   const consistentWeeks=consistentWeeksCount(),consistency=consistentWeeks*50;
@@ -3322,15 +3397,24 @@ function xpSummary(){
 }
 function rankRuleFor(rank){return KINETIK_RANK_RULES[rank?.id]||KINETIK_RANK_RULES.bronze;}
 function rankGateRows(rank){
-  const rule=rankRuleFor(rank),caps=capabilityScores(),capMap=Object.fromEntries(caps.map(x=>[x.id,x])),sessions=getHistory().length,weeks=consistentWeeksCount(),xp=xpSummary(),skillPoints=technicalSkillPoints(),mastery=masterySkillCount(),majorMastery=majorMasterySkillCount(),years=trainingYearsEvidence();
-  const assessed=caps.filter(x=>x.assessed),avg=assessed.length?Math.round(assessed.reduce((s,x)=>s+x.score,0)/assessed.length):0;
+  const rule=rankRuleFor(rank),caps=capabilityScores(),capMap=Object.fromEntries(caps.map(x=>[x.id,x])),skillPoints=technicalSkillPoints(),mastery=masterySkillCount(),majorMastery=majorMasterySkillCount();
+  // Non évalué = 0 pour les rangs qui exigent une moyenne globale.
+  // Cela empêche de ne tester que ses points forts.
+  const avg=Math.round(caps.reduce((s,x)=>s+(x.assessed?x.score:0),0)/Math.max(1,caps.length));
   const rows=[];
-  if(rule.xp)rows.push({id:'xp',label:'Expérience KINETIK',current:xp.total,target:rule.xp,unit:'XP'});
-  if(rule.sessions)rows.push({id:'sessions',label:'Séances terminées',current:sessions,target:rule.sessions,unit:''});
-  if(rule.weeks)rows.push({id:'weeks',label:'Semaines régulières',current:weeks,target:rule.weeks,unit:'sem'});
-  if(rule.years)rows.push({id:'years',label:"Années d'entraînement",current:Number(years.toFixed(1)),target:rule.years,unit:'ans',detail:'historique KINETIK ou expérience renseignée dans le profil'});
-  if(rule.avg)rows.push({id:'avg',label:'Moyenne des capacités évaluées',current:avg,target:rule.avg,unit:'/100'});
-  Object.entries(rule.caps||{}).forEach(([id,target])=>rows.push({id:`cap-${id}`,label:capMap[id]?.label||id,current:capMap[id]?.assessed?capMap[id].score:0,target,unit:'/100',detail:capMap[id]?.assessed?capMap[id].detail:'non évalué'}));
+  if(rule.avg)rows.push({id:'avg',label:'Moyenne des 6 capacités',current:avg,target:rule.avg,unit:'/100',detail:'les capacités non évaluées comptent comme 0'});
+  Object.entries(rule.caps||{}).forEach(([id,target])=>rows.push({
+    id:`cap-${id}`,label:capMap[id]?.label||id,
+    current:capMap[id]?.assessed?capMap[id].score:0,target,unit:'/100',
+    detail:capMap[id]?.assessed?capMap[id].detail:'non évalué'
+  }));
+  (rule.proofs||[]).forEach((proof,i)=>{
+    const current=rankProofValue(proof);
+    rows.push({
+      id:`proof-${i}-${proof.kind}`,label:proof.label,current,target:Number(proof.value||1),
+      unit:proof.unit||'',detail:proof.kind==='skill'?'validation technique requise':'barème de performance'
+    });
+  });
   if(rule.skillPoints)rows.push({id:'skills',label:'Difficulté technique cumulée',current:skillPoints,target:rule.skillPoints,unit:'pts'});
   if(rule.mastery)rows.push({id:'mastery',label:'Skills de maîtrise',current:mastery,target:rule.mastery,unit:''});
   if(rule.majorMastery)rows.push({id:'major-mastery',label:'Skills majeurs de maîtrise',current:majorMastery,target:rule.majorMastery,unit:'',detail:'Muscle-up avancé · HSPU libre · Front lever · Human flag'});
@@ -3360,9 +3444,7 @@ function getRankState(){
   }
   const current=RANKS[index],next=RANKS[index+1]||null,nextEval=next?evaluateRank(next):null;
   const readiness=next?rankReadinessFor(next):1,division=rankDivision(readiness,!!next);
-  const xpProgress=next?clamp(xp.total/Math.max(1,rankRuleFor(next).xp||1),0,1):1;
-  const goalProgress=readiness;
-  return {xp,current,index,next,nextEval,xpProgress,goalProgress,readiness,division,displayName:`${current.name} ${division}`};
+  return {xp,current,index,next,nextEval,xpProgress:1,goalProgress:readiness,readiness,division,displayName:`${current.name} ${division}`};
 }
 function objectiveValueText(item){
   if(item.obj.type==='skill')return item.done?'Validé':'À valider';
@@ -3542,18 +3624,19 @@ function recentSkillAchievements(limit=5){
 }
 function renderRankSystemV2(){
   const rs=getRankState();
-  return `<div class="rank-v2-list">${RANKS.map((r,i)=>{const ev=evaluateRank(r),gates=ev.gates||[],stateLabel=i<rs.index?'Validé':i===rs.index?'Rang actuel':'À atteindre';return `<details class="rank-v2-row" ${i===rs.index||i===rs.index+1?'open':''}><summary><div><strong>${r.name}</strong><span>${r.title}</span></div><b>${stateLabel}</b></summary><div class="rank-v2-content">${gates.length?gates.map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join(''):'<p>Point de départ du système KINETIK.</p>'}</div></details>`}).join('')}</div><p class="rank-scale-note">Le score 0–100 est une échelle interne de maîtrise KINETIK. Un score élevé exige plusieurs preuves différentes dans une même capacité. Légende est volontairement quasi hors-échelle : 90 de moyenne, aucun point faible majeur, plusieurs skills de maîtrise et plusieurs années de pratique.</p>`;
+  return `<div class="rank-v2-list">${RANKS.map((r,i)=>{const ev=evaluateRank(r),gates=ev.gates||[],stateLabel=i<rs.index?'Validé':i===rs.index?'Rang actuel':'À atteindre';return `<details class="rank-v2-row" ${i===rs.index||i===rs.index+1?'open':''}><summary><div><strong>${r.name}</strong><span>${r.title}</span></div><b>${stateLabel}</b></summary><div class="rank-v2-content">${gates.length?gates.map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join(''):'<p>Point de départ du système KINETIK.</p>'}</div></details>`}).join('')}</div><p class="rank-scale-note">Les rangs sont déterminés uniquement par les capacités démontrées. Ni l'âge du compte, ni le nombre de séances, ni l'XP, ni les années de pratique ne bloquent une promotion. Un athlète expérimenté qui rejoint KINETIK peut donc atteindre rapidement son vrai rang en validant les barèmes stricts.</p>`;
 }
 function renderSkills(){
   const manual=getManualSkills(),rank=getRankState(),caps=capabilityScores(),focus=primarySkillTree(),fp=skillTreeProgress(focus),performances=skillPerformanceRows(),achievements=recentSkillAchievements(),allLevels=SKILL_TREES.flatMap(t=>t.levels),doneCount=allLevels.filter(skillDone).length;
   const nextGates=rank.next?rankGateRows(rank.next):[],weak=nextGates.filter(g=>!g.done).sort((a,b)=>a.progress-b.progress)[0];
-  return shell(`<header class="topbar capabilities-topbar"><div><div class="brand">Capacités</div><div class="daylabel">Progression réelle · hauts scores multi-preuves · Légende quasi inaccessible</div></div></header>
+  return shell(`<header class="topbar capabilities-topbar"><div><div class="brand">Capacités</div><div class="daylabel">Rangs par barèmes réels · aucune ancienneté requise · Légende quasi inaccessible</div></div></header>
 
   <section class="cap-rank-intro">
-    <div><div class="kicker">Niveau KINETIK</div><h1>${rank.displayName}</h1><p>${rank.current.title} · ${rank.xp.total.toLocaleString('fr-FR')} XP · ${consistentWeeksCount()} semaines régulières</p></div>
+    <div><div class="kicker">Niveau KINETIK</div><h1>${rank.displayName}</h1><p>${rank.current.title} · rang basé sur les performances validées</p></div>
     <div class="cap-rank-next"><span>${rank.next?`Progression vers ${rank.next.name}`:'Rang maximal'}</span><strong>${Math.round(rank.readiness*100)}%</strong></div>
   </section>
   <div class="cap-rank-ladder">${RANKS.map((r,i)=>`<div class="${i<rank.index?'done':i===rank.index?'current':'future'}"><i></i><span>${r.name}</span></div>`).join('')}</div>
+  <div class="rank-performance-only"><strong>Classement instantané</strong><span>Les rangs utilisent uniquement les tests, records et skills validés. Un athlète expérimenté n'a pas besoin d'attendre des mois dans KINETIK.</span></div>
   ${weak?`<div class="rank-bottleneck"><span>Facteur limitant actuel</span><strong>${weak.label}</strong><em>${Number(weak.current).toFixed(Number(weak.current)%1?1:0)} / ${weak.target}${weak.unit?` ${weak.unit}`:''}</em></div>`:''}
 
   <section class="cap-profile-section">
@@ -3580,7 +3663,7 @@ function renderSkills(){
 
   ${achievements.length?`<section class="cap-achievements"><div class="cap-section-heading"><div><div class="kicker">Accomplissements</div><h2>Jalons validés</h2></div><strong>${doneCount}/${allLevels.length}</strong></div><div>${achievements.map(x=>`<div><span>✓</span><div><strong>${esc(x.level.name)}</strong><small>${esc(x.tree.name)}</small></div></div>`).join('')}</div></section>`:''}
 
-  <section class="legend-standard"><div><div class="kicker">Échelle de maîtrise</div><h2>Légende n'est pas un objectif normal</h2><p>Ce rang représente une maîtrise athlétique rarissime. L'ancienneté ou l'XP ne peuvent pas compenser une faiblesse : toutes les capacités doivent être très élevées, avec plusieurs skills majeurs maîtrisés.</p></div><div class="legend-standard-values"><div><span>Moyenne requise</span><strong>90 / 100</strong></div><div><span>Capacité minimale</span><strong>82+</strong></div><div><span>Séances</span><strong>1 000</strong></div><div><span>Expérience</span><strong>4 ans+</strong></div></div></section>
+  <section class="legend-standard"><div><div class="kicker">Échelle de maîtrise</div><h2>Légende se prouve, elle ne s'attend pas</h2><p>Le temps passé dans l'application ne compte pas. Un nouvel utilisateur déjà très avancé peut monter immédiatement s'il valide les standards. En revanche, Légende exige simultanément une moyenne de 90, aucun gros point faible et plusieurs performances de niveau expert.</p></div><div class="legend-standard-values"><div><span>Moyenne requise</span><strong>90 / 100</strong></div><div><span>Capacité minimale</span><strong>82+</strong></div><div><span>Skills maîtrise</span><strong>5</strong></div><div><span>Skills majeurs</span><strong>3</strong></div></div></section>
 
   <details class="cap-rank-details"><summary><div><div class="kicker">Système de rang</div><strong>Voir les exigences Bronze → Légende</strong></div><span>⌄</span></summary><div>${renderRankSystemV2()}</div></details>
   `, "skills");
