@@ -2511,3 +2511,8 @@ html[data-theme="dark"] .next-exercise-preview-rich,html[data-theme="dark"] .pro
   .today-equipment-item{font-size:.74rem}
 }
 @media(max-width:350px){.today-equipment-grid{grid-template-columns:1fr}}
+
+/* v10.19 · global training load */
+.training-mix{display:grid;gap:11px;margin-top:15px}.training-mix-row>div:first-child{display:flex;justify-content:space-between;gap:12px;font-size:.76rem;margin-bottom:5px}.training-mix-row span{color:var(--muted)}.training-mix-track{height:5px;background:var(--line);overflow:hidden;border-radius:4px}.training-mix-track i{display:block;height:100%;background:currentColor;opacity:.72;border-radius:4px}
+.activity-rpe-help{display:block;color:var(--muted);font-size:.68rem;margin-top:5px}.activity-load-preview{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;margin:4px 0 16px;display:grid;grid-template-columns:1fr auto;gap:3px 12px}.activity-load-preview span{font-size:.72rem;color:var(--muted)}.activity-load-preview strong{font-size:1rem}.activity-load-preview small{grid-column:1/-1;color:var(--muted);font-size:.66rem}
+.activity-editor input[type=range]{width:100%}

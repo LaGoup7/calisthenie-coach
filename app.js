@@ -2455,38 +2455,51 @@ function renderMore(){
 }
 
 const ACTIVITY_TYPES=[
-  {id:'running',label:'Course',unit:'min'},
-  {id:'cycling',label:'Vélo',unit:'min'},
-  {id:'swimming',label:'Piscine',unit:'min'},
-  {id:'crossfit',label:'CrossFit',unit:'min'},
-  {id:'hyrox',label:'HYROX',unit:'min'},
-  {id:'walking',label:'Marche / randonnée',unit:'min'},
-  {id:'rowing',label:'Rameur',unit:'min'},
-  {id:'sport',label:'Autre sport',unit:'min'}
+  {id:'running',label:'Course',distance:true,metric:'km'},
+  {id:'cycling',label:'Vélo',distance:true,metric:'km'},
+  {id:'swimming',label:'Piscine',distance:true,metric:'m'},
+  {id:'crossfit',label:'CrossFit',distance:false},
+  {id:'hyrox',label:'HYROX',distance:false},
+  {id:'walking',label:'Marche / randonnée',distance:true,metric:'km'},
+  {id:'rowing',label:'Rameur',distance:true,metric:'km'},
+  {id:'mobility',label:'Mobilité / étirements',distance:false},
+  {id:'sport',label:'Autre sport',distance:false}
 ];
 function getActivities(){return parse(STORAGE.activities,[]);}
 function setActivities(v){save(STORAGE.activities,v);}
 function activityType(id){return ACTIVITY_TYPES.find(x=>x.id===id)||{id,label:id||'Activité',unit:'min'};}
-function addActivityLog(type,duration,distance=0,intensity='moderate',note=''){
-  const rows=getActivities();rows.unshift({id:String(Date.now()),date:new Date().toISOString(),type,duration:Number(duration)||0,distance:Number(distance)||0,intensity,note:String(note||'')});setActivities(rows.slice(0,1500));
+function addActivityLog(type,duration,distance=0,intensity='moderate',note='',rpe=5){
+  const rows=getActivities(),mins=Math.max(1,Number(duration)||0),effort=Math.max(1,Math.min(10,Number(rpe)||5));
+  rows.unshift({id:String(Date.now()),date:new Date().toISOString(),type,duration:mins,distance:Math.max(0,Number(distance)||0),intensity,note:String(note||''),rpe:effort,load:Math.round(mins*effort)});
+  setActivities(rows.slice(0,1500));
 }
 function activityStats(days=7){
   const cut=Date.now()-days*86400000,manual=getActivities().filter(x=>new Date(x.date).getTime()>=cut);
   const strava=getStravaActivities().filter(a=>new Date(a.start_date||a.start_date_local||0).getTime()>=cut&&isRunActivity(a));
-  const rows={};
-  for(const a of manual){const x=activityType(a.type);rows[x.label]=(rows[x.label]||0)+Number(a.duration||0);}
+  const rows={};let load=0;
+  for(const a of manual){const x=activityType(a.type),mins=Number(a.duration||0);if(!rows[x.label])rows[x.label]={minutes:0,sessions:0,distance:0};rows[x.label].minutes+=mins;rows[x.label].sessions++;rows[x.label].distance+=Number(a.distance||0);load+=Number(a.load||Math.round(mins*(Number(a.rpe)||5)));}
   const runMin=Math.round(strava.reduce((s,a)=>s+Number(a.moving_time||a.elapsed_time||0),0)/60);
-  if(runMin)rows['Course Strava']=(rows['Course Strava']||0)+runMin;
-  return {minutes:Object.values(rows).reduce((a,b)=>a+b,0),sessions:manual.length+strava.length,rows,manual};
+  if(runMin){if(!rows['Course Strava'])rows['Course Strava']={minutes:0,sessions:0,distance:0};rows['Course Strava'].minutes+=runMin;rows['Course Strava'].sessions+=strava.length;rows['Course Strava'].distance+=strava.reduce((s,a)=>s+Number(a.distance||0)/1000,0);}
+  return {minutes:Object.values(rows).reduce((a,b)=>a+b.minutes,0),sessions:manual.length+strava.length,load,rows,manual};
+}
+function strengthVolumeStats(days=7){
+  const cut=Date.now()-days*86400000,rows=getHistory().filter(h=>new Date(h.date).getTime()>=cut);
+  return {minutes:rows.reduce((s,h)=>s+Number(h.durationMinutes||0),0),sessions:rows.length};
+}
+function totalTrainingStats(days=7){
+  const a=activityStats(days),s=strengthVolumeStats(days);
+  return {minutes:a.minutes+s.minutes,sessions:a.sessions+s.sessions,load:a.load,strength:s,activities:a};
 }
 function renderActivityHub(){
-  const s=activityStats(7),s30=activityStats(30);
-  return `<section class="card activity-hub"><div class="section-head"><div><div class="kicker">Activités · 7 jours</div><h2>${s.minutes} min d'activité</h2><p class="muted small">${s.sessions} session${s.sessions!==1?'s':''} enregistrée${s.sessions!==1?'s':''}</p></div><button type="button" class="btn btn-secondary compact" id="openActivityLog">＋ Activité</button></div>
-  ${Object.keys(s.rows).length?`<div class="activity-volume-list">${Object.entries(s.rows).map(([name,min])=>`<div><span>${esc(name)}</span><strong>${Math.round(min)} min</strong></div>`).join('')}</div>`:'<p class="muted small">Ajoute course, vélo, piscine, CrossFit, HYROX ou toute autre activité pour suivre ton volume global.</p>'}
-  <div class="activity-month"><span>30 jours</span><strong>${s30.minutes} min · ${s30.sessions} sessions</strong></div></section>`;
+  const all=totalTrainingStats(7),m=totalTrainingStats(30),s=all.activities;
+  const categories=[['Calisthénie / force',all.strength.minutes],...Object.entries(s.rows).map(([n,v])=>[n,v.minutes])].filter(x=>x[1]>0);
+  const max=Math.max(1,...categories.map(x=>x[1]));
+  return `<section class="card activity-hub"><div class="section-head"><div><div class="kicker">Charge globale · 7 jours</div><h2>${Math.floor(all.minutes/60)} h ${String(all.minutes%60).padStart(2,'0')} d'entraînement</h2><p class="muted small">${all.sessions} sessions · charge interne ${Math.round(all.load)} UA</p></div><button type="button" class="btn btn-secondary compact" id="openActivityLog">＋ Activité</button></div>
+  ${categories.length?`<div class="training-mix">${categories.map(([name,min])=>`<div class="training-mix-row"><div><span>${esc(name)}</span><strong>${Math.round(min)} min</strong></div><div class="training-mix-track"><i style="width:${Math.max(4,Math.round(min/max*100))}%"></i></div></div>`).join('')}</div>`:'<p class="muted small">Tes activités apparaîtront ici pour visualiser la répartition de ton volume.</p>'}
+  <div class="activity-month"><span>30 jours</span><strong>${Math.floor(m.minutes/60)} h ${String(m.minutes%60).padStart(2,'0')} · ${m.sessions} sessions</strong></div></section>`;
 }
 function renderActivityEditor(){
-  return shell(`<header class="topbar"><div><div class="brand">Ajouter une activité</div><div class="daylabel">Volume cardio & sports complémentaires</div></div></header><section class="card activity-editor"><label><span>Activité</span><select id="activityType">${ACTIVITY_TYPES.map(x=>`<option value="${x.id}">${x.label}</option>`).join('')}</select></label><div class="activity-editor-grid"><label><span>Durée</span><div class="input-with-unit"><input id="activityDuration" type="number" min="1" step="1" value="30"><b>min</b></div></label><label><span>Distance <small>optionnel</small></span><div class="input-with-unit"><input id="activityDistance" type="number" min="0" step=".1" placeholder="0"><b>km</b></div></label></div><label><span>Intensité</span><select id="activityIntensity"><option value="easy">Facile</option><option value="moderate" selected>Modérée</option><option value="hard">Difficile</option><option value="very-hard">Très difficile</option></select></label><label><span>Note <small>optionnel</small></span><textarea id="activityNote" rows="3" placeholder="Ex. piscine technique, sortie vélo vallonnée…"></textarea></label><div class="editor-actions"><button type="button" class="btn btn-secondary" id="cancelActivity">Annuler</button><button type="button" class="btn btn-primary" id="saveActivity">Enregistrer</button></div></section>`,'today');
+  return shell(`<header class="topbar"><div><div class="brand">Ajouter une activité</div><div class="daylabel">Tout ton entraînement, au même endroit</div></div></header><section class="card activity-editor"><label><span>Activité</span><select id="activityType">${ACTIVITY_TYPES.map(x=>`<option value="${x.id}">${x.label}</option>`).join('')}</select></label><div class="activity-editor-grid"><label><span>Durée</span><div class="input-with-unit"><input id="activityDuration" type="number" min="1" step="1" value="30"><b>min</b></div></label><label id="activityDistanceWrap"><span>Distance <small>optionnel</small></span><div class="input-with-unit"><input id="activityDistance" type="number" min="0" step=".1" placeholder="0"><b id="activityDistanceUnit">km</b></div></label></div><label><span>Effort perçu · RPE <b id="activityRpeValue">5/10</b></span><input id="activityRpe" type="range" min="1" max="10" step="1" value="5"><small class="activity-rpe-help">1 très facile · 5 modéré · 8 difficile · 10 maximal</small></label><label><span>Note <small>optionnel</small></span><textarea id="activityNote" rows="3" placeholder="Ex. technique piscine, sortie vallonnée, WOD jambes…"></textarea></label><div class="activity-load-preview"><span>Charge estimée</span><strong id="activityLoadPreview">150 UA</strong><small>durée × RPE · permet de comparer des sports différents</small></div><div class="editor-actions"><button type="button" class="btn btn-secondary" id="cancelActivity">Annuler</button><button type="button" class="btn btn-primary" id="saveActivity">Enregistrer</button></div></section>`,'today');
 }
 function renderTodayUsefulActions(){
   const x=progressWeekStats(),rank=getRankState(),next=rank.next;
@@ -3285,7 +3298,10 @@ function bindEvents(){
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;state.selectedHistoryId=null;render();});
   const openActivity=document.getElementById('openActivityLog');if(openActivity)openActivity.onclick=()=>{state.activityEditor=true;render();};
   const cancelActivity=document.getElementById('cancelActivity');if(cancelActivity)cancelActivity.onclick=()=>{state.activityEditor=false;render();};
-  const saveActivity=document.getElementById('saveActivity');if(saveActivity)saveActivity.onclick=()=>{const duration=Number(document.getElementById('activityDuration')?.value||0);if(duration<=0)return;addActivityLog(document.getElementById('activityType')?.value||'sport',duration,Number(document.getElementById('activityDistance')?.value||0),document.getElementById('activityIntensity')?.value||'moderate',document.getElementById('activityNote')?.value||'');state.activityEditor=false;render();};
+  const saveActivity=document.getElementById('saveActivity');if(saveActivity)saveActivity.onclick=()=>{const duration=Number(document.getElementById('activityDuration')?.value||0);if(duration<=0)return;addActivityLog(document.getElementById('activityType')?.value||'sport',duration,Number(document.getElementById('activityDistance')?.value||0),'rpe',document.getElementById('activityNote')?.value||'',Number(document.getElementById('activityRpe')?.value||5));state.activityEditor=false;render();};
+  const activityTypeEl=document.getElementById('activityType'),activityRpe=document.getElementById('activityRpe'),activityDuration=document.getElementById('activityDuration');
+  const syncActivityEditor=()=>{if(!activityTypeEl)return;const type=activityType(activityTypeEl.value),wrap=document.getElementById('activityDistanceWrap'),unit=document.getElementById('activityDistanceUnit'),rpe=Number(activityRpe?.value||5),mins=Number(activityDuration?.value||0);if(wrap)wrap.style.display=type.distance?'':'none';if(unit)unit.textContent=type.metric||'km';const rv=document.getElementById('activityRpeValue');if(rv)rv.textContent=`${rpe}/10`;const lp=document.getElementById('activityLoadPreview');if(lp)lp.textContent=`${Math.round(mins*rpe)} UA`;};
+  if(activityTypeEl){activityTypeEl.onchange=syncActivityEditor;activityRpe.oninput=syncActivityEditor;activityDuration.oninput=syncActivityEditor;syncActivityEditor();}
   document.querySelectorAll('[data-progress-tab]').forEach(b=>b.onclick=()=>{state.progressTab=b.dataset.progressTab;state.selectedHistoryId=null;render();});
   document.querySelectorAll('[data-today-progress]').forEach(b=>b.onclick=()=>{state.view='progress';state.progressTab=b.dataset.todayProgress||'performance';state.selectedHistoryId=null;render();});
   const openQuick=document.getElementById('openQuickLog');if(openQuick)openQuick.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();};
