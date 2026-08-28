@@ -1,4 +1,4 @@
-# Calisthénie Coach · V10.2 — Premium Design System
+# Calisthénie Coach · V10.3 — Progress & Guided Preview
 
 Refonte UI globale basée sur V10.1, sans changement du moteur d’entraînement ni des données.
 
@@ -12,6 +12,6 @@ Refonte UI globale basée sur V10.1, sans changement du moteur d’entraînement
 - Bottom nav et bouton Ajouter revus pour iPhone.
 - Responsive desktop élargi sans étirer excessivement les contenus.
 - Animations courtes et respect de prefers-reduced-motion.
-- Cache PWA : `calisthenie-coach-v10-2-premium-ui`.
+- Cache PWA : `calisthenie-coach-v10-3-progress-preview`.
 
 Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
