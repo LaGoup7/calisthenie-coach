@@ -2931,3 +2931,198 @@ body{
 .planning-rest-v1071{display:grid;padding:11px 0;border-bottom:1px solid var(--line)}.planning-rest-v1071 strong{font-size:.65rem}.planning-rest-v1071 span,.planning-no-kinetik{font-size:.52rem;color:var(--muted)}.planning-no-kinetik{padding:7px 0;border-bottom:1px solid var(--line)}.planning-mobility-v1071{display:flex;justify-content:space-between;gap:12px;padding:8px 0}.planning-mobility-v1071 span,.planning-mobility-v1071 strong{font-size:.51rem}.planning-mobility-v1071 span{color:var(--muted)}.planning-mobility-v1071 strong{font-weight:650}
 @media(max-width:680px){.planning-day-v1071-body{margin-left:0}.planning-conflicts-v1071>div:not(.kicker){grid-template-columns:1fr}.planning-analysis-actions{align-items:flex-start}.planning-external-event{grid-template-columns:42px 1fr}.planning-external-actions{grid-column:2;justify-self:start}.planning-details-head{display:grid}}
 @media(max-width:430px){.planning-week-header-v1071{grid-template-columns:30px 1fr 30px}.planning-week-header-v1071 h1{font-size:1.12rem}.planning-week-header-v1071 p{font-size:.5rem}.planning-week-summary-v1071>div{padding:9px 6px}.planning-analysis-actions{display:grid}.planning-kinetik-toggle{grid-template-columns:1fr}.planning-expand-label{justify-self:start}.planning-session-copy h3{font-size:.74rem}.planning-exercise-preview{font-size:.53rem}.planning-external-event{grid-template-columns:38px 1fr}.planning-external-actions{flex-wrap:wrap}}
+
+
+/* v10.72 · Planning day separation
+   Goal: make the week scannable without turning every day into a card. */
+
+.planning-days-v1071{
+  padding-top:8px;
+}
+
+/* Each day is a clear editorial section: whitespace + stronger divider. */
+.planning-day-v1071{
+  position:relative;
+  padding:24px 2px 26px;
+  border-bottom:0!important;
+}
+.planning-day-v1071 + .planning-day-v1071{
+  margin-top:4px;
+  border-top:2px solid var(--line)!important;
+}
+
+/* A short visual anchor makes it easy to spot the start of a new day. */
+.planning-day-v1071 + .planning-day-v1071::before{
+  content:"";
+  position:absolute;
+  top:-2px;
+  left:0;
+  width:54px;
+  height:2px;
+  background:var(--text);
+  opacity:.72;
+}
+
+/* Day header becomes the primary separator, not the workout card. */
+.planning-day-v1071-head{
+  min-height:34px;
+  margin-bottom:12px!important;
+}
+.planning-date-v1071{
+  gap:9px!important;
+}
+.planning-date-v1071>span{
+  font-size:.58rem!important;
+  letter-spacing:.08em;
+}
+.planning-date-v1071>strong{
+  font-size:1.24rem!important;
+  line-height:1;
+}
+.planning-date-v1071>em{
+  margin-left:7px!important;
+  padding-left:8px;
+  border-left:1px solid var(--line);
+}
+
+/* Content is indented under the date to create a simple week timeline. */
+.planning-day-v1071-body{
+  position:relative;
+  margin-left:48px!important;
+  padding-left:16px;
+  border-top:0!important;
+  border-left:1px solid var(--line);
+}
+.planning-day-v1071-body::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:-4px;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--bg);
+  border:1.5px solid var(--muted);
+}
+
+/* Keep the workout itself clean; the day separator now carries hierarchy. */
+.planning-kinetik-primary{
+  border-top:0!important;
+}
+.planning-kinetik-toggle{
+  padding-top:3px!important;
+  padding-bottom:13px!important;
+}
+.planning-session-copy h3{
+  font-size:.82rem!important;
+}
+
+/* External activities are visually secondary but clearly separated. */
+.planning-external-event,
+.planning-actual-unplanned{
+  padding-top:12px!important;
+  padding-bottom:12px!important;
+}
+.planning-external-event + .planning-external-event,
+.planning-kinetik-primary + .planning-external-event,
+.planning-kinetik-primary + .planning-actual-unplanned{
+  border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);
+}
+
+/* Rest days should still have a visible section, not look empty. */
+.planning-rest-v1071{
+  padding:8px 0 14px!important;
+}
+.planning-rest-v1071 strong{
+  font-size:.7rem!important;
+}
+
+/* Mobility closes the day visually. */
+.planning-mobility-v1071{
+  margin-top:4px;
+  padding-top:10px!important;
+  border-top:1px dashed color-mix(in srgb,var(--line) 75%,transparent);
+}
+
+/* Today: use a restrained left accent rather than a large background block. */
+.planning-day-v1071.today{
+  background:transparent!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  padding-left:2px!important;
+  padding-right:2px!important;
+}
+.planning-day-v1071.today::after{
+  content:"";
+  position:absolute;
+  left:-10px;
+  top:22px;
+  bottom:22px;
+  width:3px;
+  border-radius:3px;
+  background:var(--text);
+}
+.planning-day-v1071.today .planning-date-v1071>strong{
+  font-weight:900;
+}
+
+/* The + stays aligned with the day header and less visually dominant. */
+.planning-day-v1071 .planning-add{
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  padding:0!important;
+  border-radius:50%;
+}
+
+/* Mobile: retain the timeline, but reduce indentation. */
+@media(max-width:680px){
+  .planning-day-v1071{
+    padding-top:20px;
+    padding-bottom:22px;
+  }
+  .planning-day-v1071 + .planning-day-v1071{
+    margin-top:2px;
+  }
+  .planning-day-v1071-body{
+    margin-left:28px!important;
+    padding-left:12px;
+  }
+  .planning-day-v1071 + .planning-day-v1071::before{
+    width:42px;
+  }
+  .planning-day-v1071.today::after{
+    left:-6px;
+    top:19px;
+    bottom:19px;
+  }
+}
+
+@media(max-width:430px){
+  .planning-day-v1071{
+    padding-top:18px;
+    padding-bottom:20px;
+  }
+  .planning-day-v1071-head{
+    margin-bottom:10px!important;
+  }
+  .planning-date-v1071>strong{
+    font-size:1.12rem!important;
+  }
+  .planning-date-v1071>span{
+    font-size:.54rem!important;
+  }
+  .planning-date-v1071>em{
+    font-size:.48rem!important;
+  }
+  .planning-day-v1071-body{
+    margin-left:22px!important;
+    padding-left:10px;
+  }
+  .planning-day-v1071-body::before{
+    width:6px;
+    height:6px;
+    left:-3.5px;
+  }
+}
