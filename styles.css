@@ -2445,3 +2445,13 @@ html[data-theme="dark"] .next-exercise-preview-rich,html[data-theme="dark"] .pro
 .ai-import-weeks,.ai-import-changes{border-top:1px solid var(--line);margin-top:12px}.ai-import-weeks>div,.ai-import-changes>div{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}.ai-import-weeks b,.ai-import-changes b{font-size:.65rem}.ai-import-weeks span,.ai-import-changes span{font-size:.67rem}.ai-import-weeks small,.ai-import-changes small{font-size:.59rem;color:var(--muted)}
 .ai-import-error,.ai-import-warning{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}.ai-import-error strong{font-size:.72rem}.ai-import-error p,.ai-import-warning p{font-size:.63rem;color:var(--muted);margin:5px 0}.ai-import-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 @media(max-width:560px){.ai-import-summary{grid-template-columns:1fr 1fr}.ai-import-weeks>div,.ai-import-changes>div{grid-template-columns:45px 1fr}.ai-import-weeks small,.ai-import-changes small{grid-column:2}}
+
+/* V10.12 · weekly availability + per-exercise AI progression */
+.ai-rest-days{margin-top:12px}.ai-rest-days>span{display:block;font-size:.66rem;font-weight:750;margin-bottom:8px}
+.ai-day-choice{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.ai-day-choice label{position:relative}.ai-day-choice input{position:absolute;opacity:0;pointer-events:none}.ai-day-choice span{display:flex;align-items:center;justify-content:center;min-height:42px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:.62rem;font-weight:750;cursor:pointer}.ai-day-choice input:checked+span{border-color:var(--text);background:var(--text);color:var(--surface)}.ai-day-choice input:disabled+span{opacity:.45;cursor:not-allowed}
+.ai-rest-days>small{display:block;margin-top:7px}.ai-import-summary small{font-size:.55rem;color:var(--muted);display:block;margin-top:2px}
+.ai-import-changes small{line-height:1.5}
+@media(max-width:520px){.ai-day-choice{grid-template-columns:repeat(4,1fr)}}
+
+.ai-import-schedule{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:12px 0 14px}.ai-import-schedule>div{display:grid;gap:2px;padding:8px 5px;text-align:center;border:1px solid var(--line);border-radius:9px;background:var(--surface)}.ai-import-schedule b{font-size:.58rem}.ai-import-schedule span{font-size:.55rem}.ai-import-schedule small{font-size:.5rem;color:var(--muted)}.ai-import-schedule .is-rest{opacity:.58}
+@media(max-width:560px){.ai-import-schedule{grid-template-columns:repeat(4,1fr)}}

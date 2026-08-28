@@ -1501,10 +1501,15 @@ function prepareWorkoutObject(base, readiness=null){
   const w=clone(base),cycle=getCycleState();
   w.cycle=cycle;w.readiness=readiness;
   w.exercises=(w.exercises||[]).map(e=>{
-    let chosen=applyExerciseChoice(e);
-    const p=prescriptionFor(chosen,cycle.allowProgress);
-    chosen={...chosen,target:p.target,progressionTarget:p.target,prescriptionStatus:p.status,prescriptionNote:p.note};
-    chosen=applyCycleToExercise(chosen,cycle);
+    let chosen=applyExerciseChoice(e),ai=aiWeeklyPrescriptionFor(chosen,cycle.week);
+    if(ai){
+      chosen={...chosen,sets:ai.sets,target:ai.target,baseTarget:ai.target,type:ai.type||chosen.type,progressionTarget:ai.target,prescriptionStatus:'ai-cycle',prescriptionNote:ai.note||`Prescription spécifique S${cycle.week}${ai.assistance?` · ${ai.assistance}`:''}`,aiAssistance:ai.assistance||''};
+      if(chosen.type==='timer'&&/Cardio/i.test(chosen.name))chosen.target=Math.max(300,Math.round(chosen.target*Number(cycle.cardioFactor||1)));
+    }else{
+      const p=prescriptionFor(chosen,cycle.allowProgress);
+      chosen={...chosen,target:p.target,progressionTarget:p.target,prescriptionStatus:p.status,prescriptionNote:p.note};
+      chosen=applyCycleToExercise(chosen,cycle);
+    }
     chosen=applyReadinessToExercise(chosen,readiness);
     return chosen;
   });
@@ -1897,6 +1902,53 @@ function cycleAiDataText(objective='',target=''){
   const s=cycleAiDataSnapshot(objective,target);
   return s.metrics.map(m=>`- ${m.label}: ${Number(m.value||0)>0?`${m.value} ${m.unit}${m.source?` · ${m.source}`:''}`:'aucune donnée'}`).join('\n');
 }
+
+function cycleTrainingDays(c){
+  return Array.from({length:7},(_,day)=>day).filter(day=>(cycleDayTemplate(c,day).exercises||[]).length);
+}
+function cycleRestDayNames(c){return Array.from({length:7},(_,day)=>day).filter(day=>!(cycleDayTemplate(c,day).exercises||[]).length).map(day=>DAY_NAMES[day]);}
+function aiDesiredRestDays(){
+  return [...document.querySelectorAll('input[name=cycleAiRestDay]:checked')].map(x=>x.value);
+}
+function aiSyncTrainingSchedule(){
+  const count=Math.max(1,Math.min(6,Number(document.getElementById('cycleAiTrainingDays')?.value||6)));
+  const need=7-count,boxes=[...document.querySelectorAll('input[name=cycleAiRestDay]')],selected=boxes.filter(x=>x.checked);
+  if(selected.length>need){selected.slice(need).forEach(x=>x.checked=false);}
+  boxes.forEach(x=>x.disabled=!x.checked&&boxes.filter(y=>y.checked).length>=need);
+  const msg=document.getElementById('cycleAiRestHint'),now=boxes.filter(x=>x.checked).length;
+  if(msg)msg.textContent=need===0?'Aucun jour de repos':now===need?`${need} jour${need>1?'s':''} de repos sélectionné${need>1?'s':''}`:`Choisis encore ${need-now} jour${need-now>1?'s':''} de repos`;
+  return now===need;
+}
+function applyAiScheduleToCycle(cycle,schedule){
+  const plan=Array.isArray(schedule?.dayPlan)?schedule.dayPlan:null;
+  if(plan&&plan.length===7){
+    const original={};for(let d=0;d<7;d++)original[d+1]=cycleDayTemplate(cycle,d);
+    const nameToDay=Object.fromEntries(DAY_NAMES.map((n,i)=>[n,i])),next={};
+    for(const row of plan){
+      const day=nameToDay[row.day];if(day==null)continue;
+      if(row.status==='rest'){next[day]={name:"Repos",subtitle:"Récupération complète",duration:0,shortDuration:0,intensity:"Repos",exercises:[]};continue;}
+      const sources=(row.sourceDays||[]).map(n=>original[Number(n)]).filter(Boolean);
+      if(!sources.length){next[day]={name:"Séance",subtitle:"Séance adaptée par ChatGPT",duration:45,shortDuration:25,intensity:"Modérée",exercises:[]};continue;}
+      const first=clone(sources[0]),extra=sources.slice(1);
+      first.exercises=[...(first.exercises||[]),...extra.flatMap(w=>(clone(w.exercises)||[]))];
+      first.name=extra.length?`${first.name} · combinée`:first.name;
+      first.subtitle=extra.length?'Séance combinée selon le nouveau rythme hebdomadaire':first.subtitle;
+      first.duration=Math.max(10,Math.round(sources.reduce((s,w)=>s+Number(w.duration||45),0)*(extra.length?.68:1)));
+      next[day]=first;
+    }
+    for(let d=0;d<7;d++)if(!next[d])next[d]={name:"Repos",subtitle:"Récupération complète",duration:0,shortDuration:0,intensity:"Repos",exercises:[]};
+    cycle.days=next;return cycle;
+  }
+  const restSet=new Set(schedule?.restDays||[]),sourceSessions=Array.from({length:7},(_,d)=>cycleDayTemplate(cycle,d)).filter(w=>(w.exercises||[]).length).map(clone);
+  const next={};let i=0;for(let d=0;d<7;d++){if(restSet.has(DAY_NAMES[d]))next[d]={name:"Repos",subtitle:"Récupération complète",duration:0,shortDuration:0,intensity:"Repos",exercises:[]};else next[d]=clone(sourceSessions[i++]||{name:"Séance",subtitle:"Séance personnalisée",duration:45,shortDuration:25,intensity:"Modérée",exercises:[]});}
+  cycle.days=next;return cycle;
+}
+function aiWeeklyPrescriptionFor(e,week){
+  const rows=Array.isArray(e?.aiProgression)?e.aiProgression:[];
+  const row=rows.find(r=>Number(r.week)===Number(week));
+  if(!row)return null;
+  return {sets:Number(row.sets||e.sets||1),target:Number(row.target||e.target||1),type:row.type||e.type,assistance:row.assistance||'',note:row.note||''};
+}
 function cycleAiWeeklySummary(c){
   let strictPull=0,assistedPull=0,dips=0,cardioMin=0,trainingDays=0;
   for(let i=0;i<7;i++){
@@ -1919,7 +1971,7 @@ function cycleAiPromptText(c,goal,opts={}){
   const autoLevel=cycleAiDataText(opts.objective,opts.target);
   const recText=opts.source==='manual'?`- Niveau déclaré par l’utilisateur: ${opts.manualLevel||'non renseigné'}`:autoLevel;
   const recent=opts.source==='manual'?'- Historique non utilisé pour estimer le niveau actuel':(history.slice(-6).reverse().map(s=>{const entries=(s.entries||[]).filter(x=>x.type!=='timer').slice(0,8).map(x=>`${x.exercise}: ${recordValueText(x)}`).join('; ');return `- ${formatShortDate(s.date)}: ${entries||'séance enregistrée'}`}).join('\n')||'- Pas encore de séances exploitables');
-  const program=Array.from({length:7},(_,i)=>{const d=cycleDayTemplate(c,i);const ex=(d?.exercises||[]).map(x=>`${x.name} (${describe(x)})`).join('; ');return ex?`J${i+1}: ${ex}`:`J${i+1}: repos`;}).join('\n');
+  const program=Array.from({length:7},(_,i)=>{const d=cycleDayTemplate(c,i);const ex=(d?.exercises||[]).map(x=>`${x.name} (${describe(x)})`).join('; ');return ex?`J${i+1} (${DAY_NAMES[i]}): ${ex}`:`J${i+1} (${DAY_NAMES[i]}): repos`;}).join('\n');
   const contextParts=[
     opts.context&&opts.context!=='Aucun point particulier'?opts.context:null,
     opts.breakDuration?`Durée de l'arrêt: ${opts.breakDuration}`:null,
@@ -1942,6 +1994,11 @@ ${contextParts.length?contextParts.join('\n'):'Contexte particulier: aucun'}
 NIVEAU ACTUEL
 Source: ${opts.source==='manual'?'saisie manuelle':'données Calisthenie Coach'}
 ${recText}
+
+RYTHME HEBDOMADAIRE SOUHAITÉ
+Séances par semaine: ${opts.trainingDays||cycleTrainingDays(c).length}
+Jours de repos souhaités: ${(opts.restDays&&opts.restDays.length)?opts.restDays.join(', '):cycleRestDayNames(c).join(', ')}
+Respecte ces jours de repos dans le nouveau cycle. Si le nombre de séances change, redistribue intelligemment le contenu et les priorités sans simplement supprimer au hasard des séances.
 
 CYCLE ACTUEL
 Cycle: ${c.name}
@@ -1967,7 +2024,8 @@ TA MISSION
 1. Vérifie la cohérence entre l'objectif, le niveau actuel, l'échéance et le programme.
 2. Si une information réellement indispensable manque encore, pose au maximum 3 questions très ciblées avant de finaliser. Ne redemande jamais une information déjà présente ci-dessus.
 3. Analyse les points forts et les limites du cycle actuel pour cet objectif.
-4. Réponds ensuite avec DEUX BLOCS DE CONFIGURATION clairement séparés:
+4. Construis d'abord la RÉPARTITION HEBDOMADAIRE correspondant exactement au nombre de séances et aux jours de repos demandés. Conserve l'ordre logique push/pull/jambes/skill et évite deux grosses sollicitations identiques consécutives.
+5. Réponds ensuite avec DEUX BLOCS DE CONFIGURATION clairement séparés:
 
 BLOC A — COURBE DU CYCLE
 Propose les ${cs.weekCount} semaines avec: phase, volume relatif %, cible reps/holds %, RIR, cardio %, progression automatique oui/non. Termine ce bloc par un tableau compact S1 à S${cs.weekCount}.
@@ -1982,11 +2040,11 @@ Propose uniquement les modifications réellement utiles au programme actuel. Pou
 - raison courte;
 - semaines concernées ou règle de progression.
 
-5. Ajoute ensuite PROGRESSION DES EXERCICES PRIORITAIRES: décris la progression concrète semaine par semaine des mouvements directement liés à l'objectif.
-6. Identifie les exercices spécifiques à l'objectif absents du programme. N'en ajoute que si cela apporte un bénéfice clair.
-7. Prévois consolidation/deload et gestion de fatigue si pertinent.
-8. Si l'objectif ou l'échéance paraît irréaliste, explique-le et propose une cible intermédiaire mesurable.
-9. Ne modifie pas un exercice sans raison liée à l'objectif, à la récupération ou à la sécurité.
+6. Ajoute ensuite PROGRESSION DES EXERCICES PRIORITAIRES: décris la progression concrète semaine par semaine des mouvements directement liés à l'objectif. Pour chaque exercice prioritaire modifié/ajouté, fournis une prescription explicite pour chaque semaine concernée (séries, reps/secondes et assistance éventuelle), afin que l'application ne garde pas une prescription statique pendant 8 semaines.
+7. Identifie les exercices spécifiques à l'objectif absents du programme. N'en ajoute que si cela apporte un bénéfice clair.
+8. Prévois consolidation/deload et gestion de fatigue si pertinent.
+9. Si l'objectif ou l'échéance paraît irréaliste, explique-le et propose une cible intermédiaire mesurable.
+10. Ne modifie pas un exercice sans raison liée à l'objectif, à la récupération ou à la sécurité.
 
 FORMAT FINAL OBLIGATOIRE
 Termine par un bloc intitulé CONFIGURATION À REPORTER DANS CALISTHENIE COACH contenant:
@@ -2003,16 +2061,23 @@ Après CONFIGURATION À REPORTER DANS CALISTHENIE COACH, ajoute un unique bloc d
   "cycle": {
     "name": "Nom court du nouveau cycle",
     "goal": "Objectif",
+    "schedule": {"trainingDays":5,"restDays":["Lundi","Vendredi"],"dayPlan":[{"day":"Lundi","status":"rest","sourceDays":[]},{"day":"Mardi","status":"training","sourceDays":[1]},{"day":"Mercredi","status":"training","sourceDays":[3]}]},
     "weeks": [
       {"week":1,"phase":"Nom","volume":0.85,"target":0.95,"rir":4,"cardio":0.90,"autoProgress":false}
     ]
   },
   "programChanges": [
-    {"day":4,"action":"replace","exercise":"Nom exact actuel","newExercise":"Nom exact bibliothèque","sets":3,"target":2,"type":"reps","weeks":[1,2,3],"reason":"Raison courte"}
+    {"day":4,"action":"replace","exercise":"Nom exact actuel","newExercise":"Nom exact bibliothèque","sets":3,"target":2,"type":"reps","weeks":[1,2,3],"reason":"Raison courte","progression":[{"week":1,"sets":3,"target":2,"type":"reps","assistance":"bande moyenne"},{"week":2,"sets":3,"target":3,"type":"reps","assistance":"bande moyenne"}]}
   ]
 }
 Règles JSON:
 - cycle.weeks doit contenir exactement ${cs.weekCount} semaines;
+- cycle.schedule.trainingDays doit correspondre au nombre de séances souhaité et restDays doit contenir exactement les jours de repos demandés;
+- cycle.schedule.dayPlan doit contenir les 7 jours français exactement une fois. Pour chaque jour: status vaut "training" ou "rest"; sourceDays indique quels J1-J7 du programme actuel servent de base à cette journée;
+- un jour de repos a sourceDays: [];
+- si le nombre de séances diminue, tu peux fusionner des contenus avec plusieurs sourceDays (ex. [3,6]) ou omettre une séance secondaire, mais fais-le volontairement selon l'objectif et la récupération;
+- si plusieurs sourceDays sont fusionnés, réduis ensuite les accessoires inutiles via programChanges afin d'éviter une séance démesurée;
+- restDays utilise uniquement les noms français: Dimanche, Lundi, Mardi, Mercredi, Jeudi, Vendredi, Samedi;
 - volume, target et cardio sont des facteurs décimaux: 0.85 = 85%;
 - rir doit être compris entre 0 et 5;
 - day doit être compris entre 1 et 7;
@@ -2021,6 +2086,9 @@ Règles JSON:
 - pour modify/remove/replace, exercise doit reprendre exactement le nom existant;
 - pour add/replace, newExercise doit reprendre si possible un nom de la bibliothèque/programme;
 - weeks est un tableau de numéros de semaines;
+- progression est obligatoire pour chaque action modify/replace/add portant sur un exercice prioritaire et contient une ligne par semaine réellement prescrite;
+- progression.week doit être entre 1 et ${cs.weekCount}; sets et target doivent être positifs; assistance est une courte description libre et peut être vide;
+- les prescriptions de progression sont des cibles finales: l'application les appliquera telles quelles pour l'exercice prioritaire, sans leur appliquer une seconde fois le facteur global de reps/volume;
 - n'ajoute aucune clé non prévue sauf si elle est indispensable.
 Si tu dois d'abord poser des questions parce qu'une donnée indispensable manque, NE FOURNIS PAS ce JSON avant d'avoir reçu les réponses.`;
 }
@@ -2036,16 +2104,22 @@ function extractCycleAiJson(text){
 function validateCycleAiImport(data,sourceCycle){
   const errors=[],warnings=[];if(!data||data.schemaVersion!==1)errors.push('Version de format non reconnue.');
   const weeks=data?.cycle?.weeks;if(!Array.isArray(weeks)||weeks.length!==8)errors.push('Le cycle doit contenir exactement 8 semaines.');
+  const schedule=data?.cycle?.schedule,validDayNames=new Set(DAY_NAMES);if(!schedule||!Number.isInteger(Number(schedule.trainingDays))||Number(schedule.trainingDays)<1||Number(schedule.trainingDays)>6)errors.push('Rythme hebdomadaire invalide.');const restDays=schedule?.restDays;if(!Array.isArray(restDays)||restDays.some(x=>!validDayNames.has(x))||restDays.length!==7-Number(schedule?.trainingDays||0))errors.push('Jours de repos incohérents avec le nombre de séances.');
+  const dayPlan=schedule?.dayPlan;if(!Array.isArray(dayPlan)||dayPlan.length!==7)errors.push('Planification des 7 jours manquante.');else{const names=dayPlan.map(x=>x.day);if(new Set(names).size!==7||names.some(x=>!validDayNames.has(x)))errors.push('Les 7 jours de la semaine doivent apparaître exactement une fois.');dayPlan.forEach(x=>{if(!['training','rest'].includes(x.status))errors.push(`Planning ${x.day}: statut invalide.`);if(!Array.isArray(x.sourceDays)||x.sourceDays.some(n=>Number(n)<1||Number(n)>7))errors.push(`Planning ${x.day}: sourceDays invalide.`);if(x.status==='rest'&&x.sourceDays.length)errors.push(`Planning ${x.day}: un repos ne doit pas contenir de séance source.`);});const plannedRest=dayPlan.filter(x=>x.status==='rest').map(x=>x.day);if(plannedRest.length!==restDays?.length||plannedRest.some(x=>!restDays.includes(x)))errors.push('dayPlan ne correspond pas aux jours de repos.');}
   (weeks||[]).forEach((w,i)=>{if(Number(w.week)!==i+1)errors.push(`S${i+1}: numéro de semaine invalide.`);for(const k of ['volume','target','cardio']){const v=Number(w[k]);if(!Number.isFinite(v)||v<.4||v>1.5)errors.push(`S${i+1}: ${k} hors limites.`);}const rir=Number(w.rir);if(!Number.isFinite(rir)||rir<0||rir>5)errors.push(`S${i+1}: RIR invalide.`);});
   const allowed=new Set(['keep','modify','replace','add','remove']),types=new Set(['reps','reps_band','hold','timer']);
-  (data?.programChanges||[]).forEach((ch,i)=>{const n=i+1,day=Number(ch.day);if(day<1||day>7)errors.push(`Adaptation ${n}: jour invalide.`);if(!allowed.has(ch.action))errors.push(`Adaptation ${n}: action inconnue.`);if(ch.type&&!types.has(ch.type))errors.push(`Adaptation ${n}: type inconnu.`);const dayEx=(cycleDayTemplate(sourceCycle,day-1).exercises||[]).map(x=>x.name);if(['modify','replace','remove'].includes(ch.action)&&!dayEx.includes(ch.exercise))errors.push(`J${day}: exercice actuel introuvable « ${ch.exercise||''} ».`);if(['add','replace'].includes(ch.action)&&ch.newExercise&&!exerciseInfo(ch.newExercise))warnings.push(`J${day}: « ${ch.newExercise} » n'est pas reconnu dans la bibliothèque; vérification nécessaire.`);if(ch.weeks&&!ch.weeks.every(w=>Number(w)>=1&&Number(w)<=8))errors.push(`Adaptation ${n}: semaines invalides.`);});
+  (data?.programChanges||[]).forEach((ch,i)=>{const n=i+1,day=Number(ch.day);if(day<1||day>7)errors.push(`Adaptation ${n}: jour invalide.`);if(!allowed.has(ch.action))errors.push(`Adaptation ${n}: action inconnue.`);if(ch.type&&!types.has(ch.type))errors.push(`Adaptation ${n}: type inconnu.`);const dayEx=(cycleDayTemplate(sourceCycle,day-1).exercises||[]).map(x=>x.name);if(['modify','replace','remove'].includes(ch.action)&&!dayEx.includes(ch.exercise))errors.push(`J${day}: exercice actuel introuvable « ${ch.exercise||''} ».`);if(['add','replace'].includes(ch.action)&&ch.newExercise&&!exerciseInfo(ch.newExercise))warnings.push(`J${day}: « ${ch.newExercise} » n'est pas reconnu dans la bibliothèque; vérification nécessaire.`);if(ch.weeks&&!ch.weeks.every(w=>Number(w)>=1&&Number(w)<=8))errors.push(`Adaptation ${n}: semaines invalides.`);
+    if(Array.isArray(ch.progression)){const seen=new Set();ch.progression.forEach(p=>{const wk=Number(p.week);if(wk<1||wk>8||seen.has(wk))errors.push(`Adaptation ${n}: progression hebdomadaire invalide.`);seen.add(wk);if(Number(p.sets)<=0||Number(p.target)<=0)errors.push(`Adaptation ${n}: séries/cible invalides en S${wk}.`);});}
+    if(['modify','replace','add'].includes(ch.action)&&(!Array.isArray(ch.progression)||!ch.progression.length))warnings.push(`J${day}: aucune progression hebdomadaire détaillée pour « ${ch.newExercise||ch.exercise} »; la prescription restera statique.`);
+  });
   return {ok:!errors.length,errors,warnings};
 }
 function previewCycleAiImport(data,validation){
   const weeks=data.cycle.weeks||[],changes=data.programChanges||[];
-  return `<div class="ai-import-summary"><div><span>Nouveau cycle</span><strong>${esc(data.cycle.name||'Cycle ChatGPT')}</strong></div><div><span>Objectif</span><strong>${esc(data.cycle.goal||'—')}</strong></div><div><span>Semaines</span><strong>${weeks.length}</strong></div><div><span>Adaptations</span><strong>${changes.filter(x=>x.action!=='keep').length}</strong></div></div>
+  return `<div class="ai-import-summary"><div><span>Nouveau cycle</span><strong>${esc(data.cycle.name||'Cycle ChatGPT')}</strong></div><div><span>Objectif</span><strong>${esc(data.cycle.goal||'—')}</strong></div><div><span>Rythme</span><strong>${Number(data.cycle.schedule?.trainingDays||0)} séances</strong><small>Repos: ${esc((data.cycle.schedule?.restDays||[]).join(', '))}</small></div><div><span>Adaptations</span><strong>${changes.filter(x=>x.action!=='keep').length}</strong></div></div>
   <div class="ai-import-weeks">${weeks.map(w=>`<div><b>S${w.week}</b><span>${esc(w.phase)}</span><small>${Math.round(Number(w.volume)*100)}% · cible ${Math.round(Number(w.target)*100)}% · RIR ${w.rir}</small></div>`).join('')}</div>
-  ${changes.length?`<div class="ai-import-changes">${changes.filter(x=>x.action!=='keep').map(ch=>`<div><b>J${ch.day} · ${esc(ch.action.toUpperCase())}</b><span>${esc(ch.exercise||'—')}${ch.newExercise?` → <strong>${esc(ch.newExercise)}</strong>`:''}</span><small>${ch.sets?`${ch.sets}×${ch.target||''} · `:''}${esc((ch.weeks||[]).map(x=>'S'+x).join(', '))}</small></div>`).join('')}</div>`:''}
+  ${data.cycle.schedule?.dayPlan?`<div class="ai-import-schedule">${['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map(name=>{const r=data.cycle.schedule.dayPlan.find(x=>x.day===name);return `<div class="${r?.status==='rest'?'is-rest':''}"><b>${name.slice(0,3)}</b><span>${r?.status==='rest'?'Repos':`Séance${(r?.sourceDays||[]).length>1?' combinée':''}`}</span><small>${r?.status==='training'?(r.sourceDays||[]).map(x=>'J'+x).join(' + '):'—'}</small></div>`}).join('')}</div>`:''}
+  ${changes.length?`<div class="ai-import-changes">${changes.filter(x=>x.action!=='keep').map(ch=>`<div><b>J${ch.day} · ${esc(ch.action.toUpperCase())}</b><span>${esc(ch.exercise||'—')}${ch.newExercise?` → <strong>${esc(ch.newExercise)}</strong>`:''}</span><small>${Array.isArray(ch.progression)&&ch.progression.length?esc(ch.progression.map(p=>`S${p.week} ${p.sets}×${p.target}${p.assistance?` · ${p.assistance}`:''}`).join(' → ')):`${ch.sets?`${ch.sets}×${ch.target||''} · `:''}${esc((ch.weeks||[]).map(x=>'S'+x).join(', '))}`}</small></div>`).join('')}</div>`:''}
   ${validation.warnings.length?`<div class="ai-import-warning">${validation.warnings.map(x=>`<p>⚠ ${esc(x)}</p>`).join('')}</div>`:''}`;
 }
 function createCycleFromAiImport(data,sourceCycle){
@@ -2054,12 +2128,14 @@ function createCycleFromAiImport(data,sourceCycle){
   copy.days={};for(let d=0;d<7;d++)copy.days[d]=cycleDayTemplate(sourceCycle,d);
   for(const ch of (data.programChanges||[])){
     if(ch.action==='keep')continue;const day=Number(ch.day)-1,w=copy.days[day],arr=w.exercises||[],idx=arr.findIndex(x=>x.name===ch.exercise);
-    const makeExercise=name=>{const fallback={name,type:ch.type||'reps',sets:Number(ch.sets||3),target:Number(ch.target||8),baseTarget:Number(ch.target||8)};const e=exerciseFromLibrary(name,fallback);e.sets=Number(ch.sets||e.sets||3);e.target=Number(ch.target||e.target||8);e.baseTarget=e.target;if(ch.type)e.type=ch.type;e.aiWeeks=Array.isArray(ch.weeks)?ch.weeks.map(Number):[];e.aiReason=ch.reason||'';return e;};
+    const makeExercise=name=>{const fallback={name,type:ch.type||'reps',sets:Number(ch.sets||3),target:Number(ch.target||8),baseTarget:Number(ch.target||8)};const e=exerciseFromLibrary(name,fallback);e.sets=Number(ch.sets||e.sets||3);e.target=Number(ch.target||e.target||8);e.baseTarget=e.target;if(ch.type)e.type=ch.type;e.aiWeeks=Array.isArray(ch.weeks)?ch.weeks.map(Number):[];e.aiReason=ch.reason||'';e.aiProgression=Array.isArray(ch.progression)?clone(ch.progression):[];return e;};
     if(ch.action==='remove'&&idx>=0)arr.splice(idx,1);
     else if(ch.action==='replace'&&idx>=0)arr.splice(idx,1,makeExercise(ch.newExercise));
     else if(ch.action==='add'&&ch.newExercise)arr.push(makeExercise(ch.newExercise));
-    else if(ch.action==='modify'&&idx>=0){arr[idx]={...arr[idx],sets:Number(ch.sets||arr[idx].sets),target:Number(ch.target||arr[idx].target),baseTarget:Number(ch.target||arr[idx].target),type:ch.type||arr[idx].type,aiWeeks:Array.isArray(ch.weeks)?ch.weeks.map(Number):[],aiReason:ch.reason||''};}
+    else if(ch.action==='modify'&&idx>=0){arr[idx]={...arr[idx],sets:Number(ch.sets||arr[idx].sets),target:Number(ch.target||arr[idx].target),baseTarget:Number(ch.target||arr[idx].target),type:ch.type||arr[idx].type,aiWeeks:Array.isArray(ch.weeks)?ch.weeks.map(Number):[],aiReason:ch.reason||'',aiProgression:Array.isArray(ch.progression)?clone(ch.progression):[]};}
   }
+  copy.schedule=clone(data.cycle.schedule||{trainingDays:cycleTrainingDays(copy).length,restDays:cycleRestDayNames(copy)});
+  applyAiScheduleToCycle(copy,copy.schedule);
   copy.progression={mode:'custom',goal:data.cycle.goal||'Personnalisé',name:data.cycle.name||'Cycle ChatGPT',description:'Progression importée depuis une proposition ChatGPT.',weeks:data.cycle.weeks.map((w,i)=>normalizeProgressionWeek({week:i+1,name:w.phase||`Semaine ${i+1}`,volumeFactor:Number(w.volume),targetFactor:Number(w.target),cardioFactor:Number(w.cardio),rir:Number(w.rir),allowProgress:!!w.autoProgress},i))};
   const list=getStoredTrainingCycles();list.push(copy);setStoredTrainingCycles(list);ensureCycleProgressionState(copy.id);return copy;
 }
@@ -2067,17 +2143,17 @@ function renderCycleProgressionEditor(){
   const id=state.cycleProgressionEditor,c=trainingCycleById(id),d=state.cycleProgressionDraft||progressionPlanForCycle(c),templates=Object.entries(PROGRESSION_TEMPLATE_DEFS),goals=['Équilibré','Reprise','Force','Muscle / volume','Skills'];
   return `<main class="shell progression-builder-shell"><section class="card progression-builder-head"><button class="back-btn" id="closeProgressionEditor">← Mes séances</button><div class="kicker">${esc(c.name)} · Progression</div><h1>Comment ce cycle doit-il progresser ?</h1><p class="muted">Choisis le niveau de contrôle qui te convient. Le planning des exercices reste dans le cycle ; cette page décide comment sa difficulté évolue.</p><section class="cycle-ai-wizard-v109">
 <div class="cycle-ai-copy"><div class="cycle-ai-icon">✦</div><div><strong>Assistant de cycle</strong><p>Quelques étapes suffisent. L’app utilise d’abord les informations qu’elle connaît et ne te demande que ce qui manque.</p></div></div>
-<div class="ai-wizard-progress"><span class="active" data-ai-dot="1"></span><span data-ai-dot="2"></span><span data-ai-dot="3"></span><span data-ai-dot="4"></span><span data-ai-dot="5"></span></div>
+<div class="ai-wizard-progress"><span class="active" data-ai-dot="1"></span><span data-ai-dot="2"></span><span data-ai-dot="3"></span><span data-ai-dot="4"></span><span data-ai-dot="5"></span><span data-ai-dot="6"></span></div>
 
 <div class="ai-wizard-step active" data-ai-step="1">
-<div class="kicker">Étape 1 sur 5</div><h3>Quel est ton objectif ?</h3>
+<div class="kicker">Étape 1 sur 6</div><h3>Quel est ton objectif ?</h3>
 <label><span>Objectif principal</span><select id="cycleAiObjective"><option>Plus de tractions</option><option>Plus de dips</option><option>Muscle / volume</option><option>Force</option><option>Endurance</option><option>Remise en forme</option><option>Skill</option><option>Personnalisé</option></select></label>
 <label><span>Résultat ou skill visé</span><input id="cycleAiTarget" type="text" placeholder="Ex. 15 tractions ou premier Muscle-up"></label>
 <label><span>Objectif secondaire · facultatif</span><input id="cycleAiSecondary" type="text" placeholder="Ex. préparer le muscle-up"></label>
 </div>
 
 <div class="ai-wizard-step" data-ai-step="2">
-<div class="kicker">Étape 2 sur 5</div><h3>Quel délai veux-tu viser ?</h3>
+<div class="kicker">Étape 2 sur 6</div><h3>Quel délai veux-tu viser ?</h3>
 <div class="ai-choice-grid" id="cycleAiHorizonChoices">
 <button type="button" class="ai-choice active" data-value="Progression durable, sans date"><strong>Sans date</strong><small>Progression durable</small></button>
 <button type="button" class="ai-choice" data-value="8 semaines"><strong>8 semaines</strong><small>Cycle actuel</small></button>
@@ -2087,7 +2163,14 @@ function renderCycleProgressionEditor(){
 </div>
 
 <div class="ai-wizard-step" data-ai-step="3">
-<div class="kicker">Étape 3 sur 5</div><h3>Ton niveau actuel</h3>
+<div class="kicker">Étape 3 sur 6</div><h3>Combien de fois veux-tu t’entraîner ?</h3>
+<label><span>Séances par semaine</span><select id="cycleAiTrainingDays">${Array.from({length:6},(_,i)=>{const n=i+1;return `<option value="${n}" ${n===cycleTrainingDays(c).length?'selected':''}>${n} séance${n>1?'s':''}</option>`}).join('')}</select></label>
+<div class="ai-rest-days"><span>Choisis tes jours de repos</span><div class="ai-day-choice">${['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map(name=>`<label><input type="checkbox" name="cycleAiRestDay" value="${name}" ${cycleRestDayNames(c).includes(name)?'checked':''}><span>${name.slice(0,3)}</span></label>`).join('')}</div><small id="cycleAiRestHint" class="muted"></small></div>
+<p class="small muted">L’app conserve au moins un jour de repos. ChatGPT adaptera la répartition des séances à ces disponibilités.</p>
+</div>
+
+<div class="ai-wizard-step" data-ai-step="4">
+<div class="kicker">Étape 4 sur 6</div><h3>Ton niveau actuel</h3>
 <div id="cycleAiDetectedData" class="ai-detected-data"></div>
 <div class="ai-source-choice">
 <label class="ai-source-option active"><input type="radio" name="cycleAiSource" value="app" checked><span><strong>Utiliser mes données de l’app</strong><small>Recommandé</small></span></label>
@@ -2096,16 +2179,16 @@ function renderCycleProgressionEditor(){
 <label class="ai-manual-level" hidden><span>Décris seulement ton niveau actuel</span><textarea id="cycleAiManualLevel" rows="3" placeholder="Ex. 6 tractions strictes, 10 dips, dead hang 45 s..."></textarea></label>
 </div>
 
-<div class="ai-wizard-step" data-ai-step="4">
-<div class="kicker">Étape 4 sur 5</div><h3>Quelque chose à prendre en compte ?</h3>
+<div class="ai-wizard-step" data-ai-step="5">
+<div class="kicker">Étape 5 sur 6</div><h3>Quelque chose à prendre en compte ?</h3>
 <label><span>Situation</span><select id="cycleAiContext"><option>Aucun point particulier</option><option>Reprise après un arrêt</option><option>Fatigue élevée</option><option>Sport complémentaire</option><option>Limiter le cardio</option><option>Gêne / douleur à prendre en compte</option></select></label>
 <label id="cycleAiBreakWrap" hidden><span>Depuis combien de temps avais-tu arrêté ?</span><input id="cycleAiBreakDuration" type="text" placeholder="Ex. 3 mois"></label>
 <div id="cycleAiPainWrap" hidden class="ai-guide-grid"><label><span>Zone concernée</span><select id="cycleAiPainZone"><option>Épaule</option><option>Coude</option><option>Poignet</option><option>Dos</option><option>Genou</option><option>Autre</option></select></label><label><span>Impact</span><select id="cycleAiPainImpact"><option>Léger</option><option>Modéré</option><option>Important</option></select></label></div>
 <label><span>Autre précision · facultatif</span><textarea id="cycleAiGoal" rows="2" placeholder="Une contrainte ou préférence que l’app ne peut pas connaître…"></textarea></label>
 </div>
 
-<div class="ai-wizard-step" data-ai-step="5">
-<div class="kicker">Étape 5 sur 5</div><h3>Vérification</h3>
+<div class="ai-wizard-step" data-ai-step="6">
+<div class="kicker">Étape 6 sur 6</div><h3>Vérification</h3>
 <div id="cycleAiReview" class="ai-review-box"></div>
 <div class="ai-output-plan"><strong>Ce que ChatGPT devra proposer</strong><div><span>01</span><p><b>Courbe du cycle</b><small>Volume, cible, RIR, cardio et progression S1–S8</small></p></div><div><span>02</span><p><b>Adaptations du programme</b><small>Exercices à conserver, modifier, remplacer ou ajouter</small></p></div><div><span>03</span><p><b>Progression prioritaire</b><small>Prescription concrète semaine par semaine</small></p></div></div><p class="small muted">Le prompt contient aussi le programme complet, le matériel et les dernières séances disponibles. Aucune donnée n’est envoyée automatiquement.</p>
 <button class="btn btn-primary" id="generateCycleAiPrompt">Générer mon prompt</button>
@@ -2125,7 +2208,7 @@ function saveCycleProgression(){syncProgressionDraftFromDom();const id=state.cyc
 function renderTrainingCycleCard(c){
   const active=String(c.id)===String(getActiveTrainingCycleId()),st=cycleStats(c),days=[1,2,3,4,5,6,0];
   const pp=progressionPlanForCycle(c),ps=getCycleState(new Date(),c.id);
-  return `<article class="card training-cycle-card ${active?'active-cycle':''}"><div class="training-cycle-head"><div><div class="kicker">${c.base?'Programme de référence':'Cycle personnalisé'}</div><h2>${esc(c.name)}</h2><p class="muted small">${esc(c.description||'Cycle personnalisé')}</p></div>${active?'<span class="cycle-active-badge">● ACTIF</span>':'<button class="btn btn-primary compact activate-cycle" data-cycle-id="'+c.id+'">Utiliser ce cycle</button>'}</div><div class="cycle-stat-line"><span>${st.activeDays} jours actifs</span><span>${st.rest} repos</span><span>${st.cardio} min cardio</span><span>${progressionModeLabel(pp)} · S${ps.week}/${ps.weekCount}</span></div><div class="cycle-day-list">${days.map(day=>{const w=cycleDayTemplate(c,day),rest=!(w.exercises||[]).length;return `<div class="cycle-day-item ${rest?'is-rest':''}"><span class="cycle-day-code">${DAY_NAMES[day].slice(0,3).toUpperCase()}</span><div class="grow"><strong>${rest?'Repos':esc(w.name)}</strong><small>${rest?'Récupération complète':`${w.duration||estimateWorkoutMinutes(w)} min · Express ${w.shortDuration||Math.max(20,Math.round((w.duration||45)*.48))}`}</small></div>${!c.base?`<div class="cycle-day-actions">${rest?`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Ajouter une séance</button>${(cycleDayTemplate(baseTrainingCycle(),day).exercises||[]).length?`<button class="mini-action restore-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Copier le jour de base</button>`:''}`:`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Modifier</button><button class="mini-action rest-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Repos</button>`}</div>`:''}</div>`}).join('')}</div><div class="training-cycle-actions"><button class="btn btn-secondary edit-cycle-progression" data-cycle-id="${c.id}">Progression</button>${c.base?`<button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer pour personnaliser</button><span class="muted small">Le planning de base reste protégé ; sa progression peut être personnalisée.</span>`:`<button class="btn btn-outline rename-cycle" data-cycle-id="${c.id}">Renommer</button><button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer</button><button class="btn btn-outline danger archive-cycle" data-cycle-id="${c.id}">Archiver</button>`}</div></article>`;
+  return `<article class="card training-cycle-card ${active?'active-cycle':''}"><div class="training-cycle-head"><div><div class="kicker">${c.base?'Programme de référence':'Cycle personnalisé'}</div><h2>${esc(c.name)}</h2><p class="muted small">${esc(c.description||'Cycle personnalisé')}</p></div>${active?'<span class="cycle-active-badge">● ACTIF</span>':'<button class="btn btn-primary compact activate-cycle" data-cycle-id="'+c.id+'">Utiliser ce cycle</button>'}</div><div class="cycle-stat-line"><span>${st.activeDays} jours actifs</span><span>${st.rest} repos · ${esc(cycleRestDayNames(c).join(', ')||'aucun')}</span><span>${st.cardio} min cardio</span><span>${progressionModeLabel(pp)} · S${ps.week}/${ps.weekCount}</span></div><div class="cycle-day-list">${days.map(day=>{const w=cycleDayTemplate(c,day),rest=!(w.exercises||[]).length;return `<div class="cycle-day-item ${rest?'is-rest':''}"><span class="cycle-day-code">${DAY_NAMES[day].slice(0,3).toUpperCase()}</span><div class="grow"><strong>${rest?'Repos':esc(w.name)}</strong><small>${rest?'Récupération complète':`${w.duration||estimateWorkoutMinutes(w)} min · Express ${w.shortDuration||Math.max(20,Math.round((w.duration||45)*.48))}`}</small></div>${!c.base?`<div class="cycle-day-actions">${rest?`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Ajouter une séance</button>${(cycleDayTemplate(baseTrainingCycle(),day).exercises||[]).length?`<button class="mini-action restore-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Copier le jour de base</button>`:''}`:`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Modifier</button><button class="mini-action rest-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Repos</button>`}</div>`:''}</div>`}).join('')}</div><div class="training-cycle-actions"><button class="btn btn-secondary edit-cycle-progression" data-cycle-id="${c.id}">Progression</button>${c.base?`<button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer pour personnaliser</button><span class="muted small">Le planning de base reste protégé ; sa progression peut être personnalisée.</span>`:`<button class="btn btn-outline rename-cycle" data-cycle-id="${c.id}">Renommer</button><button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer</button><button class="btn btn-outline danger archive-cycle" data-cycle-id="${c.id}">Archiver</button>`}</div></article>`;
 }
 function renderCustomSessions(){
   if(state.cycleProgressionEditor)return renderCycleProgressionEditor();
@@ -3077,9 +3160,10 @@ function bindEvents(){
       document.querySelectorAll('[data-ai-step]').forEach(x=>x.classList.toggle('active',Number(x.dataset.aiStep)===aiStep));
       document.querySelectorAll('[data-ai-dot]').forEach(x=>x.classList.toggle('active',Number(x.dataset.aiDot)<=aiStep));
       const prev=document.getElementById('cycleAiPrev'),next=document.getElementById('cycleAiNext');
-      if(prev)prev.hidden=aiStep===1;if(next)next.hidden=aiStep===5;
-      if(aiStep===3)refreshAiDetected();
-      if(aiStep===5)refreshAiReview();
+      if(prev)prev.hidden=aiStep===1;if(next)next.hidden=aiStep===6;
+      if(aiStep===3)aiSyncTrainingSchedule();
+      if(aiStep===4)refreshAiDetected();
+      if(aiStep===6)refreshAiReview();
     };
     const aiObjective=()=>document.getElementById('cycleAiObjective')?.value||'';
     const aiTarget=()=>document.getElementById('cycleAiTarget')?.value?.trim()||'';
@@ -3091,11 +3175,13 @@ function bindEvents(){
     const refreshAiReview=()=>{
       const box=document.getElementById('cycleAiReview');if(!box)return;
       const source=document.querySelector('input[name=cycleAiSource]:checked')?.value||'app',snap=cycleAiDataSnapshot(aiObjective(),aiTarget());
-      box.innerHTML=`<div><span>Objectif</span><strong>${esc(aiObjective())} · ${esc(aiTarget()||'à préciser')}</strong></div><div><span>Échéance</span><strong>${esc(document.getElementById('cycleAiHorizon')?.value||'Sans date')}</strong></div><div><span>Niveau</span><strong>${source==='app'?`${snap.found}/${snap.total} indicateurs depuis l’app`:'Saisie manuelle'}</strong></div><div><span>Contexte</span><strong>${esc(document.getElementById('cycleAiContext')?.value||'Aucun')}</strong></div>`;
+      box.innerHTML=`<div><span>Objectif</span><strong>${esc(aiObjective())} · ${esc(aiTarget()||'à préciser')}</strong></div><div><span>Échéance</span><strong>${esc(document.getElementById('cycleAiHorizon')?.value||'Sans date')}</strong></div><div><span>Rythme</span><strong>${esc(document.getElementById('cycleAiTrainingDays')?.value||'6')} séances · repos ${esc(aiDesiredRestDays().join(', ')||'—')}</strong></div><div><span>Niveau</span><strong>${source==='app'?`${snap.found}/${snap.total} indicateurs depuis l’app`:'Saisie manuelle'}</strong></div><div><span>Contexte</span><strong>${esc(document.getElementById('cycleAiContext')?.value||'Aucun')}</strong></div>`;
     };
-    document.getElementById('cycleAiNext')?.addEventListener('click',()=>{if(aiStep===1&&!aiTarget()){document.getElementById('cycleAiTarget')?.focus();return;}showAiStep(aiStep+1);});
+    document.getElementById('cycleAiNext')?.addEventListener('click',()=>{if(aiStep===1&&!aiTarget()){document.getElementById('cycleAiTarget')?.focus();return;}if(aiStep===3&&!aiSyncTrainingSchedule())return;showAiStep(aiStep+1);});
     document.getElementById('cycleAiPrev')?.addEventListener('click',()=>showAiStep(aiStep-1));
     document.querySelectorAll('#cycleAiHorizonChoices .ai-choice').forEach(b=>b.onclick=()=>{document.querySelectorAll('#cycleAiHorizonChoices .ai-choice').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('cycleAiHorizon').value=b.dataset.value;});
+    document.getElementById('cycleAiTrainingDays')?.addEventListener('change',()=>{const need=7-Number(document.getElementById('cycleAiTrainingDays')?.value||6),boxes=[...document.querySelectorAll('input[name=cycleAiRestDay]')];boxes.forEach(x=>x.checked=false);const preferred=cycleRestDayNames(trainingCycleById(state.cycleProgressionEditor));[...preferred,...['Lundi','Vendredi','Dimanche','Mercredi','Mardi','Jeudi','Samedi']].filter((x,i,a)=>a.indexOf(x)===i).slice(0,need).forEach(name=>{const b=boxes.find(x=>x.value===name);if(b)b.checked=true;});aiSyncTrainingSchedule();});
+    document.querySelectorAll('input[name=cycleAiRestDay]').forEach(x=>x.addEventListener('change',aiSyncTrainingSchedule));aiSyncTrainingSchedule();
     document.querySelectorAll('input[name=cycleAiSource]').forEach(r=>r.onchange=()=>{const manual=document.querySelector('input[name=cycleAiSource]:checked')?.value==='manual',row=document.querySelector('.ai-manual-level');if(row)row.hidden=!manual;document.querySelectorAll('.ai-source-option').forEach(x=>x.classList.toggle('active',!!x.querySelector('input')?.checked));});
     const syncAiContext=()=>{const ctx=document.getElementById('cycleAiContext'),v=ctx?.value||'',b=document.getElementById('cycleAiBreakWrap'),p=document.getElementById('cycleAiPainWrap');if(b){b.hidden=v!=='Reprise après un arrêt';b.style.display=b.hidden?'none':'';}if(p){p.hidden=v!=='Gêne / douleur à prendre en compte';p.style.display=p.hidden?'none':'';}};const ctx=document.getElementById('cycleAiContext');if(ctx)ctx.onchange=syncAiContext;syncAiContext();
     document.getElementById('cycleAiObjective')?.addEventListener('change',refreshAiDetected);
@@ -3106,6 +3192,8 @@ function bindEvents(){
         horizon:document.getElementById('cycleAiHorizon')?.value,context:document.getElementById('cycleAiContext')?.value,
         source:document.querySelector('input[name=cycleAiSource]:checked')?.value||'app',
         manualLevel:(document.getElementById('cycleAiManualLevel')?.value||'').trim(),
+        trainingDays:Number(document.getElementById('cycleAiTrainingDays')?.value||cycleTrainingDays(c).length),
+        restDays:aiDesiredRestDays(),
         breakDuration:(document.getElementById('cycleAiBreakDuration')?.value||'').trim(),
         painZone:document.getElementById('cycleAiContext')?.value==='Gêne / douleur à prendre en compte'?document.getElementById('cycleAiPainZone')?.value:'',
         painImpact:document.getElementById('cycleAiContext')?.value==='Gêne / douleur à prendre en compte'?document.getElementById('cycleAiPainImpact')?.value:''
