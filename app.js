@@ -2608,7 +2608,7 @@ function renderMore(){
 
     <section class="profile-links-premium">
       <button data-view="measurements"><span>${uiIcon('measurements')}</span><div><strong>Mesures corporelles</strong><small>Poids, mensurations et photos</small></div><b>→</b></button>
-      <button data-view="skills"><span>${uiIcon('skills')}</span><div><strong>Skills & niveaux</strong><small>Progressions techniques</small></div><b>→</b></button>
+      <button data-view="skills"><span>${uiIcon('skills')}</span><div><strong>Capacités</strong><small>Skills, performances et rang</small></div><b>→</b></button>
       <button data-view="flexibility"><span>${uiIcon('flex')}</span><div><strong>Mobilité & flexibilité</strong><small>Routines et tests</small></div><b>→</b></button>
       <button data-view="settings"><span>${uiIcon('profile')}</span><div><strong>Réglages KINETIK</strong><small>Coach, écran, données et application</small></div><b>→</b></button>
     </section>`, 'athlete');
@@ -3349,19 +3349,86 @@ function nextSkillMilestones(limit=4){
   }
   return rows.slice(0,limit);
 }
-function renderSkills(){
-  const manual=getManualSkills(),rank=getRankState(),allLevels=SKILL_TREES.flatMap(t=>t.levels),doneCount=allLevels.filter(skillDone).length,nextMilestones=nextSkillMilestones(5);
-  return shell(`<header class="topbar skills-topbar"><div><div class="brand">Skills & Rangs</div><div class="daylabel">Progression technique · objectifs visibles à tous les niveaux</div></div></header>
-    <section class="skills-rank-hero rank-${rank.current.id}"><div class="skills-rank-icon">${rank.index===6?'★':rank.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><h1>${rank.current.name}</h1><strong>${rank.current.title}</strong><p>${rank.current.description}</p></div><div class="skills-rank-xp"><strong>${rank.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></section>
-    <section class="skill-summary-grid"><div class="skill-summary"><span>Jalons validés</span><strong>${doneCount}/${allLevels.length}</strong><small>${Math.round(doneCount/Math.max(1,allLevels.length)*100)} % du Skill Tree</small></div><div class="skill-summary"><span>Branches commencées</span><strong>${SKILL_TREES.filter(t=>t.levels.some(skillDone)).length}/${SKILL_TREES.length}</strong><small>force + skills</small></div><div class="skill-summary"><span>Prochain rang</span><strong>${rank.next?rank.next.name:'Légende'}</strong><small>${rank.next?`${rankProgressText(rank.next,rank.nextEval)}`:'rang maximal'}</small></div></section>
-    <section class="skills-section-head"><div><div class="kicker">Rangs</div><h2>Ta progression globale</h2><p>Chaque rang mélange expérience, régularité et capacités physiques. Tous les objectifs restent visibles : touche un rang pour voir ce qu'il demandera.</p></div></section>
-    ${renderRankExplorer()}
-    ${nextMilestones.length?`<section class="card next-skills-card"><div class="section-head"><div><div class="kicker">Prochains jalons</div><h2>Priorités accessibles</h2></div><span class="pill">${nextMilestones.length}</span></div><div class="next-skill-grid">${nextMilestones.map(x=>`<div class="next-skill-item"><span>${x.tree.icon||'◆'}</span><div><small>${x.tree.name}</small><strong>${x.level.name}</strong><em>${skillAutoLabel(x.level)}</em></div></div>`).join('')}</div></section>`:''}
-    <section class="skills-section-head skill-tree-heading"><div><div class="kicker">Skill Tree</div><h2>Branches techniques</h2><p>Les performances mesurables se valident automatiquement avec une séance guidée ou un test. Les validations manuelles servent aux mouvements techniques difficiles à détecter automatiquement.</p></div></section>
-    <div class="skill-tree-grid">${SKILL_TREES.map(tree=>{let previous=true;const completed=tree.levels.filter(skillDone).length;return `<section class="card skill-card skill-card-pro"><div class="skill-card-head"><div class="skill-tree-icon">${tree.icon||'◆'}</div><div class="grow"><h2>${tree.name}</h2><p>${tree.description||''}</p></div><span class="skill-tree-count">${completed}/${tree.levels.length}</span></div><div class="skill-tree-progress"><i style="width:${completed/tree.levels.length*100}%"></i></div><div class="skill-path">${tree.levels.map((level,i)=>{const done=skillDone(level),unlocked=previous||done;previous=done;return `<div class="skill-node ${done?'done':unlocked?'available':'locked'}"><div class="skill-dot">${done?'✓':i+1}</div><div class="grow"><strong>${level.name}</strong><small>${skillAutoLabel(level)}</small>${!done&&!unlocked?`<em>Après : ${tree.levels[i-1]?.name||'jalon précédent'}</em>`:''}</div>${level.manual&&unlocked?`<button class="skill-toggle" data-skill="${level.id}">${manual[level.id]?'Retirer':'Valider'}</button>`:''}</div>`}).join('')}</div></section>`}).join('')}</div>
-    <section class="card skill-method-note"><strong>Comment les rangs sont pensés</strong><p>Bronze → Or construit les fondations. À partir de Platine, la promotion passe par des catégories : Expérience, Force, Skills, Condition et Récupération. Les catégories empêchent de contourner une qualité entière, mais les objectifs internes laissent une vraie spécialisation.</p></section>`, "skills");
+function skillTreeProgress(tree){
+  const done=tree.levels.filter(skillDone).length,total=tree.levels.length,next=tree.levels.find(x=>!skillDone(x))||null;
+  return {done,total,pct:Math.round(done/Math.max(1,total)*100),next};
 }
+function capabilityScores(){
+  const by=id=>skillTreeProgress(SKILL_TREES.find(t=>t.id===id)||{levels:[]}).pct;
+  const avg=(...v)=>Math.round(v.reduce((a,b)=>a+b,0)/Math.max(1,v.length));
+  const dead=Number(performanceValueForTest('dead_hang')||0);
+  const wall=Number(performanceValueForTest('wall_handstand')||0);
+  return [
+    {id:'pull',label:'Tirage',score:by('pull')},
+    {id:'push',label:'Poussée',score:by('push')},
+    {id:'core',label:'Core',score:by('core')},
+    {id:'grip',label:'Grip',score:Math.min(100,Math.round(dead/60*100))},
+    {id:'balance',label:'Équilibre',score:Math.max(by('handstand'),Math.min(100,Math.round(wall/60*100)))},
+    {id:'explosive',label:'Explosivité',score:Math.round((by('muscleup')+by('pull'))/2)}
+  ];
+}
+function primarySkillTree(){
+  const p=typeof getAthleteProfile==='function'?getAthleteProfile():{};
+  const text=`${p.primaryGoal||''} ${p.secondaryGoal||''}`.toLowerCase();
+  const map=[['muscle','muscleup'],['handstand','handstand'],['l-sit','core'],['lsit','core'],['front lever','lever'],['human flag','flag'],['traction','pull'],['dip','push'],['pistol','legs']];
+  const found=map.find(([q])=>text.includes(q));
+  return SKILL_TREES.find(t=>t.id===(found?.[1]||'muscleup'))||SKILL_TREES[0];
+}
+function renderSkillRoadmap(tree,compact=false){
+  const p=skillTreeProgress(tree);let previous=true;
+  return `<div class="cap-roadmap ${compact?'compact':''}">${tree.levels.map((level,i)=>{const done=skillDone(level),available=previous||done;previous=done;return `<div class="cap-roadmap-step ${done?'done':available?'current':'future'}"><div class="cap-roadmap-marker">${done?'✓':i+1}</div><div><strong>${esc(level.name)}</strong><span>${done?'Validé':available?'Prochaine étape':skillAutoLabel(level)}</span></div></div>`}).join('')}</div>`;
+}
+function skillPerformanceRows(){
+  const defs=[
+    {label:'Tractions strictes',test:'pullups',targets:[1,5,8,10,15,20],unit:'reps'},
+    {label:'Dips stricts',test:'dips',targets:[5,8,10,15,20],unit:'reps'},
+    {label:'Dead hang',test:'dead_hang',targets:[30,45,60,75,90],unit:'s'},
+    {label:'Handstand au mur',test:'wall_handstand',targets:[20,30,45,60,90],unit:'s'}
+  ];
+  return defs.map(d=>{const value=Number(performanceValueForTest(d.test)||0),next=d.targets.find(x=>x>value)||d.targets[d.targets.length-1],max=d.targets[d.targets.length-1];return {...d,value,next,pct:Math.min(100,Math.round(value/Math.max(1,next)*100)),maxed:value>=max};});
+}
+function recentSkillAchievements(limit=5){
+  const rows=[];
+  for(const tree of SKILL_TREES)for(const level of tree.levels)if(skillDone(level))rows.push({tree,level});
+  return rows.slice(-limit).reverse();
+}
+function renderSkills(){
+  const manual=getManualSkills(),rank=getRankState(),caps=capabilityScores(),focus=primarySkillTree(),fp=skillTreeProgress(focus),performances=skillPerformanceRows(),achievements=recentSkillAchievements(),allLevels=SKILL_TREES.flatMap(t=>t.levels),doneCount=allLevels.filter(skillDone).length;
+  const rankPct=rank.next?Math.round(Math.min(rank.xpProgress,rank.goalProgress)*100):100;
+  return shell(`<header class="topbar capabilities-topbar"><div><div class="brand">Capacités</div><div class="daylabel">La carte de ce que ton corps sait faire</div></div></header>
 
+  <section class="cap-rank-intro">
+    <div><div class="kicker">Niveau KINETIK</div><h1>${rank.current.name}</h1><p>${rank.current.title} · ${rank.xp.total.toLocaleString('fr-FR')} XP</p></div>
+    <div class="cap-rank-next"><span>${rank.next?`Vers ${rank.next.name}`:'Rang maximal'}</span><strong>${rankPct}%</strong></div>
+  </section>
+  <div class="cap-rank-ladder">${RANKS.map((r,i)=>`<div class="${i<rank.index?'done':i===rank.index?'current':'future'}"><i></i><span>${r.name}</span></div>`).join('')}</div>
+
+  <section class="cap-profile-section">
+    <div class="cap-section-heading"><div><div class="kicker">Ton profil</div><h2>Capacités fondamentales</h2></div><p>Construit à partir de tes performances et jalons réellement enregistrés.</p></div>
+    <div class="capability-bars">${caps.map(c=>`<div><span>${c.label}</span><div><i style="width:${c.score}%"></i></div><strong>${c.score}</strong></div>`).join('')}</div>
+  </section>
+
+  <section class="cap-next-focus">
+    <div class="cap-next-head"><div><div class="kicker">Prochaine étape</div><h2>${esc(focus.name)}</h2><p>${esc(focus.description)}</p></div><div class="cap-focus-score"><strong>${fp.pct}%</strong><span>${fp.done}/${fp.total} jalons</span></div></div>
+    ${renderSkillRoadmap(focus,true)}
+    ${fp.next?`<div class="cap-next-action"><div><span>À développer maintenant</span><strong>${esc(fp.next.name)}</strong><small>${skillAutoLabel(fp.next)}</small></div>${fp.next.manual?`<button class="btn btn-secondary compact skill-toggle" data-skill="${fp.next.id}">${manual[fp.next.id]?'Retirer':'Valider'}</button>`:''}</div>`:''}
+  </section>
+
+  <section class="cap-skills-section">
+    <div class="cap-section-heading"><div><div class="kicker">Skills</div><h2>Parcours techniques</h2></div><p>Chaque mouvement est une roadmap, pas un simple badge.</p></div>
+    <div class="cap-skill-list">${SKILL_TREES.map(tree=>{const p=skillTreeProgress(tree);return `<details class="cap-skill-row" ${tree.id===focus.id?'open':''}><summary><div><strong>${esc(tree.name)}</strong><span>${p.next?`Prochaine étape · ${esc(p.next.name)}`:'Parcours validé'}</span></div><div class="cap-skill-progress"><i style="width:${p.pct}%"></i></div><b>${p.pct}%</b></summary><div class="cap-skill-detail"><p>${esc(tree.description)}</p>${renderSkillRoadmap(tree)}</div></details>`}).join('')}</div>
+  </section>
+
+  <section class="cap-performance-section">
+    <div class="cap-section-heading"><div><div class="kicker">Performances</div><h2>Repères actuels</h2></div><p>Les prochains standards servent de direction, pas de jugement.</p></div>
+    <div class="cap-performance-table">${performances.map(x=>`<div><div><strong>${x.label}</strong><span>${x.maxed?'Palier supérieur validé':`Prochain repère · ${x.next} ${x.unit}`}</span></div><b>${x.value||'—'} <small>${x.value?x.unit:''}</small></b><div class="cap-standard-track"><i style="width:${x.value?x.pct:0}%"></i></div></div>`).join('')}</div>
+  </section>
+
+  ${achievements.length?`<section class="cap-achievements"><div class="cap-section-heading"><div><div class="kicker">Accomplissements</div><h2>Jalons validés</h2></div><strong>${doneCount}/${allLevels.length}</strong></div><div>${achievements.map(x=>`<div><span>✓</span><div><strong>${esc(x.level.name)}</strong><small>${esc(x.tree.name)}</small></div></div>`).join('')}</div></section>`:''}
+
+  <details class="cap-rank-details"><summary><div><div class="kicker">Rangs</div><strong>Comprendre ma progression globale</strong></div><span>⌄</span></summary><div>${renderRankExplorer()}</div></details>
+  `, "skills");
+}
 
 const BODY_FIELDS = [
   {key:'weight',label:'Poids',unit:'kg',group:'Essentiels',step:.1,quick:true,lowerBetter:true},
