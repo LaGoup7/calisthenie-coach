@@ -3137,73 +3137,188 @@ function findSkillLevel(id){
 function skillDoneById(id){const level=findSkillLevel(id);return level?skillDone(level):false;}
 function sessionXP(session){
   const score=clamp(Number(session?.score ?? 80),0,100);
-  let xp=70+Math.round(score*.30);
+  let xp=30+Math.round(score*.20);
   const rpe=Number(session?.rpe||0);
-  if(rpe>=5&&rpe<=7&&!session?.jointDiscomfort)xp+=10;
-  return clamp(xp,50,110);
+  if(rpe>=5&&rpe<=8&&!session?.jointDiscomfort)xp+=5;
+  return clamp(xp,25,55);
 }
 function mondayWeekKey(iso){
   const d=new Date(iso), copy=new Date(d.getFullYear(),d.getMonth(),d.getDate());
   const offset=(copy.getDay()+6)%7; copy.setDate(copy.getDate()-offset);
   return `${copy.getFullYear()}-${String(copy.getMonth()+1).padStart(2,'0')}-${String(copy.getDate()).padStart(2,'0')}`;
 }
+function plannedWeeklySessions(){
+  const p=typeof getAthleteProfile==='function'?getAthleteProfile():null;
+  const profile=Number(p?.weeklySessions||0);
+  if(profile>0)return clamp(profile,1,7);
+  try{return clamp(cycleTrainingDays(getActiveTrainingCycle()).length||4,1,7);}catch(e){return 4;}
+}
 function consistentWeeksCount(){
-  const weeks=new Map();
-  getHistory().forEach(s=>{const key=mondayWeekKey(s.date),day=new Date(s.date).toDateString();if(!weeks.has(key))weeks.set(key,new Set());weeks.get(key).add(day);});
-  return [...weeks.values()].filter(days=>days.size>=5).length;
+  const planned=plannedWeeklySessions(),required=Math.max(2,Math.ceil(planned*.8)),weeks=new Map();
+  getHistory().forEach(s=>{
+    const key=mondayWeekKey(s.date),day=localDateKey(s.date);
+    if(!weeks.has(key))weeks.set(key,new Set());
+    weeks.get(key).add(day);
+  });
+  return [...weeks.values()].filter(days=>days.size>=required).length;
 }
+function piecewiseScore(value,points){
+  const v=Math.max(0,Number(value)||0);
+  if(!points?.length)return 0;
+  if(v<=points[0][0])return points[0][1];
+  for(let i=1;i<points.length;i++){
+    const [x2,y2]=points[i],[x1,y1]=points[i-1];
+    if(v<=x2){const f=(v-x1)/Math.max(.0001,x2-x1);return y1+(y2-y1)*f;}
+  }
+  return points[points.length-1][1];
+}
+function bestExerciseValue(name){
+  const a=typeof bestMetricDetails==='function'?bestMetricDetails(getHistory(),name):{value:0};
+  const b=typeof bestQuickMetricDetails==='function'?bestQuickMetricDetails(name):{value:0};
+  return Math.max(Number(a?.value||0),Number(b?.value||0));
+}
+function skillDoneSafe(id){try{return skillDoneById(id);}catch(e){return false;}}
+function capabilityLevel(score,assessed=true){
+  if(!assessed)return 'Non évalué';
+  if(score<15)return 'Fondations';
+  if(score<30)return 'Base';
+  if(score<45)return 'Intermédiaire';
+  if(score<60)return 'Confirmé';
+  if(score<75)return 'Solide';
+  if(score<90)return 'Avancé';
+  if(score<100)return 'Expert';
+  return 'Maîtrise';
+}
+function capabilityScores(){
+  const pullups=Number(performanceValueForTest('pullups')||0);
+  const dips=Number(performanceValueForTest('dips')||0);
+  const dead=Number(performanceValueForTest('dead_hang')||0);
+  const wall=Number(performanceValueForTest('wall_handstand')||0);
+  const ctb=Math.max(bestExerciseValue('Chest-to-bar'),Number(typeof aiEvaluationFor==='function'?aiEvaluationFor('Chest-to-bar')?.value||0:0));
+  const explosiveReps=bestExerciseValue('Tractions explosives');
+  const explosiveEval=Number(typeof aiEvaluationFor==='function'?aiEvaluationFor('Tractions explosives')?.value||0:0);
+  const mu=bestExerciseValue('Muscle-up strict');
+  const freeHs=bestExerciseValue('Handstand libre');
+  const toes=bestExerciseValue('Toes-to-bar');
+
+  const pullBase=piecewiseScore(pullups,[[0,0],[1,5],[3,10],[5,15],[8,23],[10,28],[12,33],[15,40],[20,47],[25,52],[30,55]]);
+  const chestBonus=piecewiseScore(ctb,[[0,0],[1,5],[3,10],[5,15],[8,20]]);
+  const explosiveBonus=Math.max(
+    piecewiseScore(explosiveReps,[[0,0],[1,6],[3,10],[5,15]]),
+    piecewiseScore(explosiveEval,[[0,0],[1,2],[2,5],[3,10],[4,13]])
+  );
+  const muBonus=piecewiseScore(mu,[[0,0],[1,5],[3,8],[5,10]]);
+  const pull=Math.min(100,Math.round(pullBase+chestBonus+explosiveBonus+muBonus));
+
+  const dipBase=piecewiseScore(dips,[[0,0],[5,10],[8,15],[10,18],[15,26],[20,33],[30,44],[40,55]]);
+  const pike=skillDoneSafe('pike-elevated')?8:0;
+  const wallHspu=skillDoneSafe('hspu-wall')?18:0;
+  const freeHspu=skillDoneSafe('hspu-free')?27:0;
+  const push=Math.min(100,Math.round(dipBase+pike+wallHspu+freeHspu));
+
+  const grip=Math.round(piecewiseScore(dead,[[0,0],[15,5],[30,12],[45,20],[60,28],[90,42],[120,57],[150,70],[180,82],[240,100]]));
+
+  let core=0;
+  const coreSteps=[['tuck-10',10],['tuck-20',20],['oneleg-lsit',38],['lsit-10',55],['lsit-20',72],['toes-bar',88]];
+  coreSteps.forEach(([id,v])=>{if(skillDoneSafe(id))core=Math.max(core,v);});
+  if(toes>1)core=Math.max(core,Math.round(piecewiseScore(toes,[[1,88],[5,94],[10,100]])));
+
+  let balance=Math.round(piecewiseScore(wall,[[0,0],[20,8],[30,12],[45,18],[60,25],[90,30]]));
+  if(skillDoneSafe('hs-free-5')||freeHs>=5)balance=Math.max(balance,50);
+  if(skillDoneSafe('hs-free-20')||freeHs>=20)balance=Math.max(balance,75);
+  if(skillDoneSafe('hs-free-30')||freeHs>=30)balance=Math.max(balance,90);
+  if(freeHs>=60)balance=100;
+
+  let explosive=Math.round(
+    Math.max(piecewiseScore(ctb,[[0,0],[1,8],[3,15],[5,20]]),0)+
+    Math.max(piecewiseScore(explosiveEval,[[0,0],[1,5],[2,12],[3,24],[4,35]]),piecewiseScore(explosiveReps,[[0,0],[1,12],[3,25],[5,35]]))
+  );
+  if(skillDoneSafe('mu-assisted'))explosive=Math.max(explosive,55);
+  if(skillDoneSafe('muscle-up')||mu>=1)explosive=Math.max(explosive,75);
+  if(skillDoneSafe('muscle-up-3')||mu>=3)explosive=Math.max(explosive,90);
+  if(mu>=5)explosive=100;
+  explosive=Math.min(100,explosive);
+
+  const rows=[
+    {id:'pull',label:'Tirage',score:pull,assessed:pullups>0||ctb>0||explosiveEval>0||explosiveReps>0,detail:pullups?`${pullups} tractions · ${ctb||0} chest-to-bar`:'Tests à compléter'},
+    {id:'push',label:'Poussée',score:push,assessed:dips>0||pike||wallHspu||freeHspu,detail:dips?`${dips} dips stricts`:'Tests à compléter'},
+    {id:'core',label:'Core',score:core,assessed:core>0,detail:core?`${capabilityLevel(core,true)}`:'L-sit / core non évalué'},
+    {id:'grip',label:'Grip',score:grip,assessed:dead>0,detail:dead?`${dead} s dead hang`:'Dead hang non évalué'},
+    {id:'balance',label:'Équilibre',score:balance,assessed:wall>0||freeHs>0,detail:freeHs?`${freeHs} s handstand libre`:wall?`${wall} s au mur`:'Handstand non évalué'},
+    {id:'explosive',label:'Explosivité',score:explosive,assessed:ctb>0||explosiveEval>0||explosiveReps>0||mu>0,detail:mu?`${mu} muscle-up strict`:explosiveEval?`tirage explosif niveau ${explosiveEval}`:ctb?`${ctb} chest-to-bar`:'Non évaluée'}
+  ];
+  return rows.map(x=>({...x,level:capabilityLevel(x.score,x.assessed)}));
+}
+function technicalSkillPoints(){
+  const base={pull:1,push:1,legs:1,handstand:2,core:2,muscleup:4,lever:4,flag:4};
+  let points=0;
+  for(const tree of SKILL_TREES){
+    const b=base[tree.id]||1;
+    tree.levels.forEach((level,i)=>{if(skillDone(level))points+=b+(tree.id==='muscleup'||tree.id==='lever'||tree.id==='flag'?i*2:i);});
+  }
+  return points;
+}
+function masterySkillCount(){
+  return ['hs-free-30','hspu-free','muscle-up-3','lever-full','flag-full','pistol-5','lsit-20'].filter(skillDoneSafe).length;
+}
+const KINETIK_RANK_RULES={
+  bronze:{xp:0,sessions:0,weeks:0,avg:0,caps:{},skillPoints:0,mastery:0},
+  silver:{xp:700,sessions:15,weeks:3,avg:12,caps:{pull:15,push:15,grip:18},skillPoints:0,mastery:0},
+  gold:{xp:2200,sessions:40,weeks:8,avg:22,caps:{pull:25,push:25,grip:28,core:10},skillPoints:6,mastery:0},
+  platinum:{xp:5000,sessions:80,weeks:16,avg:32,caps:{pull:38,push:35,grip:40,core:25,balance:20,explosive:20},skillPoints:15,mastery:0},
+  diamond:{xp:9000,sessions:150,weeks:30,avg:45,caps:{pull:52,push:48,grip:55,core:40,balance:35,explosive:40},skillPoints:30,mastery:0},
+  master:{xp:15000,sessions:250,weeks:50,avg:60,caps:{pull:68,push:62,grip:70,core:55,balance:50,explosive:60},skillPoints:50,mastery:1},
+  legend:{xp:24000,sessions:400,weeks:80,avg:76,caps:{pull:82,push:78,grip:82,core:70,balance:70,explosive:78},skillPoints:75,mastery:3}
+};
 function xpSummary(){
-  const history=getHistory(), training=history.reduce((sum,s)=>sum+sessionXP(s),0);
-  const consistentWeeks=consistentWeeksCount(),consistency=consistentWeeks*100;
-  const completedSkills=SKILL_TREES.flatMap(t=>t.levels).filter(skillDone).length;
-  const skills=completedSkills*60;
-  const uniqueTests=new Set(getTests().map(t=>t.testId)).size;
-  const tests=uniqueTests*30;
-  const recoveryDays=respectedRestDays(),recovery=recoveryDays*10;
-  return {total:training+consistency+skills+tests+recovery,training,consistency,skills,tests,recovery,recoveryDays,consistentWeeks,completedSkills,uniqueTests};
+  const history=getHistory(),training=history.reduce((sum,s)=>sum+sessionXP(s),0);
+  const consistentWeeks=consistentWeeksCount(),consistency=consistentWeeks*50;
+  const skillPoints=technicalSkillPoints(),skills=skillPoints*15;
+  const uniqueTests=new Set(getTests().map(t=>t.testId)).size,tests=uniqueTests*10;
+  const recoveryDays=respectedRestDays();
+  return {total:training+consistency+skills+tests,training,consistency,skills,tests,recovery:0,recoveryDays,consistentWeeks,completedSkills:SKILL_TREES.flatMap(t=>t.levels).filter(skillDone).length,uniqueTests,skillPoints};
 }
-function objectiveProgress(obj){
-  let current=0;
-  if(obj.type==='sessions')current=getHistory().length;
-  else if(obj.type==='weeks')current=consistentWeeksCount();
-  else if(obj.type==='recovery')current=respectedRestDays();
-  else if(obj.type==='test')current=performanceValueForTest(obj.id);
-  else if(obj.type==='exercise')current=bestMetric(getHistory(),obj.name);
-  else if(obj.type==='skill')current=skillDoneById(obj.id)?1:0;
-  const target=obj.type==='skill'?1:Number(obj.value||1);
-  return {current,target,done:current>=target};
+function rankRuleFor(rank){return KINETIK_RANK_RULES[rank?.id]||KINETIK_RANK_RULES.bronze;}
+function rankGateRows(rank){
+  const rule=rankRuleFor(rank),caps=capabilityScores(),capMap=Object.fromEntries(caps.map(x=>[x.id,x])),sessions=getHistory().length,weeks=consistentWeeksCount(),xp=xpSummary(),skillPoints=technicalSkillPoints(),mastery=masterySkillCount();
+  const assessed=caps.filter(x=>x.assessed),avg=assessed.length?Math.round(assessed.reduce((s,x)=>s+x.score,0)/assessed.length):0;
+  const rows=[];
+  if(rule.xp)rows.push({id:'xp',label:'Expérience KINETIK',current:xp.total,target:rule.xp,unit:'XP'});
+  if(rule.sessions)rows.push({id:'sessions',label:'Séances terminées',current:sessions,target:rule.sessions,unit:''});
+  if(rule.weeks)rows.push({id:'weeks',label:'Semaines régulières',current:weeks,target:rule.weeks,unit:'sem'});
+  if(rule.avg)rows.push({id:'avg',label:'Moyenne des capacités évaluées',current:avg,target:rule.avg,unit:'/100'});
+  Object.entries(rule.caps||{}).forEach(([id,target])=>rows.push({id:`cap-${id}`,label:capMap[id]?.label||id,current:capMap[id]?.assessed?capMap[id].score:0,target,unit:'/100',detail:capMap[id]?.assessed?capMap[id].detail:'non évalué'}));
+  if(rule.skillPoints)rows.push({id:'skills',label:'Difficulté technique cumulée',current:skillPoints,target:rule.skillPoints,unit:'pts'});
+  if(rule.mastery)rows.push({id:'mastery',label:'Skills de maîtrise',current:mastery,target:rule.mastery,unit:''});
+  return rows.map(x=>({...x,done:Number(x.current)>=Number(x.target),progress:clamp(Number(x.current)/Math.max(1,Number(x.target)),0,1)}));
 }
 function evaluateRank(rank){
-  const items=(rank.objectives||[]).map(obj=>({obj,...objectiveProgress(obj)}));
-  const completed=items.filter(x=>x.done).length;
-  const mandatory=items.filter(x=>x.obj.mandatory),mandatoryDone=mandatory.filter(x=>x.done).length;
-  const skillItems=items.filter(x=>x.obj.type==='skill'),skillCompleted=skillItems.filter(x=>x.done).length;
-  const mandatoryMet=mandatoryDone===mandatory.length,skillsMet=skillCompleted>=(rank.minSkillCount||0);
-  const categoryRules=(rank.categoryRules||[]).map(rule=>{
-    const categoryItems=items.filter(x=>x.obj.category===rule.id);
-    const categoryDone=categoryItems.filter(x=>x.done).length;
-    return {...rule,items:categoryItems,completed:categoryDone,total:categoryItems.length,met:categoryDone>=rule.required};
-  });
-  const categoryCompleted=categoryRules.filter(x=>x.met).length;
-  const categoryRequired=rank.requiredCategoryCount||categoryRules.length;
-  const mandatoryCategoriesMet=categoryRules.filter(x=>x.mandatory).every(x=>x.met);
-  const categoriesMet=!categoryRules.length||(mandatoryCategoriesMet&&categoryCompleted>=categoryRequired);
-  const legacyGoalsMet=mandatoryMet&&skillsMet&&completed>=(rank.requireCount||0);
-  const goalsMet=categoryRules.length?mandatoryMet&&categoriesMet:legacyGoalsMet;
-  const progressCompleted=categoryRules.length?categoryCompleted:completed;
-  const progressRequired=categoryRules.length?categoryRequired:(rank.requireCount||0);
-  return {items,completed,required:rank.requireCount||0,mandatoryDone,mandatoryTotal:mandatory.length,mandatoryMet,skillCompleted,skillTotal:skillItems.length,minSkillCount:rank.minSkillCount||0,skillsMet,categoryRules,categoryCompleted,categoryRequired,mandatoryCategoriesMet,categoriesMet,progressCompleted,progressRequired,goalsMet};
+  const gates=rankGateRows(rank),done=gates.filter(x=>x.done).length;
+  return {items:gates.map(g=>({obj:{label:g.label,unit:g.unit},current:g.current,target:g.target,done:g.done})),completed:done,required:gates.length,mandatoryDone:done,mandatoryTotal:gates.length,mandatoryMet:done===gates.length,skillCompleted:0,skillTotal:0,minSkillCount:0,skillsMet:true,categoryRules:[],categoryCompleted:0,categoryRequired:0,mandatoryCategoriesMet:true,categoriesMet:true,progressCompleted:done,progressRequired:gates.length,goalsMet:gates.every(x=>x.done),gates};
+}
+function rankReadinessFor(rank){
+  const gates=rankGateRows(rank);
+  if(!gates.length)return 1;
+  const vals=gates.map(g=>g.progress),avg=vals.reduce((a,b)=>a+b,0)/vals.length,min=Math.min(...vals);
+  return clamp(avg*.60+min*.40,0,1);
+}
+function rankDivision(readiness,nextExists=true){
+  if(!nextExists)return 'I';
+  if(readiness>=.66)return 'I';
+  if(readiness>=.33)return 'II';
+  return 'III';
 }
 function getRankState(){
   const xp=xpSummary(); let index=0;
   for(let i=1;i<RANKS.length;i++){
     const ev=evaluateRank(RANKS[i]);
-    if(xp.total>=RANKS[i].xpMin&&ev.goalsMet)index=i;else break;
+    if(ev.goalsMet)index=i;else break;
   }
   const current=RANKS[index],next=RANKS[index+1]||null,nextEval=next?evaluateRank(next):null;
-  const xpProgress=next?clamp((xp.total-current.xpMin)/Math.max(1,next.xpMin-current.xpMin),0,1):1;
-  const goalProgress=next&&nextEval.progressRequired?clamp(nextEval.progressCompleted/nextEval.progressRequired,0,1):1;
-  return {xp,current,index,next,nextEval,xpProgress,goalProgress};
+  const readiness=next?rankReadinessFor(next):1,division=rankDivision(readiness,!!next);
+  const xpProgress=next?clamp(xp.total/Math.max(1,rankRuleFor(next).xp||1),0,1):1;
+  const goalProgress=readiness;
+  return {xp,current,index,next,nextEval,xpProgress,goalProgress,readiness,division,displayName:`${current.name} ${division}`};
 }
 function objectiveValueText(item){
   if(item.obj.type==='skill')return item.done?'Validé':'À valider';
@@ -3353,20 +3468,6 @@ function skillTreeProgress(tree){
   const done=tree.levels.filter(skillDone).length,total=tree.levels.length,next=tree.levels.find(x=>!skillDone(x))||null;
   return {done,total,pct:Math.round(done/Math.max(1,total)*100),next};
 }
-function capabilityScores(){
-  const by=id=>skillTreeProgress(SKILL_TREES.find(t=>t.id===id)||{levels:[]}).pct;
-  const avg=(...v)=>Math.round(v.reduce((a,b)=>a+b,0)/Math.max(1,v.length));
-  const dead=Number(performanceValueForTest('dead_hang')||0);
-  const wall=Number(performanceValueForTest('wall_handstand')||0);
-  return [
-    {id:'pull',label:'Tirage',score:by('pull')},
-    {id:'push',label:'Poussée',score:by('push')},
-    {id:'core',label:'Core',score:by('core')},
-    {id:'grip',label:'Grip',score:Math.min(100,Math.round(dead/60*100))},
-    {id:'balance',label:'Équilibre',score:Math.max(by('handstand'),Math.min(100,Math.round(wall/60*100)))},
-    {id:'explosive',label:'Explosivité',score:Math.round((by('muscleup')+by('pull'))/2)}
-  ];
-}
 function primarySkillTree(){
   const p=typeof getAthleteProfile==='function'?getAthleteProfile():{};
   const text=`${p.primaryGoal||''} ${p.secondaryGoal||''}`.toLowerCase();
@@ -3374,59 +3475,68 @@ function primarySkillTree(){
   const found=map.find(([q])=>text.includes(q));
   return SKILL_TREES.find(t=>t.id===(found?.[1]||'muscleup'))||SKILL_TREES[0];
 }
+function skillTreeProgress(tree){
+  const done=tree.levels.filter(skillDone).length,total=tree.levels.length,next=tree.levels.find(x=>!skillDone(x))||null;
+  const weights=tree.levels.map((_,i)=>i+1),max=weights.reduce((a,b)=>a+b,0),earned=tree.levels.reduce((s,l,i)=>s+(skillDone(l)?weights[i]:0),0);
+  return {done,total,pct:Math.round(earned/Math.max(1,max)*100),next};
+}
 function renderSkillRoadmap(tree,compact=false){
-  const p=skillTreeProgress(tree);let previous=true;
+  let previous=true;
   return `<div class="cap-roadmap ${compact?'compact':''}">${tree.levels.map((level,i)=>{const done=skillDone(level),available=previous||done;previous=done;return `<div class="cap-roadmap-step ${done?'done':available?'current':'future'}"><div class="cap-roadmap-marker">${done?'✓':i+1}</div><div><strong>${esc(level.name)}</strong><span>${done?'Validé':available?'Prochaine étape':skillAutoLabel(level)}</span></div></div>`}).join('')}</div>`;
 }
 function skillPerformanceRows(){
   const defs=[
-    {label:'Tractions strictes',test:'pullups',targets:[1,5,8,10,15,20],unit:'reps'},
-    {label:'Dips stricts',test:'dips',targets:[5,8,10,15,20],unit:'reps'},
-    {label:'Dead hang',test:'dead_hang',targets:[30,45,60,75,90],unit:'s'},
+    {label:'Tractions strictes',test:'pullups',targets:[1,5,8,12,15,20,25,30],unit:'reps'},
+    {label:'Dips stricts',test:'dips',targets:[5,8,12,15,20,30,40],unit:'reps'},
+    {label:'Dead hang',test:'dead_hang',targets:[30,45,60,90,120,150,180,240],unit:'s'},
     {label:'Handstand au mur',test:'wall_handstand',targets:[20,30,45,60,90],unit:'s'}
   ];
   return defs.map(d=>{const value=Number(performanceValueForTest(d.test)||0),next=d.targets.find(x=>x>value)||d.targets[d.targets.length-1],max=d.targets[d.targets.length-1];return {...d,value,next,pct:Math.min(100,Math.round(value/Math.max(1,next)*100)),maxed:value>=max};});
 }
 function recentSkillAchievements(limit=5){
-  const rows=[];
-  for(const tree of SKILL_TREES)for(const level of tree.levels)if(skillDone(level))rows.push({tree,level});
-  return rows.slice(-limit).reverse();
+  const rows=[];for(const tree of SKILL_TREES)for(const level of tree.levels)if(skillDone(level))rows.push({tree,level});return rows.slice(-limit).reverse();
+}
+function renderRankSystemV2(){
+  const rs=getRankState();
+  return `<div class="rank-v2-list">${RANKS.map((r,i)=>{const ev=evaluateRank(r),gates=ev.gates||[],stateLabel=i<rs.index?'Validé':i===rs.index?'Rang actuel':'À atteindre';return `<details class="rank-v2-row" ${i===rs.index||i===rs.index+1?'open':''}><summary><div><strong>${r.name}</strong><span>${r.title}</span></div><b>${stateLabel}</b></summary><div class="rank-v2-content">${gates.length?gates.map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join(''):'<p>Point de départ du système KINETIK.</p>'}</div></details>`}).join('')}</div><p class="rank-scale-note">Le score 0–100 est une échelle interne de maîtrise KINETIK, pas un percentile de population. 75+ correspond volontairement à un niveau avancé et 90+ à un niveau expert.</p>`;
 }
 function renderSkills(){
   const manual=getManualSkills(),rank=getRankState(),caps=capabilityScores(),focus=primarySkillTree(),fp=skillTreeProgress(focus),performances=skillPerformanceRows(),achievements=recentSkillAchievements(),allLevels=SKILL_TREES.flatMap(t=>t.levels),doneCount=allLevels.filter(skillDone).length;
-  const rankPct=rank.next?Math.round(Math.min(rank.xpProgress,rank.goalProgress)*100):100;
-  return shell(`<header class="topbar capabilities-topbar"><div><div class="brand">Capacités</div><div class="daylabel">La carte de ce que ton corps sait faire</div></div></header>
+  const nextGates=rank.next?rankGateRows(rank.next):[],weak=nextGates.filter(g=>!g.done).sort((a,b)=>a.progress-b.progress)[0];
+  return shell(`<header class="topbar capabilities-topbar"><div><div class="brand">Capacités</div><div class="daylabel">Progression réelle · standards difficiles · maîtrise à long terme</div></div></header>
 
   <section class="cap-rank-intro">
-    <div><div class="kicker">Niveau KINETIK</div><h1>${rank.current.name}</h1><p>${rank.current.title} · ${rank.xp.total.toLocaleString('fr-FR')} XP</p></div>
-    <div class="cap-rank-next"><span>${rank.next?`Vers ${rank.next.name}`:'Rang maximal'}</span><strong>${rankPct}%</strong></div>
+    <div><div class="kicker">Niveau KINETIK</div><h1>${rank.displayName}</h1><p>${rank.current.title} · ${rank.xp.total.toLocaleString('fr-FR')} XP · ${consistentWeeksCount()} semaines régulières</p></div>
+    <div class="cap-rank-next"><span>${rank.next?`Progression vers ${rank.next.name}`:'Rang maximal'}</span><strong>${Math.round(rank.readiness*100)}%</strong></div>
   </section>
   <div class="cap-rank-ladder">${RANKS.map((r,i)=>`<div class="${i<rank.index?'done':i===rank.index?'current':'future'}"><i></i><span>${r.name}</span></div>`).join('')}</div>
+  ${weak?`<div class="rank-bottleneck"><span>Facteur limitant actuel</span><strong>${weak.label}</strong><em>${Number(weak.current).toFixed(Number(weak.current)%1?1:0)} / ${weak.target}${weak.unit?` ${weak.unit}`:''}</em></div>`:''}
 
   <section class="cap-profile-section">
-    <div class="cap-section-heading"><div><div class="kicker">Ton profil</div><h2>Capacités fondamentales</h2></div><p>Construit à partir de tes performances et jalons réellement enregistrés.</p></div>
-    <div class="capability-bars">${caps.map(c=>`<div><span>${c.label}</span><div><i style="width:${c.score}%"></i></div><strong>${c.score}</strong></div>`).join('')}</div>
+    <div class="cap-section-heading"><div><div class="kicker">Ton profil</div><h2>Capacités fondamentales</h2></div><p>Les scores utilisent des courbes de difficulté non linéaires. Les premiers progrès comptent, mais les hauts scores demandent beaucoup plus.</p></div>
+    <div class="capability-bars">${caps.map(c=>`<div class="${c.assessed?'':'unassessed'}"><div class="cap-label"><span>${c.label}</span><small>${esc(c.detail)}</small></div><div><i style="width:${c.assessed?c.score:0}%"></i></div><strong>${c.assessed?c.score:'—'}<small>${c.level}</small></strong></div>`).join('')}</div>
+    <div class="cap-scale"><span>0 Fondations</span><span>30 Intermédiaire</span><span>60 Solide</span><span>75 Avancé</span><span>90 Expert</span><span>100 Maîtrise</span></div>
   </section>
 
   <section class="cap-next-focus">
-    <div class="cap-next-head"><div><div class="kicker">Prochaine étape</div><h2>${esc(focus.name)}</h2><p>${esc(focus.description)}</p></div><div class="cap-focus-score"><strong>${fp.pct}%</strong><span>${fp.done}/${fp.total} jalons</span></div></div>
+    <div class="cap-next-head"><div><div class="kicker">Objectif technique</div><h2>${esc(focus.name)}</h2><p>${esc(focus.description)}</p></div><div class="cap-focus-score"><strong>${fp.pct}%</strong><span>progression pondérée</span></div></div>
     ${renderSkillRoadmap(focus,true)}
-    ${fp.next?`<div class="cap-next-action"><div><span>À développer maintenant</span><strong>${esc(fp.next.name)}</strong><small>${skillAutoLabel(fp.next)}</small></div>${fp.next.manual?`<button class="btn btn-secondary compact skill-toggle" data-skill="${fp.next.id}">${manual[fp.next.id]?'Retirer':'Valider'}</button>`:''}</div>`:''}
+    ${fp.next?`<div class="cap-next-action"><div><span>Étape actuelle</span><strong>${esc(fp.next.name)}</strong><small>${skillAutoLabel(fp.next)}</small></div>${fp.next.manual?`<button class="btn btn-secondary compact skill-toggle" data-skill="${fp.next.id}">${manual[fp.next.id]?'Retirer':'Valider'}</button>`:''}</div>`:''}
   </section>
 
   <section class="cap-skills-section">
-    <div class="cap-section-heading"><div><div class="kicker">Skills</div><h2>Parcours techniques</h2></div><p>Chaque mouvement est une roadmap, pas un simple badge.</p></div>
+    <div class="cap-section-heading"><div><div class="kicker">Skills</div><h2>Parcours techniques</h2></div><p>Les étapes avancées valent davantage que les fondations : 1 traction ne pèse plus autant qu'un muscle-up ou un front lever.</p></div>
     <div class="cap-skill-list">${SKILL_TREES.map(tree=>{const p=skillTreeProgress(tree);return `<details class="cap-skill-row" ${tree.id===focus.id?'open':''}><summary><div><strong>${esc(tree.name)}</strong><span>${p.next?`Prochaine étape · ${esc(p.next.name)}`:'Parcours validé'}</span></div><div class="cap-skill-progress"><i style="width:${p.pct}%"></i></div><b>${p.pct}%</b></summary><div class="cap-skill-detail"><p>${esc(tree.description)}</p>${renderSkillRoadmap(tree)}</div></details>`}).join('')}</div>
   </section>
 
   <section class="cap-performance-section">
-    <div class="cap-section-heading"><div><div class="kicker">Performances</div><h2>Repères actuels</h2></div><p>Les prochains standards servent de direction, pas de jugement.</p></div>
-    <div class="cap-performance-table">${performances.map(x=>`<div><div><strong>${x.label}</strong><span>${x.maxed?'Palier supérieur validé':`Prochain repère · ${x.next} ${x.unit}`}</span></div><b>${x.value||'—'} <small>${x.value?x.unit:''}</small></b><div class="cap-standard-track"><i style="width:${x.value?x.pct:0}%"></i></div></div>`).join('')}</div>
+    <div class="cap-section-heading"><div><div class="kicker">Standards</div><h2>Repères de progression</h2></div><p>Les derniers paliers sont volontairement espacés : progresser de 150 à 180 s de hang vaut beaucoup plus que de 15 à 30 s.</p></div>
+    <div class="cap-performance-table">${performances.map(x=>`<div><div><strong>${x.label}</strong><span>${x.maxed?'Palier de maîtrise atteint':`Prochain repère · ${x.next} ${x.unit}`}</span></div><b>${x.value||'—'} <small>${x.value?x.unit:''}</small></b><div class="cap-standard-track"><i style="width:${x.value?x.pct:0}%"></i></div></div>`).join('')}</div>
   </section>
 
   ${achievements.length?`<section class="cap-achievements"><div class="cap-section-heading"><div><div class="kicker">Accomplissements</div><h2>Jalons validés</h2></div><strong>${doneCount}/${allLevels.length}</strong></div><div>${achievements.map(x=>`<div><span>✓</span><div><strong>${esc(x.level.name)}</strong><small>${esc(x.tree.name)}</small></div></div>`).join('')}</div></section>`:''}
 
-  <details class="cap-rank-details"><summary><div><div class="kicker">Rangs</div><strong>Comprendre ma progression globale</strong></div><span>⌄</span></summary><div>${renderRankExplorer()}</div></details>
+  <details class="cap-rank-details"><summary><div><div class="kicker">Système de rang</div><strong>Voir les exigences Bronze → Légende</strong></div><span>⌄</span></summary><div>${renderRankSystemV2()}</div></details>
   `, "skills");
 }
 
