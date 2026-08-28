@@ -1571,9 +1571,14 @@ function renderCycleMini(){
     <details class="progression-explainer"><summary>Comment l'intensité est gérée <span>⌄</span></summary><div><p><strong>RIR</strong> = répétitions encore possibles à la fin d'une série. 3 RIR est confortable ; 1 RIR est une semaine nettement plus exigeante.</p><p><strong>Volume</strong> agit surtout sur le nombre de séries. <strong>Reps / holds</strong> ajuste les cibles. <strong>Cardio</strong> ajuste la durée des blocs cardio.</p><p><strong>Progression auto</strong> décide si l'app peut augmenter une cible ou proposer une variante après des performances maîtrisées.</p><p class="muted small">Chaque cycle d'entraînement possède maintenant son propre bloc de progression. Changer de cycle met sa progression en pause ; revenir dessus reprend là où tu l'avais laissée.</p></div></details>
   </section>`;
 }
+function renderSessionModeExercise(e,i){return `<div class="mode-program-row">${exerciseImage(e.name,'mini')}<span class="mode-program-num">${i+1}</span><div><strong>${esc(e.name)}</strong><small>${describe(e)} · ${phaseLabel(e.phase)}</small></div></div>`;}
 function renderSessionModePicker(){
   const r=state.sessionModeEditor,day=Number(r.day),full=preparedWorkout(day,null,'full'),short=preparedWorkout(day,null,'short');
-  return `<main class="shell mode-shell"><section class="card mode-card"><button class="back-btn" id="cancelSessionMode">← Retour</button><div class="kicker">${DAY_NAMES[day]} · ${full.name}</div><h1>Combien de temps as-tu ?</h1><p class="muted">Les deux formats gardent un échauffement, les mouvements essentiels, un bloc cardio et un retour au calme. La version Express coupe surtout les accessoires et le volume.</p><div class="session-mode-grid"><button class="session-mode-choice" data-session-length="full"><span class="mode-icon">◎</span><strong>Séance complète</strong><b>≈ ${full.duration} min</b><small>${full.exercises.length} étapes · volume complet · cardio ${Math.round(cardioTargetSeconds(full)/60)} min</small></button><button class="session-mode-choice express" data-session-length="short"><span class="mode-icon">⚡</span><strong>Séance Express</strong><b>≈ ${short.duration} min</b><small>${short.exercises.length} étapes · essentiels seulement · cardio ${Math.round(cardioTargetSeconds(short)/60)} min</small></button></div><p class="install-note">L’Express est une solution quand tu manques de temps, pas une obligation de compresser toutes les séances de la semaine.</p></section></main>`;
+  const shortNames=new Set(short.exercises.map(e=>e.name)),removed=full.exercises.filter(e=>!shortNames.has(e.name));
+  return `<main class="shell mode-shell"><section class="card mode-card"><button class="back-btn" id="cancelSessionMode">← Retour</button><div class="kicker">${DAY_NAMES[day]} · ${full.name}</div><h1>Combien de temps as-tu ?</h1><p class="muted">Compare le contenu avant de choisir. L'Express conserve l'essentiel, mais réduit certains volumes et retire les accessoires moins prioritaires.</p><div class="session-mode-grid mode-grid-detailed">
+    <article class="session-mode-choice mode-choice-panel"><span class="mode-icon">◎</span><strong>Séance complète</strong><b>≈ ${full.duration} min</b><small>${full.exercises.length} étapes · volume complet · cardio ${Math.round(cardioTargetSeconds(full)/60)} min</small><details class="mode-program-details"><summary>Voir le programme <span>⌄</span></summary><div class="mode-program-list">${full.exercises.map(renderSessionModeExercise).join('')}</div></details><button class="btn btn-primary mode-start-btn" data-session-length="full">Commencer la séance complète</button></article>
+    <article class="session-mode-choice mode-choice-panel express"><span class="mode-icon">⚡</span><strong>Séance Express</strong><b>≈ ${short.duration} min</b><small>${short.exercises.length} étapes · essentiels seulement · cardio ${Math.round(cardioTargetSeconds(short)/60)} min</small><details class="mode-program-details"><summary>Voir le programme <span>⌄</span></summary><div class="mode-program-list">${short.exercises.map(renderSessionModeExercise).join('')}</div>${removed.length?`<div class="mode-removed"><strong>Allégé par rapport à la complète</strong><span>${removed.map(e=>esc(e.name)).join(' · ')}</span></div>`:''}</details><button class="btn btn-primary mode-start-btn" data-session-length="short">Commencer l'Express</button></article>
+  </div><p class="install-note">L’Express est une solution quand tu manques de temps, pas une obligation de compresser toutes les séances de la semaine.</p></section></main>`;
 }
 function renderReadiness(){
   const r=state.readinessEditor,base=workoutForReadiness(r),plan=readinessPlan(r),c=getCycleState(),label=r.customWorkoutId?'Séance personnelle':DAY_NAMES[Number(r.day)];
@@ -1968,7 +1973,7 @@ function shell(content, activeTab=state.view) {
 
 function renderMore(){
   const logs=getBodyLogs(),latest=logs[0];
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.3</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.4</div></div></header>
     <section class="more-grid more-grid-six">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">${uiIcon('flex')}</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">${uiIcon('skills')}</span><div><strong>Skills</strong><small>Handstand, L-sit, lever…</small></div></button>
@@ -1981,6 +1986,11 @@ function renderMore(){
     ${state.stravaMessage?`<div class="quick-toast">${esc(state.stravaMessage)}</div>`:''}${renderStravaProfile()}
     <section class="card home-equipment"><div class="kicker">Matériel maison</div><h2>Ton setup</h2><div class="equipment-chips">${HOME_EQUIPMENT.map(x=>`<span>${x}</span>`).join('')}</div><p class="muted small">Les dips et L-sit utilisent en priorité les barres parallèles. Les pompes peuvent se faire sur poignées. Pour les jambes, la résistance vient actuellement des bandes : aucun sac à dos n’est utilisé dans le programme.</p></section>`, 'more');
 }
+function renderTodayUsefulActions(){
+  const x=progressWeekStats(),rank=getRankState(),next=rank.next;
+  const count=(x.recs?.length||0)+(x.due?.overdue?1:0)+(next?1:0);
+  return `<section class="card today-actions-card"><div class="section-head"><div><div class="kicker">À surveiller</div><h2>Prochaines actions utiles</h2></div><span class="pill">${count}</span></div><div class="progress-watch-list">${x.recs?.length?`<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">◷</span><div><strong>Tests périodiques</strong><small>${x.due.label}</small></div><b>Ouvrir →</b></button>${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)} · ${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><b>Rangs →</b></button>`:''}</div></section>`;
+}
 function renderToday() {
   const day=todayDay(),w=preparedWorkout(day),history=getHistory(),seven=Date.now()-7*86400000;
   const recent=history.filter(h=>new Date(h.date).getTime()>=seven),weeklyMinutes=recent.reduce((a,h)=>a+(h.durationMinutes||0),0);
@@ -1990,7 +2000,7 @@ function renderToday() {
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">Calisthénie Coach</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
     <section class="today-cockpit"><button class="cockpit-card" data-open-quick-log="true"><span>${uiIcon('add')}</span><strong>Ajouter</strong><small>Noter une série libre</small></button><div class="cockpit-card rank-cockpit rank-${rank.current.id}"><strong>${rank.current.name}</strong><small>${rank.next?`${rankProgressText(rank.next,rank.nextEval)} vers ${rank.next.name}`:`${rank.xp.total.toLocaleString('fr-FR')} XP · rang maximal`}</small></div><div class="cockpit-card"><span>${uiIcon('clock')}</span><strong>${weeklyMinutes} min</strong><small>${recent.length} séances / 7 j</small></div></section>
-    ${renderDailyVolumeCard()}${program}`, 'today');
+    ${renderDailyVolumeCard()}${renderTodayUsefulActions()}${program}`, 'today');
 }
 function renderWeekExercise(e, i) {
   const rest = e.rest > 0 ? ` · repos ${fmtTime(e.rest)}` : '';
@@ -2759,6 +2769,7 @@ async function hydrateBodyPhotos(){const imgs=[...document.querySelectorAll('[da
 function bindEvents(){
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;state.selectedHistoryId=null;render();});
   document.querySelectorAll('[data-progress-tab]').forEach(b=>b.onclick=()=>{state.progressTab=b.dataset.progressTab;state.selectedHistoryId=null;render();});
+  document.querySelectorAll('[data-today-progress]').forEach(b=>b.onclick=()=>{state.view='progress';state.progressTab=b.dataset.todayProgress||'performance';state.selectedHistoryId=null;render();});
   const openQuick=document.getElementById('openQuickLog');if(openQuick)openQuick.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();};
   document.querySelectorAll('[data-open-quick-log]').forEach(b=>b.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();});
   const closeQuick=document.getElementById('closeQuickLog');if(closeQuick)closeQuick.onclick=()=>{state.quickEditor=false;state.quickToast=null;render();};
@@ -3156,7 +3167,7 @@ renderProfile=function(){
 };
 renderMore=function(){
   const logs=getBodyLogs(),latest=logs[0],setup=getEquipmentSetup(),available=EQUIPMENT_CATALOG.filter(x=>setup[x.id]).length;
-  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.3</div></div></header>
+  return shell(`<header class="topbar"><div><div class="brand">Plus</div><div class="daylabel">Outils & réglages · V10.4</div></div></header>
     <section class="more-grid more-grid-six">
       <button class="card more-tile" data-view="flexibility"><span class="more-icon">${uiIcon('flex')}</span><div><strong>Flexibilité</strong><small>Routines guidées & mobilité</small></div></button>
       <button class="card more-tile" data-view="skills"><span class="more-icon">${uiIcon('skills')}</span><div><strong>Skills</strong><small>Rangs, priorités & Skill Tree</small></div></button>
