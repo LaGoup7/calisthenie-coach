@@ -2480,7 +2480,9 @@ function render() {
   else if (state.view === "progress") app.innerHTML = renderProgress();
   else if (state.view === "skills") app.innerHTML = renderSkills();
   else if (state.view === "measurements") app.innerHTML = renderMeasurements();
-  else if (state.view === "profile") app.innerHTML = renderProfile();
+  else if (state.view === "athlete") app.innerHTML = renderMore();
+  else if (state.view === "settings") app.innerHTML = renderProfile();
+  else if (state.view === "profile") app.innerHTML = renderMore();
   else if (state.view === "custom") app.innerHTML = renderCustomSessions();
   else if (state.view === "more") app.innerHTML = renderMore();
   else app.innerHTML = renderToday();
@@ -2509,7 +2511,7 @@ function uiIcon(name, cls="ui-icon") {
 }
 
 function shell(content, activeTab=state.view) {
-  const navTab=activeTab==='custom'?'week':['today','week','progress'].includes(activeTab)?activeTab:'more';
+  const navTab=activeTab==='custom'?'week':['today','week','progress'].includes(activeTab)?activeTab:((activeTab==='athlete'||activeTab==='more'||activeTab==='settings'||activeTab==='profile')?'athlete':'athlete');
   return `<main class="shell">${content}</main>
   <button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une série rapide"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>
   ${renderQuickLogModal()}
@@ -2517,7 +2519,7 @@ function shell(content, activeTab=state.view) {
     <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>${uiIcon('today')}</span>Aujourd'hui</button>
     <button class="nav-btn ${navTab==='week'?'active':''}" data-view="week"><span>${uiIcon('week')}</span>Planning</button>
     <button class="nav-btn ${navTab==='progress'?'active':''}" data-view="progress"><span>${uiIcon('progress')}</span>Progression</button>
-    <button class="nav-btn ${navTab==='more'?'active':''}" data-view="more"><span>${uiIcon('more')}</span>Profil</button>
+    <button class="nav-btn ${navTab==='athlete'?'active':''}" data-view="athlete"><span>${uiIcon('profile')}</span>Profil</button>
   </nav>`;
 }
 
@@ -2606,8 +2608,8 @@ function renderMore(){
       <button data-view="measurements"><span>${uiIcon('measurements')}</span><div><strong>Mesures corporelles</strong><small>Poids, mensurations et photos</small></div><b>→</b></button>
       <button data-view="skills"><span>${uiIcon('skills')}</span><div><strong>Skills & niveaux</strong><small>Progressions techniques</small></div><b>→</b></button>
       <button data-view="flexibility"><span>${uiIcon('flex')}</span><div><strong>Mobilité & flexibilité</strong><small>Routines et tests</small></div><b>→</b></button>
-      <button data-view="profile"><span>${uiIcon('profile')}</span><div><strong>Réglages KINETIK</strong><small>Coach, écran, données et application</small></div><b>→</b></button>
-    </section>`, 'more');
+      <button data-view="settings"><span>${uiIcon('profile')}</span><div><strong>Réglages KINETIK</strong><small>Coach, écran, données et application</small></div><b>→</b></button>
+    </section>`, 'athlete');
 }
 const ACTIVITY_TYPES=[
   {id:'running',label:'Course',distance:true,metric:'km'},
@@ -3454,7 +3456,7 @@ function renderMeasurements(){
 }
 function renderBodySettings(){const cfg=getBodyConfig();const goalDefs=[['weight','Poids','kg'],['waist','Tour de taille','cm'],['bodyFat','Masse grasse','%'],['chest','Poitrine','cm'],['armLeft','Bras G','cm'],['armRight','Bras D','cm'],['thighLeft','Cuisse G','cm'],['thighRight','Cuisse D','cm']];return `<div class="body-setting-section"><h3>Calcul de composition corporelle</h3><div class="parameter-grid"><label><span>Formule anthropométrique</span><select id="bodyFatFormula"><option value="male" ${cfg.bodyFatFormula==='male'?'selected':''}>US Navy · homme</option><option value="female" ${cfg.bodyFatFormula==='female'?'selected':''}>US Navy · femme</option><option value="off" ${cfg.bodyFatFormula==='off'?'selected':''}>Désactivée</option></select></label><label><span>Source masse grasse</span><select id="bodyFatSource"><option value="auto" ${cfg.bodyFatSource==='auto'?'selected':''}>Auto · balance puis estimation</option><option value="estimate" ${cfg.bodyFatSource==='estimate'?'selected':''}>Estimation uniquement</option><option value="scale" ${cfg.bodyFatSource==='scale'?'selected':''}>Balance uniquement</option></select></label></div><p class="muted small">L'estimation anthropométrique est indicative. Pour la formule femme, hanches + taille + cou sont nécessaires.</p></div><div class="divider"></div><div class="body-setting-section"><h3>Fréquences recommandées</h3><div class="parameter-grid threshold-grid"><label><span>Poids · tous les</span><input class="mini-input body-freq" data-freq="weightDays" type="number" min="1" value="${cfg.frequencies.weightDays}"></label><label><span>Taille · tous les</span><input class="mini-input body-freq" data-freq="waistDays" type="number" min="1" value="${cfg.frequencies.waistDays}"></label><label><span>Bilan complet · tous les</span><input class="mini-input body-freq" data-freq="completeDays" type="number" min="1" value="${cfg.frequencies.completeDays}"></label><label><span>Photos · tous les</span><input class="mini-input body-freq" data-freq="photoDays" type="number" min="1" value="${cfg.frequencies.photoDays}"></label></div><small class="muted">Valeurs en jours. Elles servent de repères, pas d'obligation.</small></div><div class="divider"></div><div class="body-setting-section"><h3>Objectifs</h3><div class="target-editor-list">${goalDefs.map(([k,l,u])=>`<div class="target-editor-row"><strong>${l}</strong><label><span>Cible ${u}</span><input class="mini-input body-goal-input" data-body-goal="${k}" type="number" min="0" step="0.1" value="${cfg.goals[k]??''}" placeholder="—"></label></div>`).join('')}</div></div><div class="divider"></div><div class="body-setting-section"><div class="section-head"><div><h3>Champs suivis</h3><small class="muted">Masque ce que tu n'utilises pas.</small></div><button class="btn btn-outline compact" id="addCustomBodyField">＋ Champ perso</button></div><div class="body-track-grid">${BODY_FIELDS.map(f=>`<label class="body-track"><input class="body-track-input" data-body-track="${f.key}" type="checkbox" ${cfg.tracked[f.key]!==false?'checked':''}><span>${f.label}</span></label>`).join('')}${cfg.customFields.map(f=>`<div class="body-track custom"><label><input class="body-track-custom" data-custom-track="${f.key}" type="checkbox" ${f.visible!==false?'checked':''}><span>${esc(f.label)} (${esc(f.unit||'')})</span></label><button class="body-remove-custom" data-remove-custom="${f.key}">×</button></div>`).join('')}</div></div><div class="parameter-actions"><button class="btn btn-primary" id="saveBodyConfig">Enregistrer</button><button class="btn btn-outline" id="resetBodyConfig">Valeurs par défaut</button></div>`;}
 
-function renderProfile(){const p=getPrefs();return shell(`<header class="topbar"><div><div class="brand">Réglages KINETIK</div><div class="daylabel">Application, données et préférences</div></div></header>
+function renderProfile(){const p=getPrefs();return shell(`<header class="topbar"><div><button class="profile-back-link" data-view="athlete">← Mon profil sportif</button><div class="brand">Réglages KINETIK</div><div class="daylabel">Application, données et préférences</div></div></header>
   <section class="card"><h2>Coach adaptatif</h2><div class="switchline"><div><strong>Progression intelligente</strong><div class="small muted">Ajuste légèrement les objectifs selon tes dernières séances, ton effort et les gênes articulaires.</div></div><input id="smartPref" type="checkbox" ${p.smartProgression!==false?'checked':''}></div></section>
   <section class="card"><h2>Alertes & écran</h2><div class="switchline"><div><strong>Son du timer</strong><div class="small muted">Triple bip à la fin d'un chrono</div></div><input id="soundPref" type="checkbox" ${p.sound?'checked':''}></div><div class="switchline"><div><strong>Garder l'écran actif</strong><div class="small muted">Recommandé sur iPhone : empêche la mise en veille pendant un chrono</div></div><input id="keepAwakePref" type="checkbox" ${p.keepAwake!==false?'checked':''}></div><div class="switchline"><div><strong>Vibration</strong><div class="small muted">Utilisée uniquement si le navigateur la prend en charge</div></div><input id="vibrationPref" type="checkbox" ${p.vibration?'checked':''}></div><p class="install-note">Si tu verrouilles volontairement l’iPhone, iOS peut suspendre une PWA. Pour une alarme garantie sur écran verrouillé, il faudra ajouter des notifications push côté serveur.</p></section>
   <section class="card"><div class="section-head"><div><h2>Tutoriels exercices</h2><p class="muted small">Remplace progressivement les recherches par les vidéos que tu as validées.</p></div><span class="pill">${tutorialStats().exact}/${tutorialStats().total}</span></div><button class="btn btn-secondary" id="manageTutorials">Gérer les tutoriels</button></section>
