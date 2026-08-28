@@ -2455,3 +2455,7 @@ html[data-theme="dark"] .next-exercise-preview-rich,html[data-theme="dark"] .pro
 
 .ai-import-schedule{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:12px 0 14px}.ai-import-schedule>div{display:grid;gap:2px;padding:8px 5px;text-align:center;border:1px solid var(--line);border-radius:9px;background:var(--surface)}.ai-import-schedule b{font-size:.58rem}.ai-import-schedule span{font-size:.55rem}.ai-import-schedule small{font-size:.5rem;color:var(--muted)}.ai-import-schedule .is-rest{opacity:.58}
 @media(max-width:560px){.ai-import-schedule{grid-template-columns:repeat(4,1fr)}}
+
+/* V10.12.2 · importer feedback */
+.ai-import-loading{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.ai-import-loading strong{font-size:.72rem}.ai-import-loading p{margin:5px 0 0;font-size:.63rem;color:var(--muted)}
