@@ -2439,7 +2439,7 @@ function uiIcon(name, cls="ui-icon") {
 function shell(content, activeTab=state.view) {
   const navTab=activeTab==='custom'?'week':['today','week','flexibility','progress'].includes(activeTab)?activeTab:((activeTab==='athlete'||activeTab==='more'||activeTab==='settings'||activeTab==='profile'||activeTab==='skills'||activeTab==='measurements')?'athlete':'athlete');
   return `<main class="shell">${content}</main>
-  ${['today','week'].includes(activeTab)?`<button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une performance"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`:''}
+  ${['today','week','flexibility','progress'].includes(activeTab)?`<button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une performance"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`:''}
   ${renderQuickLogModal()}
   <nav class="bottom-nav bottom-nav-simple" aria-label="Navigation principale">
     <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>${uiIcon('today')}</span>Aujourd'hui</button>
@@ -7282,6 +7282,13 @@ renderAssessmentCenter=function(){
 /* ========================================================================== */
 /* V10.90 · FAB placement                                                     */
 /* Bouton Ajouter flottant uniquement sur Aujourd'hui et Planning.             */
+/* ========================================================================== */
+
+
+/* ========================================================================== */
+/* V10.91 · FAB placement                                                     */
+/* Bouton Ajouter sur Aujourd'hui, Planning, Mobilité et Progression.           */
+/* Profil et sous-pages profil restent sans FAB.                               */
 /* ========================================================================== */
 
 applyAppTheme();
