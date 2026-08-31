@@ -7005,6 +7005,117 @@ bindEvents=function(){
   if(keep)keep.onclick=()=>{v1087ResetProposalIfNeeded();state.multisportProposalChoice='keep';render();};
 };
 
+
+/* ========================================================================== */
+/* V10.88 · Étape 7 — Profil Visual Clarity                                   */
+/* Profil = identité + objectifs + contexte. Les analyses restent ailleurs.   */
+/* ========================================================================== */
+function v1088BodySummary(){
+  const logs=getBodyLogs(),latest=logs[0],derived=latest?bodyDerived(latest):{};
+  if(!latest)return `<button class="p88-data-row" data-view="measurements"><div><span>Données corporelles</span><strong>Aucun relevé</strong><small>Poids, mensurations et photos</small></div><b>Commencer →</b></button>`;
+  const weight=bodyValue(latest,'weight'),waist=bodyValue(latest,'waist');
+  return `<button class="p88-data-row" data-view="measurements"><div><span>Données corporelles</span><strong>${weight?`${Number(weight).toFixed(1)} kg`:'Poids —'}${waist?` · taille ${Number(waist).toFixed(1)} cm`:''}</strong><small>Dernier relevé · ${formatDate(latest.date)}${derived.bf!=null?` · MG estimée ${derived.bf.toFixed(1)}%`:''}</small></div><b>Voir →</b></button>`;
+}
+function v1088ConnectionSection(){
+  const st=state.stravaStatus,meta=getStravaMeta();
+  if(!st.checked)return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Connexions</div><h2>Services externes</h2></div></div><div class="p88-connection"><div><strong>Strava</strong><span>Vérification de la connexion…</span></div><b>…</b></div></section>`;
+  if(!st.connected)return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Connexions</div><h2>Services externes</h2></div></div>
+    <div class="p88-connection"><div><strong>Strava</strong><span>Non connecté · import automatique des courses facultatif</span></div><a href="/api/strava/auth">Connecter →</a></div>
+    <div class="p88-connection disabled"><div><strong>Apple Santé</strong><span>Non disponible directement dans la PWA web</span></div><b>Plus tard</b></div>
+  </section>`;
+  const athlete=st.athlete?`${st.athlete.firstname||''} ${st.athlete.lastname||''}`.trim():'';
+  return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Connexions</div><h2>Services externes</h2></div></div>
+    <div class="p88-connection connected"><div><strong>Strava</strong><span>${athlete?esc(athlete)+' · ':''}${meta.lastSync?`synchro ${formatDate(meta.lastSync)}`:'connecté'}</span></div><button id="syncStrava">Synchroniser →</button></div>
+    <div class="p88-connection disabled"><div><strong>Apple Santé</strong><span>Non disponible directement dans la PWA web</span></div><b>Plus tard</b></div>
+  </section>`;
+}
+function v1088ProfileContext(p){
+  const sports=(p.sports||[]).map(athleteSportLabel),places=(p.locations||[]).map(x=>({home:'Maison',outdoor:'Parc / extérieur',gym:'Salle',club:'Club / box'}[x]||x));
+  return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Contexte sportif</div><h2>Où et comment tu t’entraînes</h2></div><button id="editAthleteProfile">Modifier →</button></div>
+    <div class="p88-context-grid">
+      <div><span>Sports</span><strong>${sports.join(' · ')||'Non renseignés'}</strong></div>
+      <div><span>Lieux</span><strong>${places.join(' · ')||'Non renseignés'}</strong></div>
+      <div><span>Rythme</span><strong>${p.weeklySessions} séance${p.weeklySessions>1?'s':''}/sem · ${p.preferredDuration} min</strong></div>
+      <div><span>Format</span><strong>${esc(p.sessionPreference)}</strong></div>
+    </div>
+  </section>`;
+}
+function v1088EquipmentSection(){
+  const setup=getEquipmentSetup(),equipment=EQUIPMENT_CATALOG.filter(x=>setup[x.id]),active=getActiveTrainingCycle(),missing=[];
+  Object.values(active.days||{}).forEach(w=>(w.exercises||[]).forEach(e=>{const a=exerciseAdaptation(e.name);if(!a.equipment.available&&exerciseInfo(e.name))missing.push(e.name);}));
+  return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Matériel</div><h2>${equipment.length} équipement${equipment.length>1?'s':''} disponible${equipment.length>1?'s':''}</h2></div><button id="editAthleteProfile">Modifier →</button></div>
+    ${equipment.length?`<div class="p88-equipment">${equipment.map(x=>`<div>${equipmentVisualIcon(x.label)}<span>${esc(x.label)}</span></div>`).join('')}</div>`:'<p class="p88-muted">Aucun matériel renseigné.</p>'}
+    ${missing.length?`<div class="p88-equipment-warning"><strong>${[...new Set(missing)].length} exercice${[...new Set(missing)].length>1?'s':''} du cycle à adapter</strong><span>KINETIK signalera une variante compatible au moment utile.</span></div>`:'<div class="p88-equipment-ok">Cycle actuel compatible avec ton matériel.</div>'}
+  </section>`;
+}
+
+renderMore=function(){
+  const p=getAthleteProfile(),cycle=getActiveTrainingCycle(),cs=getCycleState(),completion=athleteProfileCompletion(p),rank=getRankState();
+  return shell(`<header class="topbar p88-topbar"><div><div class="brand">Profil</div><div class="daylabel">Qui tu es · ce que tu vises · ce dont KINETIK dispose</div></div><button class="btn btn-primary compact" id="editAthleteProfile">Modifier</button></header>
+
+    <section class="p88-identity">
+      <div class="athlete-avatar large">${athleteInitials(p.name)}</div>
+      <div><div class="kicker">Identité sportive</div><h1>${esc(p.name||'Mon profil')}</h1><p>${esc(p.experience)}${p.yearsTraining?` · ${p.yearsTraining} an${p.yearsTraining>1?'s':''} de pratique`:''}${p.age?` · ${p.age} ans`:''}</p></div>
+      <div class="p88-completion"><strong>${completion}%</strong><span>profil renseigné</span></div>
+    </section>
+
+    <section class="p88-goal">
+      <div class="p88-section-head"><div><div class="kicker">Objectifs</div><h2>${esc(p.primaryGoal)}</h2></div><button id="editAthleteProfile">Modifier →</button></div>
+      ${p.secondaryGoal?`<p><span>Secondaire</span><strong>${esc(p.secondaryGoal)}</strong></p>`:''}
+      <div class="p88-goal-cycle"><div><span>Cycle actuel</span><strong>${esc(cycle.name)} · S${cs.week}/${cs.weekCount}</strong></div>${p.goalHorizon?`<div><span>Horizon</span><strong>${esc(p.goalHorizon)}</strong></div>`:''}</div>
+      <button class="p88-inline-link" data-view="week">Voir le programme actuel →</button>
+    </section>
+
+    ${v1088ProfileContext(p)}
+
+    ${v1088EquipmentSection()}
+
+    <section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Données personnelles</div><h2>Ce que KINETIK utilise pour te suivre</h2></div></div>
+      ${v1088BodySummary()}
+      <button class="p88-data-row" data-view="skills"><div><span>Capacités & rang</span><strong>${esc(rank.displayName)}</strong><small>Profil de capacités et exigences validées</small></div><b>Voir →</b></button>
+      <button class="p88-data-row" data-view="flexibility"><div><span>Mobilité</span><strong>${mobilityProfiles().filter(x=>x.assessed).length}/${mobilityProfiles().length} zones évaluées</strong><small>Tests et zones à travailler</small></div><b>Voir →</b></button>
+    </section>
+
+    ${v1088ConnectionSection()}
+
+    <section class="p88-settings-link">
+      <button data-view="settings"><div><div class="kicker">Application</div><strong>Réglages KINETIK</strong><span>Coach, timers, écran, bibliothèque, sauvegarde et installation</span></div><b>→</b></button>
+    </section>`, 'athlete');
+};
+
+/* Settings no longer duplicates athlete profile/equipment. */
+renderProfile=function(){
+  const p=getPrefs();
+  return shell(`<header class="topbar p88-settings-top"><div><button class="profile-back-link" data-view="athlete">← Profil</button><div class="brand">Réglages KINETIK</div><div class="daylabel">Comportement de l’application et données</div></div></header>
+
+    <section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Coaching</div><h2>Comportement de KINETIK</h2></div></div>
+      <div class="switchline"><div><strong>Progression intelligente</strong><div class="small muted">Analyse tes dernières séances et propose des ajustements. Les changements contextuels restent à valider.</div></div><input id="smartPref" type="checkbox" ${p.smartProgression!==false?'checked':''}></div>
+    </section>
+
+    <section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Séance</div><h2>Timers & écran</h2></div></div>
+      <div class="switchline"><div><strong>Son du timer</strong><div class="small muted">Signal à la fin d’un chrono.</div></div><input id="soundPref" type="checkbox" ${p.sound?'checked':''}></div>
+      <div class="switchline"><div><strong>Garder l’écran actif</strong><div class="small muted">Évite la mise en veille pendant la séance quand le navigateur le permet.</div></div><input id="keepAwakePref" type="checkbox" ${p.keepAwake!==false?'checked':''}></div>
+      <div class="switchline"><div><strong>Vibration</strong><div class="small muted">Uniquement sur les navigateurs compatibles.</div></div><input id="vibrationPref" type="checkbox" ${p.vibration?'checked':''}></div>
+    </section>
+
+    <section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Contenu</div><h2>Exercices & tutoriels</h2></div></div>
+      <button class="p88-settings-action" id="openExerciseLibrary"><div><strong>Bibliothèque d’exercices</strong><span>Exercices, variantes et disponibilité</span></div><b>Ouvrir →</b></button>
+      <button class="p88-settings-action" id="manageTutorials"><div><strong>Tutoriels</strong><span>${tutorialStats().exact}/${tutorialStats().total} contenus validés</span></div><b>Gérer →</b></button>
+      ${Object.entries(getExerciseChoices()).length?`<details class="p88-settings-details"><summary><div><strong>Variantes adoptées</strong><span>${Object.entries(getExerciseChoices()).length} choix actifs</span></div><b>↓</b></summary><div>${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${esc(base)} → <strong>${esc(chosen)}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div></details>`:''}
+    </section>
+
+    <section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Application</div><h2>Installation</h2></div></div>
+      <p class="p88-muted">Android/Chrome : installation directe si disponible. iPhone/Safari : Partager → Ajouter à l’écran d’accueil.</p>
+      <button class="btn btn-primary" id="installApp" ${state.deferredInstall?'':'disabled'}>${state.deferredInstall?'Installer KINETIK':'Installation via le navigateur'}</button>
+    </section>
+
+    <section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Données</div><h2>Sauvegarde locale</h2></div></div>
+      <p class="p88-muted">Exporte une sauvegarde avant un changement de téléphone, navigateur ou domaine. Les fichiers restent sous ton contrôle.</p>
+      <div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div>
+      <div class="p88-danger-zone"><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></div>
+    </section>`, 'profile');
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
