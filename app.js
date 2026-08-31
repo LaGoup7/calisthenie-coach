@@ -2439,7 +2439,7 @@ function uiIcon(name, cls="ui-icon") {
 function shell(content, activeTab=state.view) {
   const navTab=activeTab==='custom'?'week':['today','week','flexibility','progress'].includes(activeTab)?activeTab:((activeTab==='athlete'||activeTab==='more'||activeTab==='settings'||activeTab==='profile'||activeTab==='skills'||activeTab==='measurements')?'athlete':'athlete');
   return `<main class="shell">${content}</main>
-  ${['today','week'].includes(activeTab)?'':`<button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une série rapide"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`}
+  ${['today','week'].includes(activeTab)?`<button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une performance"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`:''}
   ${renderQuickLogModal()}
   <nav class="bottom-nav bottom-nav-simple" aria-label="Navigation principale">
     <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>${uiIcon('today')}</span>Aujourd'hui</button>
@@ -7277,6 +7277,12 @@ renderAssessmentCenter=function(){
   const note=`<section class="p89-integrity-note"><div><div class="kicker">Intégrité des performances</div><strong>Une preuve valide uniquement la performance avec laquelle elle a été enregistrée.</strong><p>Exemple : 20 tractions déclarées et un test KINETIK à 10 restent deux références distinctes. Le rang ne traitera jamais les 20 comme un test KINETIK.</p></div></section>`;
   return html.includes(marker)?html.replace(marker,note+marker):note+html;
 };
+
+
+/* ========================================================================== */
+/* V10.90 · FAB placement                                                     */
+/* Bouton Ajouter flottant uniquement sur Aujourd'hui et Planning.             */
+/* ========================================================================== */
 
 applyAppTheme();
 
