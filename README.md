@@ -119,3 +119,13 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Mesures de bras clarifiées comme circonférence biceps + triceps.
 - Fléchisseurs de hanche et adducteurs restent des sous-zones mobilité dédiées, déjà suivies dans Mobilité.
 - Audit développeur disponible via window.__KINETIK_BODY_AUDIT__.
+
+
+## V10.111 — Body System Consistency
+- Dernier nettoyage transversal du référentiel corporel.
+- Pectoraux ajoutés au référentiel canonique Mobilité (le moteur les suivait déjà).
+- Objectifs de mensurations Bras G/D renommés en Bras gauche/droit (biceps + triceps).
+- Volume utilisateur : Core devient Core / Abdos / Lombaires, Dos devient Dos / Dorsaux, Grip devient Avant-bras / Grip.
+- Les cartes du Body Map indiquent maintenant explicitement si le score est une estimation dérivée, une mesure de mobilité ou une lecture combinée.
+- Pas de faux score séparé épaule gauche/droite en force sans données unilatérales.
+- Audit transversal développeur exposé dans window.__KINETIK_BODY_SYSTEM_AUDIT__.

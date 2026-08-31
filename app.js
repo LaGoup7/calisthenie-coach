@@ -3883,7 +3883,7 @@ function renderMeasurements(){
   <div class="measurement-frequency-note"><strong>Fréquence recommandée</strong><span>${schedule[0]?.text||'Mesure régulièrement, dans des conditions similaires.'}</span></div>
   `}`, 'measurements');
 }
-function renderBodySettings(){const cfg=getBodyConfig();const goalDefs=[['weight','Poids','kg'],['waist','Tour de taille','cm'],['bodyFat','Masse grasse','%'],['chest','Poitrine','cm'],['armLeft','Bras G','cm'],['armRight','Bras D','cm'],['thighLeft','Cuisse G','cm'],['thighRight','Cuisse D','cm']];return `<div class="body-setting-section"><h3>Calcul de composition corporelle</h3><div class="parameter-grid"><label><span>Formule anthropométrique</span><select id="bodyFatFormula"><option value="male" ${cfg.bodyFatFormula==='male'?'selected':''}>US Navy · homme</option><option value="female" ${cfg.bodyFatFormula==='female'?'selected':''}>US Navy · femme</option><option value="off" ${cfg.bodyFatFormula==='off'?'selected':''}>Désactivée</option></select></label><label><span>Source masse grasse</span><select id="bodyFatSource"><option value="auto" ${cfg.bodyFatSource==='auto'?'selected':''}>Auto · balance puis estimation</option><option value="estimate" ${cfg.bodyFatSource==='estimate'?'selected':''}>Estimation uniquement</option><option value="scale" ${cfg.bodyFatSource==='scale'?'selected':''}>Balance uniquement</option></select></label></div><p class="muted small">L'estimation anthropométrique est indicative. Pour la formule femme, hanches + taille + cou sont nécessaires.</p></div><div class="divider"></div><div class="body-setting-section"><h3>Fréquences recommandées</h3><div class="parameter-grid threshold-grid"><label><span>Poids · tous les</span><input class="mini-input body-freq" data-freq="weightDays" type="number" min="1" value="${cfg.frequencies.weightDays}"></label><label><span>Taille · tous les</span><input class="mini-input body-freq" data-freq="waistDays" type="number" min="1" value="${cfg.frequencies.waistDays}"></label><label><span>Bilan complet · tous les</span><input class="mini-input body-freq" data-freq="completeDays" type="number" min="1" value="${cfg.frequencies.completeDays}"></label><label><span>Photos · tous les</span><input class="mini-input body-freq" data-freq="photoDays" type="number" min="1" value="${cfg.frequencies.photoDays}"></label></div><small class="muted">Valeurs en jours. Elles servent de repères, pas d'obligation.</small></div><div class="divider"></div><div class="body-setting-section"><h3>Objectifs</h3><div class="target-editor-list">${goalDefs.map(([k,l,u])=>`<div class="target-editor-row"><strong>${l}</strong><label><span>Cible ${u}</span><input class="mini-input body-goal-input" data-body-goal="${k}" type="number" min="0" step="0.1" value="${cfg.goals[k]??''}" placeholder="—"></label></div>`).join('')}</div></div><div class="divider"></div><div class="body-setting-section"><div class="section-head"><div><h3>Champs suivis</h3><small class="muted">Masque ce que tu n'utilises pas.</small></div><button class="btn btn-outline compact" id="addCustomBodyField">＋ Champ perso</button></div><div class="body-track-grid">${BODY_FIELDS.map(f=>`<label class="body-track"><input class="body-track-input" data-body-track="${f.key}" type="checkbox" ${cfg.tracked[f.key]!==false?'checked':''}><span>${f.label}</span></label>`).join('')}${cfg.customFields.map(f=>`<div class="body-track custom"><label><input class="body-track-custom" data-custom-track="${f.key}" type="checkbox" ${f.visible!==false?'checked':''}><span>${esc(f.label)} (${esc(f.unit||'')})</span></label><button class="body-remove-custom" data-remove-custom="${f.key}">×</button></div>`).join('')}</div></div><div class="parameter-actions"><button class="btn btn-primary" id="saveBodyConfig">Enregistrer</button><button class="btn btn-outline" id="resetBodyConfig">Valeurs par défaut</button></div>`;}
+function renderBodySettings(){const cfg=getBodyConfig();const goalDefs=[['weight','Poids','kg'],['waist','Tour de taille','cm'],['bodyFat','Masse grasse','%'],['chest','Poitrine','cm'],['armLeft','Bras gauche (biceps + triceps)','cm'],['armRight','Bras droit (biceps + triceps)','cm'],['thighLeft','Cuisse G','cm'],['thighRight','Cuisse D','cm']];return `<div class="body-setting-section"><h3>Calcul de composition corporelle</h3><div class="parameter-grid"><label><span>Formule anthropométrique</span><select id="bodyFatFormula"><option value="male" ${cfg.bodyFatFormula==='male'?'selected':''}>US Navy · homme</option><option value="female" ${cfg.bodyFatFormula==='female'?'selected':''}>US Navy · femme</option><option value="off" ${cfg.bodyFatFormula==='off'?'selected':''}>Désactivée</option></select></label><label><span>Source masse grasse</span><select id="bodyFatSource"><option value="auto" ${cfg.bodyFatSource==='auto'?'selected':''}>Auto · balance puis estimation</option><option value="estimate" ${cfg.bodyFatSource==='estimate'?'selected':''}>Estimation uniquement</option><option value="scale" ${cfg.bodyFatSource==='scale'?'selected':''}>Balance uniquement</option></select></label></div><p class="muted small">L'estimation anthropométrique est indicative. Pour la formule femme, hanches + taille + cou sont nécessaires.</p></div><div class="divider"></div><div class="body-setting-section"><h3>Fréquences recommandées</h3><div class="parameter-grid threshold-grid"><label><span>Poids · tous les</span><input class="mini-input body-freq" data-freq="weightDays" type="number" min="1" value="${cfg.frequencies.weightDays}"></label><label><span>Taille · tous les</span><input class="mini-input body-freq" data-freq="waistDays" type="number" min="1" value="${cfg.frequencies.waistDays}"></label><label><span>Bilan complet · tous les</span><input class="mini-input body-freq" data-freq="completeDays" type="number" min="1" value="${cfg.frequencies.completeDays}"></label><label><span>Photos · tous les</span><input class="mini-input body-freq" data-freq="photoDays" type="number" min="1" value="${cfg.frequencies.photoDays}"></label></div><small class="muted">Valeurs en jours. Elles servent de repères, pas d'obligation.</small></div><div class="divider"></div><div class="body-setting-section"><h3>Objectifs</h3><div class="target-editor-list">${goalDefs.map(([k,l,u])=>`<div class="target-editor-row"><strong>${l}</strong><label><span>Cible ${u}</span><input class="mini-input body-goal-input" data-body-goal="${k}" type="number" min="0" step="0.1" value="${cfg.goals[k]??''}" placeholder="—"></label></div>`).join('')}</div></div><div class="divider"></div><div class="body-setting-section"><div class="section-head"><div><h3>Champs suivis</h3><small class="muted">Masque ce que tu n'utilises pas.</small></div><button class="btn btn-outline compact" id="addCustomBodyField">＋ Champ perso</button></div><div class="body-track-grid">${BODY_FIELDS.map(f=>`<label class="body-track"><input class="body-track-input" data-body-track="${f.key}" type="checkbox" ${cfg.tracked[f.key]!==false?'checked':''}><span>${f.label}</span></label>`).join('')}${cfg.customFields.map(f=>`<div class="body-track custom"><label><input class="body-track-custom" data-custom-track="${f.key}" type="checkbox" ${f.visible!==false?'checked':''}><span>${esc(f.label)} (${esc(f.unit||'')})</span></label><button class="body-remove-custom" data-remove-custom="${f.key}">×</button></div>`).join('')}</div></div><div class="parameter-actions"><button class="btn btn-primary" id="saveBodyConfig">Enregistrer</button><button class="btn btn-outline" id="resetBodyConfig">Valeurs par défaut</button></div>`;}
 
 function renderProfile(){const p=getPrefs();return shell(`<header class="topbar"><div><button class="profile-back-link" data-view="athlete">← Mon profil sportif</button><div class="brand">Réglages KINETIK</div><div class="daylabel">Application, données et préférences</div></div></header>
   <section class="card"><h2>Coach adaptatif</h2><div class="switchline"><div><strong>Progression intelligente</strong><div class="small muted">Ajuste légèrement les objectifs selon tes dernières séances, ton effort et les gênes articulaires.</div></div><input id="smartPref" type="checkbox" ${p.smartProgression!==false?'checked':''}></div></section>
@@ -9875,6 +9875,7 @@ const KINETIK_BODY_TAXONOMY = Object.freeze({
   mobility:[
     {id:'wrists',label:'Poignets',flex:'Poignets'},
     {id:'shoulders',label:'Épaules',flex:'Épaules'},
+    {id:'chestMobility',label:'Pectoraux',flex:'Pectoraux'},
     {id:'thorax',label:'Thorax',flex:'Thorax'},
     {id:'hips',label:'Hanches',flex:'Hanches'},
     {id:'hipFlexors',label:'Fléchisseurs de hanche',flex:'Fléchisseurs hanche'},
@@ -10040,3 +10041,260 @@ if(typeof window!=='undefined')window.__KINETIK_BODY_AUDIT__=v10110BodyTaxonomyA
 
 /* Refresh once so all late-patch taxonomy changes are visible immediately. */
 try{render();}catch(e){console.warn('KINETIK body taxonomy refresh',e);}
+
+
+/* ========================================================================== */
+/* V10.111 · Body System Consistency                                           */
+/* Vérification transversale : Body Map, volume, mobilité, bibliothèque,       */
+/* évaluations, mesures et readiness.                                          */
+/* ========================================================================== */
+
+const KINETIK_BODY_ZONE_SOURCES = Object.freeze({
+  chest:{
+    label:'Pectoraux',kind:'derived',
+    capabilities:['push'],mobility:['thorax'],
+    tests:['Dips stricts','Pompes / poussée'],
+    volume:'Pectoraux',measurement:'chest'
+  },
+  back:{
+    label:'Dos / dorsaux',kind:'derived',
+    capabilities:['pull','explosive'],mobility:['thorax'],
+    tests:['Tractions strictes','Chest-to-bar'],
+    volume:'Dos'
+  },
+  traps:{
+    label:'Trapèzes',kind:'derived',
+    capabilities:['pull','explosive'],mobility:['thorax','shoulders'],
+    tests:['Scapular pull-ups','Face pulls','Tirage'],
+    volume:'Trapèzes'
+  },
+  shoulders:{
+    label:'Épaules',kind:'derived-bilateral',
+    capabilities:['push','balance'],mobility:['shoulders'],
+    tests:['Poussée verticale','Handstand','Mobilité épaules G/D'],
+    volume:'Épaules',measurement:'shoulders',restriction:'shoulders'
+  },
+  biceps:{
+    label:'Biceps',kind:'derived',
+    capabilities:['pull','grip'],
+    tests:['Tractions / chin-ups','Curl biceps'],
+    volume:'Biceps',measurement:'arm'
+  },
+  triceps:{
+    label:'Triceps',kind:'derived',
+    capabilities:['push','balance'],
+    tests:['Dips','Pike / HSPU','Extension triceps'],
+    volume:'Triceps',measurement:'arm'
+  },
+  forearms:{
+    label:'Avant-bras / grip',kind:'mixed',
+    capabilities:['grip'],tests:['Dead hang','Towel hang'],
+    volume:'Grip',measurement:'forearm',restriction:'wrists'
+  },
+  core:{
+    label:'Core / abdos / lombaires',kind:'derived',
+    capabilities:['core','balance'],mobility:['thorax','hips'],
+    tests:['L-sit','Hollow hold','Gainage'],
+    volume:'Core',restriction:'back'
+  },
+  hips:{
+    label:'Hanches',kind:'mixed',
+    capabilities:['legs','core'],mobility:['hips'],
+    tests:['Mobilité hanches','Squat / jambes'],
+    restriction:'hips'
+  },
+  glutes:{
+    label:'Fessiers',kind:'derived',
+    capabilities:['legs','core'],mobility:['hips'],
+    tests:['Pistol / split squat','Contrôle du bassin'],
+    volume:'Fessiers'
+  },
+  quads:{
+    label:'Quadriceps',kind:'derived',
+    capabilities:['legs'],mobility:['hips'],
+    tests:['Pistol / split squat'],
+    volume:'Quadriceps',measurement:'thigh',restriction:'knees'
+  },
+  hamstrings:{
+    label:'Ischios',kind:'mixed',
+    capabilities:['legs'],mobility:['posterior'],
+    tests:['Chaîne postérieure','Jambes'],
+    volume:'Ischios',measurement:'thigh'
+  },
+  calves:{
+    label:'Mollets',kind:'derived',
+    capabilities:['legs'],mobility:['ankles'],
+    tests:['Contrôle du bas de jambe'],
+    volume:'Mollets',measurement:'calf',restriction:'ankles'
+  },
+  ankles:{
+    label:'Chevilles',kind:'direct-mobility',
+    mobility:['ankles'],tests:['Knee-to-wall G/D'],
+    restriction:'ankles'
+  },
+  wrists:{
+    label:'Poignets',kind:'direct-mobility',
+    capabilities:['grip','balance'],mobility:['wrists'],
+    tests:['Mobilité poignets'],restriction:'wrists'
+  },
+  thorax:{
+    label:'Thorax',kind:'direct-mobility',
+    mobility:['thorax'],tests:['Rotation thoracique']
+  },
+  hipFlexors:{
+    label:'Fléchisseurs de hanche',kind:'mobility-only',
+    mobility:['Fléchisseurs hanche']
+  },
+  adductors:{
+    label:'Adducteurs',kind:'mobility-only',
+    mobility:['Adducteurs']
+  }
+});
+
+/* Anatomical wording in user-facing volume pages; internal storage keys stay stable. */
+v10110VolumeLabel=function(group){
+  const labels={
+    Grip:'Avant-bras / Grip',
+    Core:'Core / Abdos / Lombaires',
+    Dos:'Dos / Dorsaux'
+  };
+  return labels[group]||group;
+};
+
+function v10111ZoneSourceMeta(id){
+  return KINETIK_BODY_ZONE_SOURCES[id]||null;
+}
+function v10111ZoneScoreLabel(zone){
+  const meta=v10111ZoneSourceMeta(zone?.id);
+  if(!zone || zone.score==null)return 'Niveau';
+  if(meta?.kind==='direct-mobility')return 'Mesure';
+  if(meta?.kind==='mobility-only')return 'Mobilité';
+  return 'Estimation';
+}
+function v10111ZoneMethodText(zone){
+  const meta=v10111ZoneSourceMeta(zone?.id);
+  if(!meta)return '';
+  if(meta.kind==='derived-bilateral'){
+    return 'Score dérivé de performances bilatérales. KINETIK ne sépare pas gauche/droite en force sans mesure unilatérale fiable.';
+  }
+  if(meta.kind==='derived'){
+    return 'Score dérivé de plusieurs performances : il ne s’agit pas d’un test isolé du muscle.';
+  }
+  if(meta.kind==='mixed'){
+    return 'Lecture combinant performances et données fonctionnelles disponibles.';
+  }
+  if(meta.kind==='direct-mobility'){
+    return 'Cette zone peut s’appuyer sur un protocole de mobilité directement mesuré.';
+  }
+  if(meta.kind==='mobility-only'){
+    return 'Zone suivie dans Mobilité ; aucun faux score de force n’est créé.';
+  }
+  return '';
+}
+
+/* Final zone card: state explicitly when a muscle score is derived. */
+v1095ZoneDetailCard=function(mode='overall',view='front'){
+  const base=v1095SelectedBodyZone(mode,view), zone=base?v10103ZoneData(base.id,mode):null;
+  if(!zone)return '';
+  const cta=v10103ZoneCta(zone);
+  const provisional=zone.confidence.id!=='high'&&zone.score!=null;
+  const method=v10111ZoneMethodText(zone);
+  const levelLabel=provisional?'Provisoire':v10111ZoneScoreLabel(zone);
+  return `<article class="body-zone-detail card body-zone-detail-v5 body-zone-detail-v111">
+    <div class="body-zone-detail-head">
+      <div><div class="kicker">Zone sélectionnée</div><h3>${esc(zone.label)}</h3></div>
+      <div class="body-zone-score ${v10103ZoneVisual(zone)}"><span>${levelLabel}</span>${zone.score!=null?`${zone.score}<small>/100</small>`:'—'}</div>
+    </div>
+    <div class="body-zone-state-grid">
+      <div><span>Statut</span><strong>${esc(zone.status.label)}</strong></div>
+      <div><span>Confiance</span><strong class="confidence-${zone.confidence.id}">${esc(zone.confidence.label)}</strong></div>
+    </div>
+    <p class="body-zone-description">${esc(zone.desc||'')}</p>
+    ${method?`<div class="body-zone-method"><span>Méthode</span><strong>${esc(method)}</strong></div>`:''}
+    <div class="body-zone-sources"><span>Données disponibles</span><strong>${esc(v10103InputSummary(zone.inputs))}</strong></div>
+    ${zone.missing.length?`<div class="body-zone-missing"><span>Données manquantes</span><strong>${esc(v10103MissingSummary(zone.missing))}</strong></div>`:''}
+    ${zone.confidence.id==='low'?`<p class="body-zone-caution">La couleur de niveau reste volontairement neutre tant que cette zone repose sur trop peu de données fiables.</p>`:''}
+    <div class="body-zone-mini-actions">
+      <button class="btn btn-secondary compact" data-body-zone-cycle="prev">← Zone</button>
+      <button class="btn btn-secondary compact" data-body-zone-cycle="next">Zone →</button>
+      <button class="btn btn-outline compact" ${cta.attr}>${cta.label} →</button>
+    </div>
+  </article>`;
+};
+
+/* Cross-page audit. This is developer-facing and creates no extra UI clutter. */
+function v10111BodySystemAudit(){
+  const bodyMapIds=new Set([
+    ...v10109ZoneIds('front'),
+    ...v10109ZoneIds('back'),
+    'glutes'
+  ]);
+
+  const strength=KINETIK_BODY_TAXONOMY.strength.map(row=>{
+    const source=KINETIK_BODY_ZONE_SOURCES[row.id]||{};
+    const volumeOk=!row.volume||VOLUME_GROUPS.includes(row.volume);
+    const libraryOk=!row.volume || (row.volume==='Grip'
+      ? EXERCISE_LIBRARY.some(e=>e.muscles?.includes('Grip')||e.muscles?.includes('Avant-bras'))
+      : EXERCISE_LIBRARY.some(e=>e.muscles?.includes(row.volume)));
+    return {
+      zone:row.label,
+      bodyMap:bodyMapIds.has(row.id),
+      volume:volumeOk,
+      library:libraryOk,
+      source:source.kind||'unknown'
+    };
+  });
+
+  const mobility=KINETIK_BODY_TAXONOMY.mobility.map(row=>({
+    zone:row.label,
+    mobilityEngine:FLEX_ZONES.includes(row.flex),
+    directlyTested:['Poignets','Épaules','Thorax','Hanches','Ischios / chaîne postérieure','Chevilles'].includes(row.label),
+    bodyMap:['wrists','shoulders','thorax','hips','hamstrings','ankles','chestMobility'].includes(row.id)
+      ? (row.id==='chestMobility' ? bodyMapIds.has('chest') : row.id==='thorax' ? (bodyMapIds.has('chest')||bodyMapIds.has('back')) : bodyMapIds.has(row.id))
+      : false
+  }));
+
+  const measureLabels=BODY_FIELDS.map(x=>x.label);
+  const measurements={
+    chest:measureLabels.some(x=>/poitrine/i.test(x)),
+    shoulders:measureLabels.some(x=>/épaules/i.test(x)),
+    arms:measureLabels.some(x=>/biceps.*triceps/i.test(x)),
+    forearms:measureLabels.some(x=>/avant-bras/i.test(x)),
+    thighs:measureLabels.some(x=>/cuisse/i.test(x)),
+    calves:measureLabels.some(x=>/mollet/i.test(x))
+  };
+
+  const restrictionIds=new Set(RESTRICTION_AREAS.map(([id])=>id));
+  const restrictions=['wrists','elbows','shoulders','back','hips','knees','ankles']
+    .map(id=>({id,covered:restrictionIds.has(id)}));
+
+  const missing=[
+    ...strength.filter(x=>!x.bodyMap||!x.volume||!x.library).map(x=>`strength:${x.zone}`),
+    ...mobility.filter(x=>!x.mobilityEngine).map(x=>`mobility:${x.zone}`),
+    ...restrictions.filter(x=>!x.covered).map(x=>`restriction:${x.id}`)
+  ];
+
+  return {
+    ok:missing.length===0,
+    missing,
+    strength,
+    mobility,
+    measurements,
+    restrictions,
+    principles:[
+      'Biceps, triceps, trapèzes, pectoraux, dos et fessiers utilisent des scores dérivés : KINETIK ne prétend pas les isoler avec un test musculaire fictif.',
+      'Épaules : mobilité gauche/droite possible, mais force conservée bilatérale tant qu’aucune évaluation unilatérale fiable n’existe.',
+      'Adducteurs et fléchisseurs de hanche restent des zones Mobilité dédiées, pas des scores de force.',
+      'Coudes et genoux sont des articulations de readiness/restriction, pas des muscles à scorer.'
+    ]
+  };
+}
+if(typeof window!=='undefined'){
+  window.__KINETIK_BODY_SYSTEM_AUDIT__=v10111BodySystemAudit();
+  if(!window.__KINETIK_BODY_SYSTEM_AUDIT__.ok){
+    console.warn('KINETIK body-system consistency:',window.__KINETIK_BODY_SYSTEM_AUDIT__.missing);
+  }
+}
+
+/* One final render applies the cleaned labels/card without changing navigation. */
+try{render();}catch(e){console.warn('KINETIK body consistency refresh',e);}

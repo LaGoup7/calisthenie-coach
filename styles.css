@@ -3650,3 +3650,8 @@ body{
 /* V10.110 · taxonomy sync */
 .bodymap-v109 [data-body-zone="glutes"]>path{stroke:rgba(255,255,255,.82);stroke-width:1.45;stroke-linejoin:round}
 .bodymap-v109 [data-body-zone="glutes"].selected>path{stroke:#4f46e5;stroke-width:2.65;filter:url(#v109SelectedGlow)}
+
+/* V10.111 · Body System Consistency */
+.body-zone-method{display:grid;gap:4px;padding:10px 12px;border-radius:14px;background:var(--surface-2);margin:8px 0}
+.body-zone-method span{font-size:.68rem;color:var(--muted)}
+.body-zone-method strong{font-size:.76rem;line-height:1.42;font-weight:650}
