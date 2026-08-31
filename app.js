@@ -1678,10 +1678,10 @@ function renderVolumePanel(){
   return `<section class="card param-volume-card"><div class="section-head"><div><div class="kicker">Équilibre hebdomadaire</div><h2>Volume musculaire</h2></div><span class="pill">séries pondérées</span></div>
     <p class="muted small">Charge réelle = séances complètes, Express, séances personnelles et Quick Logs. Le plan officiel reste affiché séparément. Les fourchettes cibles ci-dessous sont modifiables.</p>
     <div class="volume-legend"><span><i class="dot primary"></i>Principal ≥ ${cfg.primaryThreshold.toFixed(2)}</span><span><i class="dot secondary"></i>Secondaire ≥ ${cfg.secondaryThreshold.toFixed(2)}</span><span><i class="dot technical"></i>Technique / support</span></div>
-    <div class="volume-list param-volume-list">${groups.map(g=>{const a=actual[g]||0,p=planned[g]||0,t=cfg.volumeTargets[g]||{min:0,max:99},st=volumeStatus(a,t),pct=clamp(a/Math.max(1,t.max),0,1.25)*100,b=actualBreakdown[g]||{primary:0,secondary:0,technical:0},pb=plannedBreakdown[g]||{};return `<div class="param-volume-row"><div class="param-volume-head"><div><strong>${g}</strong><span>${a.toFixed(1)} réel · ${p.toFixed(1)} planifié · cible ${t.min}–${t.max}</span></div><span class="target-state ${st.cls}">${st.label}</span></div><div class="volume-track target-track"><i style="width:${Math.min(100,pct)}%"></i><em style="left:${Math.min(100,t.min/Math.max(1,t.max)*100)}%"></em></div><div class="volume-breakdown"><span>P <b>${b.primary.toFixed(1)}</b></span><span>S <b>${b.secondary.toFixed(1)}</b></span><span>T <b>${b.technical.toFixed(1)}</b></span><small>plan P/S/T ${Number(pb.primary||0).toFixed(1)} / ${Number(pb.secondary||0).toFixed(1)} / ${Number(pb.technical||0).toFixed(1)}</small></div></div>`}).join('')}</div>
+    <div class="volume-list param-volume-list">${groups.map(g=>{const a=actual[g]||0,p=planned[g]||0,t=cfg.volumeTargets[g]||{min:0,max:99},st=volumeStatus(a,t),pct=clamp(a/Math.max(1,t.max),0,1.25)*100,b=actualBreakdown[g]||{primary:0,secondary:0,technical:0},pb=plannedBreakdown[g]||{};return `<div class="param-volume-row"><div class="param-volume-head"><div><strong>${v10110VolumeLabel(g)}</strong><span>${a.toFixed(1)} réel · ${p.toFixed(1)} planifié · cible ${t.min}–${t.max}</span></div><span class="target-state ${st.cls}">${st.label}</span></div><div class="volume-track target-track"><i style="width:${Math.min(100,pct)}%"></i><em style="left:${Math.min(100,t.min/Math.max(1,t.max)*100)}%"></em></div><div class="volume-breakdown"><span>P <b>${b.primary.toFixed(1)}</b></span><span>S <b>${b.secondary.toFixed(1)}</b></span><span>T <b>${b.technical.toFixed(1)}</b></span><small>plan P/S/T ${Number(pb.primary||0).toFixed(1)} / ${Number(pb.secondary||0).toFixed(1)} / ${Number(pb.technical||0).toFixed(1)}</small></div></div>`}).join('')}</div>
     <details class="parameter-details"><summary><div><strong>Comment c'est calculé ?</strong><small>${quickCount} Quick Log${quickCount>1?'s':''} inclus cette semaine</small></div><span>⌄</span></summary><div class="parameter-body"><p>Une série applique les coefficients de l'exercice à tous les muscles concernés. Exemple : une série de pompes peut compter 1,00 pectoraux + 0,60 triceps + 0,35 épaules. Les seuils ci-dessous classent ensuite chaque contribution en travail principal, secondaire ou technique.</p><p>Ce compteur sert au pilotage de la charge. Il ne signifie pas qu'une série technique fatigue autant qu'une série lourde.</p></div></details>
     <details class="parameter-details"><summary><div><strong>Pourquoi ces valeurs ?</strong><small>Base scientifique + choix de coaching</small></div><span>⌄</span></summary><div class="parameter-body"><p>L'ACSM 2026 recommande surtout la régularité, le travail de tous les grands groupes au moins 2 jours/semaine et l'individualisation. Pour l'hypertrophie, ~10 séries hebdomadaires par groupe est un repère général, pas une obligation.</p><p>Les fourchettes de cette app partent de ce socle puis donnent davantage de marge au dos, au core et au grip car ils soutiennent directement les tractions, L-sit, handstand et futurs skills. Bandes et poids du corps sont considérés comme des outils valides de renforcement.</p><div class="source-links"><a href="https://acsm.org/resistance-training-guidelines-update-2026/" target="_blank" rel="noopener">ACSM 2026</a><a href="https://www.who.int/europe/news-room/fact-sheets/item/everyday-actions-for-better-health-who-recommendations" target="_blank" rel="noopener">OMS · activité physique</a></div></div></details>
-    <details class="parameter-details"><summary><div><strong>Modifier mes cibles</strong><small>Tout est enregistré localement</small></div><span>⌄</span></summary><div class="parameter-body"><div class="parameter-grid threshold-grid"><label><span>Seuil principal</span><input class="mini-input" id="primaryThreshold" type="number" min="0" max="1" step="0.05" value="${cfg.primaryThreshold}"></label><label><span>Seuil secondaire</span><input class="mini-input" id="secondaryThreshold" type="number" min="0" max="1" step="0.05" value="${cfg.secondaryThreshold}"></label><label><span>Cardio min / semaine</span><input class="mini-input" id="cardioMinTarget" type="number" min="0" step="5" value="${cfg.cardioMin}"></label><label><span>Cardio max / semaine</span><input class="mini-input" id="cardioMaxTarget" type="number" min="0" step="5" value="${cfg.cardioMax}"></label></div><div class="target-editor-list">${groups.map(g=>{const t=cfg.volumeTargets[g];return `<div class="target-editor-row"><strong>${g}</strong><label><span>Min</span><input class="mini-input volume-target-input" data-group="${g}" data-bound="min" type="number" min="0" step="0.5" value="${t.min}"></label><label><span>Max</span><input class="mini-input volume-target-input" data-group="${g}" data-bound="max" type="number" min="0" step="0.5" value="${t.max}"></label></div>`}).join('')}</div><div class="parameter-actions"><button class="btn btn-primary" id="saveTrainingConfig">Enregistrer les cibles</button><button class="btn btn-outline" id="resetTrainingConfig">Valeurs par défaut</button></div></div></details>
+    <details class="parameter-details"><summary><div><strong>Modifier mes cibles</strong><small>Tout est enregistré localement</small></div><span>⌄</span></summary><div class="parameter-body"><div class="parameter-grid threshold-grid"><label><span>Seuil principal</span><input class="mini-input" id="primaryThreshold" type="number" min="0" max="1" step="0.05" value="${cfg.primaryThreshold}"></label><label><span>Seuil secondaire</span><input class="mini-input" id="secondaryThreshold" type="number" min="0" max="1" step="0.05" value="${cfg.secondaryThreshold}"></label><label><span>Cardio min / semaine</span><input class="mini-input" id="cardioMinTarget" type="number" min="0" step="5" value="${cfg.cardioMin}"></label><label><span>Cardio max / semaine</span><input class="mini-input" id="cardioMaxTarget" type="number" min="0" step="5" value="${cfg.cardioMax}"></label></div><div class="target-editor-list">${groups.map(g=>{const t=cfg.volumeTargets[g];return `<div class="target-editor-row"><strong>${v10110VolumeLabel(g)}</strong><label><span>Min</span><input class="mini-input volume-target-input" data-group="${g}" data-bound="min" type="number" min="0" step="0.5" value="${t.min}"></label><label><span>Max</span><input class="mini-input volume-target-input" data-group="${g}" data-bound="max" type="number" min="0" step="0.5" value="${t.max}"></label></div>`}).join('')}</div><div class="parameter-actions"><button class="btn btn-primary" id="saveTrainingConfig">Enregistrer les cibles</button><button class="btn btn-outline" id="resetTrainingConfig">Valeurs par défaut</button></div></div></details>
   </section>`;
 }
 function saveTrainingConfigFromDom(){
@@ -2385,7 +2385,7 @@ function programAudit(){
 }
 function renderProgramAudit(){
   const a=programAudit(),cardioOK=a.cardioMinutes>=a.cfg.cardioMin&&a.cardioMinutes<=a.cfg.cardioMax;
-  return `<section class="card program-audit"><div class="section-head"><div><div class="kicker">Audit automatique · ${esc(getActiveTrainingCycle().name)}</div><h2>Couverture hebdomadaire</h2></div><span class="pill ${a.covered===VOLUME_GROUPS.length?'badge-success':'badge-warn'}">${a.covered}/${VOLUME_GROUPS.length} zones dans tes cibles</span></div><div class="audit-hero"><div><strong>${a.days.length}/7</strong><span>jours actifs</span></div><div><strong>${a.cardioMinutes}</strong><span>min cardio · cible ${a.cfg.cardioMin}–${a.cfg.cardioMax}</span></div><div><strong>${a.warmups}/${a.days.length}</strong><span>échauffements</span></div><div><strong>${a.cooldowns}/${a.days.length}</strong><span>retours au calme</span></div></div><div class="audit-section"><strong>Muscles / fonctions · programme complet</strong><div class="audit-chip-grid">${VOLUME_GROUPS.map(g=>{const n=a.muscles[g]||0,t=a.cfg.volumeTargets[g],ok=n>=t.min&&n<=t.max;return `<span class="audit-chip ${ok?'ok':'warn'}">${g} <b>${n.toFixed(1)}</b> <small>${t.min}–${t.max}</small></span>`}).join('')}</div></div><div class="audit-section"><strong>Matériel utilisé dans la semaine</strong><div class="equipment-audit">${HOME_EQUIPMENT.map(eq=>`<div><span>${eq}</span><strong>${a.equipment[eq]?.size||0} j</strong></div>`).join('')}</div></div><div class="audit-note ${cardioOK?'audit-ok':''}"><strong>Mode Express</strong><span>${a.expressCardioMinutes} min de cardio si tu faisais toutes les séances actives en Express. Les cibles cardio et musculaires sont maintenant les tiennes : modifie-les dans Volume musculaire selon ton objectif et ta récupération.</span></div><p class="muted small">L'audit compare désormais le programme complet à tes propres fourchettes paramétriques, au lieu d'un seuil fixe.</p></section>`;
+  return `<section class="card program-audit"><div class="section-head"><div><div class="kicker">Audit automatique · ${esc(getActiveTrainingCycle().name)}</div><h2>Couverture hebdomadaire</h2></div><span class="pill ${a.covered===VOLUME_GROUPS.length?'badge-success':'badge-warn'}">${a.covered}/${VOLUME_GROUPS.length} zones dans tes cibles</span></div><div class="audit-hero"><div><strong>${a.days.length}/7</strong><span>jours actifs</span></div><div><strong>${a.cardioMinutes}</strong><span>min cardio · cible ${a.cfg.cardioMin}–${a.cfg.cardioMax}</span></div><div><strong>${a.warmups}/${a.days.length}</strong><span>échauffements</span></div><div><strong>${a.cooldowns}/${a.days.length}</strong><span>retours au calme</span></div></div><div class="audit-section"><strong>Muscles / fonctions · programme complet</strong><div class="audit-chip-grid">${VOLUME_GROUPS.map(g=>{const n=a.muscles[g]||0,t=a.cfg.volumeTargets[g],ok=n>=t.min&&n<=t.max;return `<span class="audit-chip ${ok?'ok':'warn'}">${v10110VolumeLabel(g)} <b>${n.toFixed(1)}</b> <small>${t.min}–${t.max}</small></span>`}).join('')}</div></div><div class="audit-section"><strong>Matériel utilisé dans la semaine</strong><div class="equipment-audit">${HOME_EQUIPMENT.map(eq=>`<div><span>${eq}</span><strong>${a.equipment[eq]?.size||0} j</strong></div>`).join('')}</div></div><div class="audit-note ${cardioOK?'audit-ok':''}"><strong>Mode Express</strong><span>${a.expressCardioMinutes} min de cardio si tu faisais toutes les séances actives en Express. Les cibles cardio et musculaires sont maintenant les tiennes : modifie-les dans Volume musculaire selon ton objectif et ta récupération.</span></div><p class="muted small">L'audit compare désormais le programme complet à tes propres fourchettes paramétriques, au lieu d'un seuil fixe.</p></section>`;
 }
 
 function render() {
@@ -4554,7 +4554,7 @@ renderProgressPerformance=function(){const tests=getTests(),due=testDueSummary()
 
 function renderProgramAudit(){
   const a=programAudit(),cardioOK=a.cardioMinutes>=a.cfg.cardioMin&&a.cardioMinutes<=a.cfg.cardioMax,missing=[];for(const day of a.days){const w=preparedWorkout(day,null,'full');for(const e of w.exercises){const ad=exerciseAdaptation(e.name);if(!ad.equipment.available&&exerciseInfo(e.name))missing.push({day,name:e.name,suggestion:ad.suggestion});}}
-  return `<section class="card program-audit"><div class="section-head"><div><div class="kicker">Audit automatique · ${esc(getActiveTrainingCycle().name)}</div><h2>Couverture hebdomadaire</h2></div><span class="pill ${a.covered===VOLUME_GROUPS.length&&!missing.length?'badge-success':'badge-warn'}">${a.covered}/${VOLUME_GROUPS.length} zones · ${missing.length} adaptations</span></div><div class="audit-hero"><div><strong>${a.days.length}/7</strong><span>jours actifs</span></div><div><strong>${a.cardioMinutes}</strong><span>min cardio · cible ${a.cfg.cardioMin}–${a.cfg.cardioMax}</span></div><div><strong>${a.warmups}/${a.days.length}</strong><span>échauffements</span></div><div><strong>${a.cooldowns}/${a.days.length}</strong><span>retours au calme</span></div></div>${missing.length?`<div class="audit-equipment-warnings"><strong>Setup à adapter</strong>${missing.slice(0,8).map(x=>`<span>${DAY_NAMES[x.day]} · ${x.name}${x.suggestion?' → '+x.suggestion:''}</span>`).join('')}</div>`:''}<div class="audit-section"><strong>Muscles / fonctions · programme complet</strong><div class="audit-chip-grid">${VOLUME_GROUPS.map(g=>{const n=a.muscles[g]||0,t=a.cfg.volumeTargets[g],ok=n>=t.min&&n<=t.max;return `<span class="audit-chip ${ok?'ok':'warn'}">${g} <b>${n.toFixed(1)}</b> <small>${t.min}–${t.max}</small></span>`}).join('')}</div></div><div class="audit-note ${cardioOK?'audit-ok':''}"><strong>Mode Express</strong><span>${a.expressCardioMinutes} min de cardio si toutes les séances actives étaient faites en Express.</span></div></section>`;
+  return `<section class="card program-audit"><div class="section-head"><div><div class="kicker">Audit automatique · ${esc(getActiveTrainingCycle().name)}</div><h2>Couverture hebdomadaire</h2></div><span class="pill ${a.covered===VOLUME_GROUPS.length&&!missing.length?'badge-success':'badge-warn'}">${a.covered}/${VOLUME_GROUPS.length} zones · ${missing.length} adaptations</span></div><div class="audit-hero"><div><strong>${a.days.length}/7</strong><span>jours actifs</span></div><div><strong>${a.cardioMinutes}</strong><span>min cardio · cible ${a.cfg.cardioMin}–${a.cfg.cardioMax}</span></div><div><strong>${a.warmups}/${a.days.length}</strong><span>échauffements</span></div><div><strong>${a.cooldowns}/${a.days.length}</strong><span>retours au calme</span></div></div>${missing.length?`<div class="audit-equipment-warnings"><strong>Setup à adapter</strong>${missing.slice(0,8).map(x=>`<span>${DAY_NAMES[x.day]} · ${x.name}${x.suggestion?' → '+x.suggestion:''}</span>`).join('')}</div>`:''}<div class="audit-section"><strong>Muscles / fonctions · programme complet</strong><div class="audit-chip-grid">${VOLUME_GROUPS.map(g=>{const n=a.muscles[g]||0,t=a.cfg.volumeTargets[g],ok=n>=t.min&&n<=t.max;return `<span class="audit-chip ${ok?'ok':'warn'}">${v10110VolumeLabel(g)} <b>${n.toFixed(1)}</b> <small>${t.min}–${t.max}</small></span>`}).join('')}</div></div><div class="audit-note ${cardioOK?'audit-ok':''}"><strong>Mode Express</strong><span>${a.expressCardioMinutes} min de cardio si toutes les séances actives étaient faites en Express.</span></div></section>`;
 }
 
 const _bindEventsV97=bindEvents;
@@ -9815,8 +9815,10 @@ v10107InitBody3D=function(){
 
   zSphere('core',[0,.70,.405],[.45,.68,.095]);
   zSphere('core',[0,.70,-.405],[.45,.68,.095]);
+  // Hips = anterior/lateral pelvis. Glutes are a distinct posterior muscle zone.
   zSphere('hips',[0,-.22,.30],[.56,.38,.17]);
-  zSphere('hips',[0,-.22,-.30],[.56,.38,.17]);
+  zSphere('glutes',[-.24,-.24,-.30],[.34,.34,.18]);
+  zSphere('glutes',[ .24,-.24,-.30],[.34,.34,.18]);
   zCapsule('quads',[-.31,-1.22,.16],.19,.90,[1,.98,.72],[0,0,-.025]);
   zCapsule('quads',[ .31,-1.22,.16],.19,.90,[1,.98,.72],[0,0, .025]);
   zCapsule('hamstrings',[-.31,-1.22,-.16],.19,.90,[1,.98,.72],[0,0,-.025]);
@@ -9848,3 +9850,193 @@ v10107InitBody3D=function(){
   requestAnimationFrame(loop);
 };
 
+
+
+/* ========================================================================== */
+/* V10.110 · Référentiel corporel unifié                                      */
+/* Body Map ↔ volume ↔ bibliothèque ↔ mobilité ↔ mesures ↔ restrictions.      */
+/* ========================================================================== */
+
+const KINETIK_BODY_TAXONOMY = Object.freeze({
+  strength:[
+    {id:'chest',label:'Pectoraux',volume:'Pectoraux'},
+    {id:'back',label:'Dos',volume:'Dos'},
+    {id:'traps',label:'Trapèzes',volume:'Trapèzes'},
+    {id:'shoulders',label:'Épaules',volume:'Épaules'},
+    {id:'biceps',label:'Biceps',volume:'Biceps'},
+    {id:'triceps',label:'Triceps',volume:'Triceps'},
+    {id:'forearms',label:'Avant-bras / grip',volume:'Grip'},
+    {id:'core',label:'Core / abdos / lombaires',volume:'Core'},
+    {id:'glutes',label:'Fessiers',volume:'Fessiers'},
+    {id:'quads',label:'Quadriceps',volume:'Quadriceps'},
+    {id:'hamstrings',label:'Ischios',volume:'Ischios'},
+    {id:'calves',label:'Mollets',volume:'Mollets'}
+  ],
+  mobility:[
+    {id:'wrists',label:'Poignets',flex:'Poignets'},
+    {id:'shoulders',label:'Épaules',flex:'Épaules'},
+    {id:'thorax',label:'Thorax',flex:'Thorax'},
+    {id:'hips',label:'Hanches',flex:'Hanches'},
+    {id:'hipFlexors',label:'Fléchisseurs de hanche',flex:'Fléchisseurs hanche'},
+    {id:'adductors',label:'Adducteurs',flex:'Adducteurs'},
+    {id:'hamstrings',label:'Ischios / chaîne postérieure',flex:'Ischios'},
+    {id:'ankles',label:'Chevilles',flex:'Chevilles'}
+  ],
+  joints:[
+    {id:'wrists',label:'Poignets'},
+    {id:'elbows',label:'Coudes'},
+    {id:'shoulders',label:'Épaules'},
+    {id:'back',label:'Dos / lombaires'},
+    {id:'hips',label:'Hanches'},
+    {id:'knees',label:'Genoux'},
+    {id:'ankles',label:'Chevilles'}
+  ]
+});
+
+function v10110VolumeLabel(group){
+  return group==='Grip'?'Avant-bras / Grip':group;
+}
+
+/* Trapèzes: auparavant visibles dans la Body Map, mais absents du moteur de volume. */
+if(!VOLUME_GROUPS.includes('Trapèzes')) VOLUME_GROUPS.splice(3,0,'Trapèzes');
+DEFAULT_TRAINING_CONFIG.volumeTargets['Trapèzes']={min:6,max:12};
+
+/* Existing saved configs remain compatible because getTrainingConfig starts from DEFAULT_TRAINING_CONFIG. */
+function v10110PatchExercise(name,{trap=0,addMuscles=[]}={}){
+  const item=exerciseInfo(name);
+  if(!item)return;
+  item.volume=item.volume||{};
+  if(trap>0) item.volume['Trapèzes']=trap;
+  item.muscles=Array.isArray(item.muscles)?item.muscles:[];
+  if(trap>=.25 && !item.muscles.includes('Trapèzes')) item.muscles.push('Trapèzes');
+  addMuscles.forEach(m=>{if(!item.muscles.includes(m))item.muscles.push(m);});
+}
+
+/* Weighted coaching contribution; intentionally conservative on compound movements. */
+[
+  ['Row avec bande',.55],['Australian rows',.55],
+  ['Tractions assistées',.25],['Tractions strictes',.25],
+  ['Chest-to-bar',.40],['Tractions explosives',.45],
+  ['Chin-ups assistés',.20],['Chin-ups',.20],
+  ['Archer pull-ups assistés',.30],['Archer pull-ups',.30],
+  ['Scapular pull-ups',.75],['Face pulls',.80],
+  ['Dead hang',.15],['Towel hang',.15],['One-arm assisted hang',.20],
+  ['Muscle-up assisté',.30],['Muscle-up strict',.30],
+  ['Tuck front lever',.45],['Advanced tuck front lever',.50],
+  ['One-leg front lever',.50],['Straddle front lever',.55],['Front lever',.60],
+  ['Handstand au mur',.20],['Handstand décollages du mur',.20],['Handstand libre',.20],
+  ['HSPU négatives au mur',.25],['Handstand push-up au mur',.30],['Handstand push-up libre',.30],
+  ['Human flag support vertical',.20],['Tuck human flag',.25],['One-leg human flag',.25],
+  ['Straddle human flag',.30],['Human flag',.30]
+].forEach(([name,trap])=>v10110PatchExercise(name,{trap}));
+
+/* Grip is a function, forearms are the anatomical region: expose both in the exercise library. */
+EXERCISE_LIBRARY.forEach(item=>{
+  if(item.muscles?.includes('Grip') && !item.muscles.includes('Avant-bras')) item.muscles.push('Avant-bras');
+});
+
+/* Body Map: fessiers were tracked in volume but not selectable anatomically. */
+const _v1095BodyZonesV10110=v1095BodyZones;
+v1095BodyZones=function(mode='overall',view='front'){
+  const rows=_v1095BodyZonesV10110(mode,view);
+  if(view!=='back') return rows;
+  const legs=v1095LegsScore(), core=v1095CapabilityScore('core'), mHips=v1095MobilityScore('hips');
+  const score=mode==='strength'?v1095Avg(legs,core):
+    mode==='mobility'?v1095Avg(mHips):
+    v1095Avg(legs,core,mHips);
+  const glutes={id:'glutes',score,label:'Fessiers',desc:mode==='mobility'?'Mobilité de hanche et contrôle du bassin.':'Extension de hanche, stabilité du bassin et force du bas du corps.',action:mode==='mobility'?'flexibility':'skills',tone:v1095BodyTone(score)};
+  const idx=rows.findIndex(x=>x.id==='hamstrings');
+  if(!rows.some(x=>x.id==='glutes')) rows.splice(idx<0?rows.length:idx,0,glutes);
+  return rows;
+};
+
+const _v10103ExpectedInputsV10110=v10103ExpectedInputs;
+v10103ExpectedInputs=function(id,mode='overall'){
+  if(id==='glutes'){
+    let rows=[
+      {kind:'cap',key:'legs',label:'Jambes'},
+      {kind:'cap',key:'core',label:'Core'},
+      {kind:'mob',key:'hips',label:'Mobilité hanches'}
+    ];
+    if(mode==='strength')rows=rows.filter(x=>x.kind==='cap');
+    if(mode==='mobility')rows=rows.filter(x=>x.kind==='mob');
+    return rows;
+  }
+  return _v10103ExpectedInputsV10110(id,mode);
+};
+
+const _v10109ZoneIdsV10110=v10109ZoneIds;
+v10109ZoneIds=function(view='front'){
+  const ids=_v10109ZoneIdsV10110(view).slice();
+  if(view==='back'&&!ids.includes('glutes')){
+    const i=ids.indexOf('hamstrings');
+    ids.splice(i<0?ids.length:i,0,'glutes');
+  }
+  return ids;
+};
+
+/* Inject a real selectable glute overlay into the current premium SVG back view. */
+const _v1095BodyMapSVGV10110=v1095BodyMapSVG;
+v1095BodyMapSVG=function(view='front',mode='overall',selectedId=''){
+  let svg=_v1095BodyMapSVGV10110(view,mode,selectedId);
+  if(view!=='back')return svg;
+  const zone=v10103ZoneData('glutes',mode);
+  if(!zone)return svg;
+  const cls=`bodymap-zone v7-zone ${v10103ZoneVisual(zone)}${selectedId==='glutes'?' selected':''}`;
+  const group=`<g class="${cls}" data-body-zone="glutes" role="button" tabindex="0" aria-label="Fessiers ${zone.score!=null?zone.score+' sur 100':zone.status.label}">
+    <path d="M157 414 C171 404 190 407 207 423 L205 472 C190 484 171 483 156 467 Z"/>
+    <path d="M263 414 C249 404 230 407 213 423 L215 472 C230 484 249 483 264 467 Z"/>
+  </g>`;
+  const marker=/<g class="bodymap-zone v7-zone [^"]*" data-body-zone="hamstrings"/;
+  return marker.test(svg)?svg.replace(marker,group+'$&'):svg;
+};
+
+/* Restrictions / readiness: hips were missing even though the app trains them heavily. */
+if(!RESTRICTION_AREAS.some(([id])=>id==='hips')){
+  const kneeIndex=RESTRICTION_AREAS.findIndex(([id])=>id==='knees');
+  RESTRICTION_AREAS.splice(kneeIndex<0?RESTRICTION_AREAS.length:kneeIndex,0,['hips','Hanches']);
+}
+const _exerciseStressAreasV10110=exerciseStressAreas;
+exerciseStressAreas=function(name){
+  const out=_exerciseStressAreasV10110(name),n=String(name).toLowerCase();
+  const add=x=>{if(!out.includes(x))out.push(x);};
+  if(/squat|fente|lunge|bulgarian|pistol|shrimp|deadlift|rdl|good morning|nordic|hamstring|90\/90|frog|couch stretch|side plank|human flag/.test(n))add('hips');
+  return out;
+};
+
+/* Measurements: circumference is useful, but it measures the whole arm, not biceps alone. */
+const armLeftField=BODY_FIELDS.find(x=>x.key==='armLeft');
+const armRightField=BODY_FIELDS.find(x=>x.key==='armRight');
+if(armLeftField)armLeftField.label='Bras gauche (biceps + triceps)';
+if(armRightField)armRightField.label='Bras droit (biceps + triceps)';
+if(BODY_SYMMETRY[0]?.[0]==='Bras')BODY_SYMMETRY[0][0]='Bras (biceps + triceps)';
+
+/* Lightweight developer audit to prevent future taxonomy drift. */
+function v10110BodyTaxonomyAudit(){
+  const strength=KINETIK_BODY_TAXONOMY.strength.map(x=>({
+    zone:x.label,
+    volume:x.volume?VOLUME_GROUPS.includes(x.volume):true,
+    bodyMap:['chest','back','traps','shoulders','biceps','triceps','forearms','core','glutes','quads','hamstrings','calves'].includes(x.id),
+    library:x.volume==='Grip'
+      ?EXERCISE_LIBRARY.some(e=>e.muscles?.includes('Grip'))
+      :EXERCISE_LIBRARY.some(e=>e.muscles?.includes(x.volume))
+  }));
+  const mobility=KINETIK_BODY_TAXONOMY.mobility.map(x=>({
+    zone:x.label,
+    flex:FLEX_ZONES.includes(x.flex),
+    tested:['wrists','shoulders','thorax','hips','hamstrings','ankles'].includes(x.id)
+  }));
+  return {
+    strength,mobility,
+    restrictionAreas:RESTRICTION_AREAS.map(([id,label])=>({id,label})),
+    notes:[
+      'Fléchisseurs de hanche et adducteurs sont gérés comme sous-zones de mobilité, sans faux score de force.',
+      'Avant-bras est anatomique; Grip reste la métrique fonctionnelle historique.',
+      'Épaules restent bilatérales en force: les séparer gauche/droite sans données unilatérales créerait une fausse précision.'
+    ]
+  };
+}
+if(typeof window!=='undefined')window.__KINETIK_BODY_AUDIT__=v10110BodyTaxonomyAudit();
+
+/* Refresh once so all late-patch taxonomy changes are visible immediately. */
+try{render();}catch(e){console.warn('KINETIK body taxonomy refresh',e);}

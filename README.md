@@ -108,3 +108,14 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Ajout d’une zone Trapèzes distincte dans la vue d’ensemble du corps.
 - Le body map 2D premium et le body map 3D utilisent maintenant ces nouvelles zones.
 - Les cartes de détail, priorités et points forts utilisent les mêmes nouvelles zones.
+
+
+## V10.110 — Référentiel corporel unifié
+- Audit complet des grandes zones anatomiques utilisées par KINETIK.
+- Trapèzes ajoutés au moteur de volume musculaire et à la bibliothèque d’exercices concernés.
+- Fessiers ajoutés comme zone corporelle distincte sur la vue dos 2D/3D.
+- Grip conservé comme métrique fonctionnelle, avec libellé anatomique Avant-bras / Grip dans les vues de volume.
+- Hanches ajoutées aux zones à ménager / readiness et au mapping de stress des exercices.
+- Mesures de bras clarifiées comme circonférence biceps + triceps.
+- Fléchisseurs de hanche et adducteurs restent des sous-zones mobilité dédiées, déjà suivies dans Mobilité.
+- Audit développeur disponible via window.__KINETIK_BODY_AUDIT__.

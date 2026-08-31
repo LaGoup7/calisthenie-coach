@@ -3646,3 +3646,7 @@ body{
   .body3d-help small{display:none}
   .body3d-help{padding:7px 9px}
 }
+
+/* V10.110 · taxonomy sync */
+.bodymap-v109 [data-body-zone="glutes"]>path{stroke:rgba(255,255,255,.82);stroke-width:1.45;stroke-linejoin:round}
+.bodymap-v109 [data-body-zone="glutes"].selected>path{stroke:#4f46e5;stroke-width:2.65;filter:url(#v109SelectedGlow)}
