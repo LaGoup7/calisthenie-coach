@@ -6370,6 +6370,165 @@ renderFlexibility=function(){
   "flexibility");
 };
 
+
+/* ========================================================================== */
+/* V10.80 · Progression Visual Clarity                                        */
+/* Answer 3 questions: am I progressing, where, what next?                     */
+/* ========================================================================== */
+function v1080ProgressInsight(){
+  const i=v1060InsightDecision(30),s=i.state,lim=i.limiter?.limiter;
+  const signals=[
+    {label:'Force',value:s.force?.value||'—',tone:s.force?.tone||'',symbol:s.force?.symbol||'—'},
+    {label:'Skills',value:s.skills?.value||'—',tone:s.skills?.tone||'',symbol:s.skills?.symbol||'—'},
+    {label:'Charge',value:s.load?.value||'—',tone:s.load?.tone||'',symbol:s.load?.symbol||'—'}
+  ];
+  return `<section class="p80-insight ${i.tone}">
+    <div class="p80-insight-head"><div><div class="kicker">KINETIK Insight · 30 jours</div><h2>${esc(i.title)}</h2></div><button class="p80-text-action" data-progress-tab="performance">Voir l’analyse →</button></div>
+    <p>${esc(i.text)}</p>
+    <div class="p80-signal-row">${signals.map(x=>`<div class="${x.tone}"><span>${x.label}</span><strong>${x.symbol} ${esc(String(x.value))}</strong></div>`).join('')}</div>
+    <div class="p80-insight-next">
+      <div><span>Prochain meilleur choix</span><strong>${esc(i.next.label)}</strong><small>${esc(i.next.detail)}</small></div>
+      <button ${i.next.action==='assessment'?'data-view="assessment"':i.next.action==='performance'?'data-progress-tab="performance"':'data-view="today"'}>Ouvrir →</button>
+    </div>
+    ${lim?`<div class="p80-limiter"><span>Facteur limitant · ${esc(getAthleteProfile().primaryGoal||'objectif actuel')}</span><strong>${esc(lim.label)}</strong></div>`:''}
+  </section>`;
+}
+function v1080RankRow(){
+  const r=getRankState(),next=r.next,readiness=Math.round(Number(r.readiness||0)*100);
+  return `<button class="p80-rank-row rank-${r.current.id}" data-open-rank="true">
+    <div><div class="kicker">Rang actuel</div><strong>${esc(r.displayName)}</strong><span>${next?`${readiness}% des exigences vers ${esc(next.name)}`:'Rang maximal atteint'}</span></div>
+    <b>Exigences →</b>
+  </button>`;
+}
+function v1080MainTrends(limit=4){
+  const records=currentRecords().slice(0,limit);
+  if(!records.length)return `<div class="p80-empty">Tes premières performances créeront les références.</div>`;
+  return `<div class="p80-main-trends">${records.map(r=>{
+    const stats=exerciseHistoryStats(r.exercise,30),trend=stats.trend;
+    return `<button data-exercise-progress="${encodeURIComponent(r.exercise)}"><div><strong>${esc(r.exercise)}</strong><span>${formatShortDate(r.date)}</span></div><b>${recordValueText(r)}</b><small>${trend==null?'Référence':`${trend>=0?'+':''}${Math.round(trend)}% tendance`}</small></button>`;
+  }).join('')}</div>`;
+}
+function v1080MobilityLine(){
+  const profiles=mobilityProfiles(),assessed=profiles.filter(x=>x.assessed),p=mobilityPriority();
+  return `<button class="p80-mobility-line" data-view="flexibility"><div><span>Mobilité</span><strong>${assessed.length}/${profiles.length} zones évaluées${p?.id?` · priorité ${p.label.toLowerCase()}`:''}</strong></div><b>Voir →</b></button>`;
+}
+renderProgressOverview=function(){
+  const x=progressWeekStats(),rank=getRankState(),cycle=getCycleState(),recs=x.recs||[],coverage=assessmentCoverage();
+  const sessionPct=x.cycle.planned?Math.round(x.cycle.done/x.cycle.planned*100):0;
+  return `<section class="p80-week">
+    <div><div class="kicker">Cette semaine · ${esc(getActiveTrainingCycle().name)}</div><h1>Semaine ${cycle.week} / ${cycle.weekCount}</h1><p>${esc(cycle.name)} · RIR ${cycle.rir} · ${Math.round(cycle.setFactor*100)}% volume prévu</p></div>
+    <div class="p80-week-stats">
+      <div><strong>${x.cycle.done}/${x.cycle.planned}</strong><span>Séances</span><small>${Math.min(100,sessionPct)}% prévu</small></div>
+      <div><strong>${x.mins}</strong><span>Minutes</span><small>7 jours</small></div>
+      <div><strong>${x.reps7.reps.toLocaleString('fr-FR')}</strong><span>Répétitions</span><small>${x.reps7.sets} séries</small></div>
+    </div>
+  </section>
+
+  ${v1080ProgressInsight()}
+
+  <section class="p80-actions">
+    <div class="p80-section-head"><div><div class="kicker">À faire</div><h2>Ce qui demande ton attention</h2></div></div>
+    <div class="p80-action-list">
+      ${recs.length?`<button data-progress-tab="performance"><span>↗</span><div><strong>${recs.length} progression${recs.length>1?'s':''} disponible${recs.length>1?'s':''}</strong><small>${recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}
+      <button data-view="assessment"><span>◷</span><div><strong>Évaluations</strong><small>${coverage.verifiedPct}% vérifié · ${x.due.label}</small></div><b>Évaluer →</b></button>
+      ${v1080RankRow()}
+    </div>
+  </section>
+
+  <section class="p80-trends">
+    <div class="p80-section-head"><div><div class="kicker">Tendances principales</div><h2>Dernières performances</h2></div><button class="p80-text-action" data-progress-tab="performance">Tout voir →</button></div>
+    ${v1080MainTrends(4)}
+  </section>
+
+  ${v1080MobilityLine()}`;
+};
+
+function v1080TestsBlock(){
+  const tests=getTests(),due=testDueSummary(),coverage=assessmentCoverage();
+  return `<details class="p80-tests">
+    <summary><div><div class="kicker">Évaluations</div><strong>${coverage.tested}/${coverage.total} repères renseignés</strong><span>${due.label} · les tests restent secondaires tant qu’ils ne sont pas nécessaires.</span></div><b>Voir les tests →</b></summary>
+    <div class="p80-tests-body">
+      <div class="test-grid">${TEST_DEFS.map(t=>{const best=bestTestValue(t.id),last=tests.filter(x=>x.testId===t.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];return `<button class="test-tile edit-test" data-test="${t.id}"><span>${t.name}</span><strong>${best?best+' '+t.unit:'—'}</strong><small>${last?'Dernier '+formatShortDate(last.date):'À mesurer'}</small></button>`}).join('')}</div>
+      <button class="btn btn-outline compact" data-view="assessment">Centre d’évaluation KINETIK →</button>
+    </div>
+  </details>`;
+}
+function v1080PerformanceRecords(){
+  const records=currentRecords().slice(0,12);
+  return `<section class="p80-performance-records">
+    <div class="p80-section-head"><div><div class="kicker">Records principaux</div><h2>Ce qui devient meilleur</h2></div><span>${records.length} références</span></div>
+    ${records.length?`<div class="p80-record-grid">${records.map(r=>{const s=exerciseHistoryStats(r.exercise,30);return `<button data-exercise-progress="${encodeURIComponent(r.exercise)}"><span>${esc(r.exercise)}</span><strong>${recordValueText(r)}</strong><small>${s.trend==null?'Référence actuelle':`${s.trend>=0?'↗ +':'↘ '}${Math.abs(Math.round(s.trend))}% · 30 j`}</small></button>`}).join('')}</div>`:'<div class="p80-empty">Enregistre quelques séances pour créer tes premières références.</div>'}
+  </section>`;
+}
+renderProgressPerformance=function(){
+  return `${v1080PerformanceRecords()}
+    <section class="p80-performance-section">
+      <div class="p80-section-head"><div><div class="kicker">Propositions</div><h2>Prêt à progresser</h2></div></div>
+      ${renderProgressionRecommendations()}
+    </section>
+    <section class="p80-performance-section">
+      <div class="p80-section-head"><div><div class="kicker">Tendances</div><h2>Par exercice</h2></div><span>5 dernières</span></div>
+      <div class="p80-trend-body">${exerciseProgressRows()||'<div class="p80-empty">Termine quelques séances pour voir les tendances.</div>'}</div>
+    </section>
+    ${v1080TestsBlock()}
+    ${state.exerciseDetailName?renderExerciseProgressDetail(state.exerciseDetailName):''}`;
+};
+
+function v1080VolumePeriodData(){
+  const id=state.repVolumePeriod||'7d';
+  return repetitionVolume(id);
+}
+renderProgressVolume=function(){
+  const d=v1080VolumePeriodData(),top=d.rows.filter(r=>r.reps>0||r.holdSeconds>0).slice(0,12),
+        max=Math.max(1,...top.map(r=>r.reps||Math.round(r.holdSeconds/3)));
+  const periodButtons=[['7d','7 j'],['30d','30 j'],['90d','90 j'],['365d','1 an'],['all','Tout']];
+  return `<section class="p80-volume">
+    <div class="p80-section-head"><div><div class="kicker">Volume global</div><h2>Ce que tu as réellement accumulé</h2></div></div>
+    <div class="p80-periods">${periodButtons.map(([id,label])=>`<button class="${state.repVolumePeriod===id?'active':''}" data-rep-period="${id}">${label}</button>`).join('')}</div>
+    <div class="p80-volume-kpis">
+      <div><strong>${d.reps.toLocaleString('fr-FR')}</strong><span>Répétitions</span></div>
+      <div><strong>${d.sets.toLocaleString('fr-FR')}</strong><span>Séries</span></div>
+      <div><strong>${d.exerciseCount}</strong><span>Exercices</span></div>
+      <div><strong>${Math.round(d.holdSeconds/60)}</strong><span>Min de holds</span></div>
+    </div>
+    <p class="p80-volume-note">Séances guidées, Express, libres et Quick Logs sont réunis dans un même volume. La source reste disponible dans les données détaillées mais ne concurrence plus la lecture principale.</p>
+    <div class="p80-volume-list">${top.length?top.map((r,i)=>{
+      const amount=r.reps||Math.round(r.holdSeconds/3),label=r.reps?`${r.reps.toLocaleString('fr-FR')} reps`:`${coreTimerFormat(r.holdSeconds)} holds`;
+      return `<div><div><span><i>${i+1}</i><strong>${esc(r.name)}</strong></span><b>${label}</b></div><u><i style="width:${Math.max(3,amount/max*100)}%"></i></u><small>${r.sets} séries</small></div>`;
+    }).join(''):'<div class="p80-empty">Aucun volume enregistré sur cette période.</div>'}</div>
+    <details class="p80-volume-advanced"><summary><div><strong>Analyse musculaire avancée</strong><span>Répartition par groupes et cibles personnelles</span></div><b>Ouvrir →</b></summary><div>${renderVolumePanel()}</div></details>
+  </section>`;
+};
+
+renderProgressHistory=function(){
+  const x=progressWeekStats(),h=x.h;
+  return `<section class="p80-history-head">
+    <div><div class="kicker">Historique</div><h1>Ton journal d’entraînement</h1><p>Retrouve ce que tu as réellement fait, sans mélanger historique et progression.</p></div>
+    <div class="p80-history-stats"><div><strong>${h.length}</strong><span>Séances</span></div><div><strong>${x.recent.length}</strong><span>7 jours</span></div><div><strong>${x.mins}</strong><span>Min · 7 j</span></div></div>
+  </section>
+  <section class="p80-history-list">
+    <div class="p80-section-head"><div><div class="kicker">Journal chronologique</div><h2>Dernières séances</h2></div></div>
+    ${h.length?h.slice(0,40).map(s=>`<button class="p80-history-item" data-history="${s.id}">
+      <div><strong>${esc(s.name)}</strong><span>${formatDate(s.date)} · ${s.durationMinutes} min · RPE ${s.rpe||'—'}</span>${summaryLine(s)}</div>
+      <b>Voir →</b>
+    </button>`).join(''):'<div class="p80-empty">Ta première séance terminée apparaîtra ici.</div>'}
+  </section>
+  ${state.selectedHistoryId?v1080HistoryDetail(state.selectedHistoryId):''}`;
+};
+function v1080HistoryDetail(id){
+  const s=getHistory().find(x=>String(x.id)===String(id));if(!s)return'';
+  return `<section class="p80-history-detail"><div class="p80-section-head"><div><div class="kicker">${formatDate(s.date)} · ${s.durationMinutes} min · RPE ${s.rpe||'—'}</div><h2>${esc(s.name)}</h2></div><button class="icon-btn" id="closeHistory">×</button></div>
+    ${s.prs?.length?`<div class="history-prs">🏆 ${s.prs.map(p=>`${p.exercise} ${recordValueText(p)}`).join(' · ')}</div>`:''}
+    <div class="p80-history-exercises">${(s.entries||[]).map(e=>`<div><span>${esc(e.exercise)} · S${e.set}${e.substitutedFrom?' · remplace '+esc(e.substitutedFrom):''}</span><strong>${e.value}${String(e.type||'').startsWith('hold')?' s':' reps'}${e.band?' · '+esc(e.band):''}${e.loadKg?' · sac '+e.loadKg+' kg':''}</strong></div>`).join('')}</div>
+  </section>`;
+}
+renderProgress=function(){
+  const content=state.progressTab==='performance'?renderProgressPerformance():state.progressTab==='volume'?renderProgressVolume():state.progressTab==='history'?renderProgressHistory():renderProgressOverview();
+  return shell(`<header class="topbar p80-topbar"><div><div class="brand">Progression</div><div class="daylabel">Est-ce que je progresse · où · quoi faire ensuite</div></div></header>
+    ${renderProgressTabs()}
+    <div class="p80-content">${content}</div>`, "progress");
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
