@@ -8087,6 +8087,244 @@ v1095ZoneChip=function(z){
   </button>`;
 };
 
+
+/* ========================================================================== */
+/* V10.103 · Body Map V5 — silhouette continue + heatmap de confiance         */
+/* Le corps reste neutre. Les couleurs sont des overlays de données.          */
+/* ========================================================================== */
+function v10103EvidenceLabel(level){
+  const n=Number(level||0);
+  return n>=3?'test':n>=2?'séance':n>=1?'déclaré':'sans preuve';
+}
+function v10103CapabilityEvidence(id){
+  const test=id=>Number(assessmentEvidenceForTest(id)||0), ex=name=>Number(assessmentEvidenceForExercise(name)||0);
+  const map={
+    pull:[test('pullups'),ex('Chest-to-bar'),ex('Tractions explosives'),ex('Muscle-up strict')],
+    push:[test('dips'),ex('Pike push-ups pieds surélevés'),ex('Handstand push-up au mur'),ex('Handstand push-up libre')],
+    grip:[test('dead_hang'),ex('Towel hang'),ex('One-arm assisted hang')],
+    core:[test('l_sit'),ex('Tuck L-sit'),ex('L-sit'),ex('Toes-to-bar'),ex('Hollow hold')],
+    balance:[test('wall_handstand'),ex('Handstand libre'),ex('Handstand push-up au mur'),ex('Handstand push-up libre')],
+    explosive:[ex('Chest-to-bar'),ex('Tractions explosives'),ex('Muscle-up assisté'),ex('Muscle-up strict')],
+    legs:[ex('Pistol squat'),ex('Pistol squat assisté'),ex('Bulgarian split squat'),ex('Shrimp squat')]
+  };
+  return Math.max(0,...(map[id]||[]));
+}
+function v10103ExpectedInputs(id,mode='overall'){
+  const e={
+    shoulders:[['cap','push','Poussée'],['cap','balance','Équilibre'],['mob','shoulders','Mobilité épaules']],
+    chest:[['cap','push','Poussée'],['mob','thorax','Mobilité thorax']],
+    back:[['cap','pull','Tirage'],['cap','explosive','Explosivité'],['mob','thorax','Mobilité thorax']],
+    arms:[['cap','pull','Tirage'],['cap','push','Poussée']],
+    forearms:[['cap','grip','Grip']],
+    wrists:[['cap','grip','Grip'],['cap','balance','Équilibre'],['mob','wrists','Mobilité poignets']],
+    core:[['cap','core','Core'],['cap','balance','Équilibre']],
+    hips:[['cap','legs','Jambes'],['cap','core','Core'],['mob','hips','Mobilité hanches']],
+    quads:[['cap','legs','Jambes'],['mob','hips','Mobilité hanches']],
+    hamstrings:[['cap','legs','Jambes'],['mob','posterior','Chaîne postérieure']],
+    calves:[['cap','legs','Jambes'],['mob','ankles','Mobilité chevilles']],
+    ankles:[['cap','legs','Jambes'],['mob','ankles','Mobilité chevilles']]
+  };
+  let rows=(e[id]||[]).map(([kind,key,label])=>({kind,key,label}));
+  if(mode==='strength')rows=rows.filter(x=>x.kind==='cap');
+  if(mode==='mobility')rows=rows.filter(x=>x.kind==='mob');
+  return rows;
+}
+function v10103InputForExpected(x){
+  if(x.kind==='cap'){
+    if(x.key==='legs'){
+      const value=v1095LegsScore();
+      return value==null?null:{...x,value:Number(value),evidence:v10103CapabilityEvidence('legs')||1};
+    }
+    const c=capabilityScores().find(v=>v.id===x.key);
+    return c?.assessed?{...x,value:Number(c.score),evidence:v10103CapabilityEvidence(x.key)}:null;
+  }
+  const m=mobilityProfiles().find(v=>v.id===x.key);
+  return m?.assessed?{...x,value:Number(m.score),evidence:2}:null;
+}
+function v10103ZoneInputs(id,mode='overall'){
+  return v10103ExpectedInputs(id,mode).map(v10103InputForExpected).filter(Boolean);
+}
+function v10103ZoneConfidence(id,mode='overall'){
+  const expected=v10103ExpectedInputs(id,mode), inputs=v10103ZoneInputs(id,mode);
+  if(!inputs.length)return {id:'none',label:'Aucune donnée',coverage:0,evidence:0};
+  const coverage=expected.length?inputs.length/expected.length:0;
+  const evidence=inputs.reduce((s,x)=>s+Number(x.evidence||0),0)/inputs.length;
+  if(coverage<.5 || evidence<1.5)return {id:'low',label:'Faible',coverage,evidence};
+  if(coverage<1 || evidence<2.5)return {id:'medium',label:'Moyenne',coverage,evidence};
+  return {id:'high',label:'Élevée',coverage,evidence};
+}
+function v10103ZoneData(id,mode='overall'){
+  const zone=v1095BodyZoneLookup(mode)[id];
+  if(!zone)return null;
+  const inputs=v10103ZoneInputs(id,mode), expected=v10103ExpectedInputs(id,mode), confidence=v10103ZoneConfidence(id,mode);
+  const present=new Set(inputs.map(x=>`${x.kind}:${x.key}`));
+  const missing=expected.filter(x=>!present.has(`${x.kind}:${x.key}`));
+  const status=zone.score==null||confidence.id==='none'?{id:'none',label:'À évaluer'}:
+    confidence.id==='low'?{id:'partial',label:'Données limitées'}:v1095BodyTone(zone.score);
+  return {...zone,inputs,expected,missing,confidence,status};
+}
+function v10103ZoneVisual(z){
+  if(!z||z.status?.id==='none')return 'tone-none confidence-none';
+  if(z.confidence?.id==='low')return 'tone-partial confidence-low';
+  return `tone-${z.tone?.id||'none'} confidence-${z.confidence?.id||'none'}`;
+}
+function v10103InputSummary(inputs=[]){
+  if(!inputs.length)return 'Aucune donnée enregistrée';
+  return inputs.map(x=>`${x.label} ${Math.round(x.value)}/100 · ${v10103EvidenceLabel(x.evidence)}`).join(' · ');
+}
+function v10103MissingSummary(missing=[]){return missing.map(x=>x.label).join(' · ');}
+function v10103ZoneCta(zone){
+  if(zone?.missing?.length){
+    const hasCap=zone.missing.some(x=>x.kind==='cap');
+    return {label:'Compléter cette zone',attr:hasCap?'data-view="assessment"':'data-view="flexibility"'};
+  }
+  if(zone?.confidence?.id==='low')return {label:'Renforcer la preuve',attr:'data-view="assessment"'};
+  return {label:zone?.action==='flexibility'?'Voir mobilité':'Voir capacités',attr:v1095ActionButton(zone?.action)};
+}
+
+v1095BodyMapSVG=function(view='front',mode='overall',selectedId=''){
+  const ids=view==='back'
+    ?['shoulders','back','arms','forearms','wrists','core','hips','hamstrings','calves','ankles']
+    :['shoulders','chest','arms','forearms','wrists','core','hips','quads','calves','ankles'];
+  const zones=Object.fromEntries(ids.map(id=>[id,v10103ZoneData(id,mode)]));
+  const z=id=>zones[id]||{id,label:id,score:null,status:{id:'none',label:'À évaluer'},confidence:{id:'none',label:'Aucune donnée'}};
+  const attrs=id=>`class="bodymap-zone bodymap-overlay ${v10103ZoneVisual(z(id))}${selectedId===id?' selected':''}" data-body-zone="${id}" role="button" tabindex="0" aria-label="${esc(z(id).label)} ${z(id).score!=null?z(id).score+' sur 100':z(id).status.label}"`;
+  const front=view==='front';
+  return `<svg class="bodymap-figure bodymap-v5" viewBox="0 0 300 540" role="img" aria-label="Carte corporelle ${front?'face':'dos'}">
+    <defs>
+      <filter id="v5Shadow" x="-30%" y="-20%" width="160%" height="150%"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#64748b" flood-opacity=".14"/></filter>
+      <filter id="v5Select" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#4f46e5" flood-opacity=".25"/></filter>
+      <linearGradient id="v5Skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1f5f9"/><stop offset="1" stop-color="#dce4ee"/></linearGradient>
+    </defs>
+
+    <!-- Neutral, continuous silhouette. It never carries performance color. -->
+    <g class="bodymap-v5-shell" filter="url(#v5Shadow)">
+      <ellipse cx="150" cy="45" rx="27" ry="32"/>
+      <path d="M138 75 Q150 83 162 75 L165 96 Q150 103 135 96 Z"/>
+      <path d="M103 101 Q124 88 141 94 Q150 99 159 94 Q176 88 197 101
+               Q211 111 215 129 Q217 159 211 197 Q208 224 201 249
+               Q193 274 174 286 Q163 292 150 293 Q137 292 126 286
+               Q107 274 99 249 Q92 224 89 197 Q83 159 85 129 Q89 111 103 101 Z"/>
+      <path d="M124 282 Q150 296 176 282 L185 317 Q171 334 150 336 Q129 334 115 317 Z"/>
+      <path d="M90 112 Q70 124 66 148 Q64 172 70 203 L78 244 Q81 259 88 276 L98 270 Q94 251 92 233 L94 194 L100 144 Q102 123 90 112 Z"/>
+      <path d="M210 112 Q230 124 234 148 Q236 172 230 203 L222 244 Q219 259 212 276 L202 270 Q206 251 208 233 L206 194 L200 144 Q198 123 210 112 Z"/>
+      <path d="M87 270 Q98 264 107 276 L111 351 Q111 370 101 386 L88 381 Q84 366 84 349 L79 294 Q78 278 87 270 Z"/>
+      <path d="M213 270 Q202 264 193 276 L189 351 Q189 370 199 386 L212 381 Q216 366 216 349 L221 294 Q222 278 213 270 Z"/>
+      <path d="M87 381 Q101 377 107 390 L106 409 Q100 420 87 414 Q80 399 87 381 Z"/>
+      <path d="M213 381 Q199 377 193 390 L194 409 Q200 420 213 414 Q220 399 213 381 Z"/>
+      <path d="M122 313 Q137 308 143 326 L142 393 Q140 420 137 451 L127 485 Q118 489 112 479 L115 444 Q112 410 110 374 L109 336 Q110 320 122 313 Z"/>
+      <path d="M178 313 Q163 308 157 326 L158 393 Q160 420 163 451 L173 485 Q182 489 188 479 L185 444 Q188 410 190 374 L191 336 Q190 320 178 313 Z"/>
+      <path d="M126 478 Q137 476 142 484 L141 505 Q132 516 116 509 Q114 490 126 478 Z"/>
+      <path d="M174 478 Q163 476 158 484 L159 505 Q168 516 184 509 Q186 490 174 478 Z"/>
+    </g>
+
+    <!-- Data heatmap overlays. -->
+    <g ${attrs('shoulders')}>
+      <path d="M104 106 Q119 96 137 101 L132 126 Q118 124 105 139 Q94 132 94 119 Q96 111 104 106 Z"/>
+      <path d="M196 106 Q181 96 163 101 L168 126 Q182 124 195 139 Q206 132 206 119 Q204 111 196 106 Z"/>
+      <path d="M133 102 Q150 108 167 102 L164 119 Q150 124 136 119 Z" class="bodymap-overlay-secondary"/>
+    </g>
+
+    ${front?`
+      <g ${attrs('chest')}>
+        <path d="M111 132 Q128 120 146 129 L146 178 Q128 186 113 172 Z"/>
+        <path d="M189 132 Q172 120 154 129 L154 178 Q172 186 187 172 Z"/>
+      </g>`:`
+      <g ${attrs('back')}>
+        <path d="M105 128 Q127 115 150 124 Q173 115 195 128 L201 181 Q195 220 177 244 Q164 257 150 260 Q136 257 123 244 Q105 220 99 181 Z"/>
+        <path d="M124 136 Q137 155 150 161 Q163 155 176 136 L171 224 Q161 237 150 240 Q139 237 129 224 Z" class="bodymap-overlay-secondary"/>
+      </g>`}
+
+    <g ${attrs('arms')}>
+      <path d="M92 143 Q80 153 81 173 L86 229 Q89 247 101 257 Q111 250 110 232 L108 176 Q108 155 92 143 Z"/>
+      <path d="M208 143 Q220 153 219 173 L214 229 Q211 247 199 257 Q189 250 190 232 L192 176 Q192 155 208 143 Z"/>
+    </g>
+
+    <g ${attrs('forearms')}>
+      <path d="M90 264 Q101 260 107 272 L111 343 Q112 363 101 377 Q90 373 87 359 L82 292 Q81 274 90 264 Z"/>
+      <path d="M210 264 Q199 260 193 272 L189 343 Q188 363 199 377 Q210 373 213 359 L218 292 Q219 274 210 264 Z"/>
+    </g>
+
+    <g ${attrs('wrists')}>
+      <path d="M86 374 Q99 369 108 383 L107 405 Q99 416 86 409 Q79 393 86 374 Z"/>
+      <path d="M214 374 Q201 369 192 383 L193 405 Q201 416 214 409 Q221 393 214 374 Z"/>
+    </g>
+
+    <g ${attrs('core')}>
+      ${front?`
+        <path d="M116 180 Q132 188 150 188 Q168 188 184 180 L188 248 Q177 270 150 276 Q123 270 112 248 Z"/>
+        <path d="M132 198 Q150 207 168 198" class="bodymap-anatomy-line"/>
+        <path d="M126 220 H174 M124 244 H176 M150 195 V260" class="bodymap-anatomy-line"/>`
+        :`<path d="M114 184 Q132 194 150 194 Q168 194 186 184 L188 247 Q177 267 150 273 Q123 267 112 247 Z"/>
+          <path d="M130 210 Q150 221 170 210 L172 249 Q161 259 150 262 Q139 259 128 249 Z" class="bodymap-overlay-secondary"/>`}
+    </g>
+
+    <g ${attrs('hips')}>
+      ${front?`<path d="M117 276 Q133 288 150 290 Q167 288 183 276 L189 313 Q171 328 150 329 Q129 328 111 313 Z"/>`
+        :`<path d="M112 278 Q130 270 150 284 Q170 270 188 278 L190 315 Q173 333 150 330 Q127 333 110 315 Z"/>`}
+    </g>
+
+    <g ${attrs(front?'quads':'hamstrings')}>
+      <path d="M120 316 Q136 307 144 326 L142 390 Q140 416 130 438 Q117 433 114 412 L112 344 Q112 326 120 316 Z"/>
+      <path d="M180 316 Q164 307 156 326 L158 390 Q160 416 170 438 Q183 433 186 412 L188 344 Q188 326 180 316 Z"/>
+      ${front?`<path d="M126 329 Q137 337 140 356 M174 329 Q163 337 160 356" class="bodymap-anatomy-line"/>`:''}
+    </g>
+
+    <g ${attrs('calves')}>
+      <path d="M126 431 Q137 423 143 436 L139 481 Q132 493 121 483 Q116 464 119 447 Z"/>
+      <path d="M174 431 Q163 423 157 436 L161 481 Q168 493 179 483 Q184 464 181 447 Z"/>
+    </g>
+
+    <g ${attrs('ankles')}>
+      <path d="M120 474 Q132 472 140 482 L140 503 Q131 512 116 506 Q114 488 120 474 Z"/>
+      <path d="M180 474 Q168 472 160 482 L160 503 Q169 512 184 506 Q186 488 180 474 Z"/>
+    </g>
+  </svg>`;
+};
+
+v1095ZoneDetailCard=function(mode='overall',view='front'){
+  const base=v1095SelectedBodyZone(mode,view), zone=base?v10103ZoneData(base.id,mode):null;
+  if(!zone)return '';
+  const cta=v10103ZoneCta(zone), provisional=zone.confidence.id!=='high'&&zone.score!=null;
+  return `<article class="body-zone-detail card body-zone-detail-v5">
+    <div class="body-zone-detail-head">
+      <div><div class="kicker">Zone sélectionnée</div><h3>${esc(zone.label)}</h3></div>
+      <div class="body-zone-score ${v10103ZoneVisual(zone)}"><span>${provisional?'Provisoire':'Niveau'}</span>${zone.score!=null?`${zone.score}<small>/100</small>`:'—'}</div>
+    </div>
+    <div class="body-zone-state-grid">
+      <div><span>Statut</span><strong>${esc(zone.status.label)}</strong></div>
+      <div><span>Confiance</span><strong class="confidence-${zone.confidence.id}">${esc(zone.confidence.label)}</strong></div>
+    </div>
+    <p class="body-zone-description">${esc(zone.desc||'')}</p>
+    <div class="body-zone-sources"><span>Données disponibles</span><strong>${esc(v10103InputSummary(zone.inputs))}</strong></div>
+    ${zone.missing.length?`<div class="body-zone-missing"><span>Données manquantes</span><strong>${esc(v10103MissingSummary(zone.missing))}</strong></div>`:''}
+    ${zone.confidence.id==='low'?`<p class="body-zone-caution">La couleur de niveau reste volontairement neutre tant que cette zone repose sur trop peu de données fiables.</p>`:''}
+    <div class="body-zone-mini-actions">
+      <button class="btn btn-secondary compact" data-body-zone-cycle="prev">← Zone</button>
+      <button class="btn btn-secondary compact" data-body-zone-cycle="next">Zone →</button>
+      <button class="btn btn-outline compact" ${cta.attr}>${cta.label} →</button>
+    </div>
+  </article>`;
+};
+
+v1095ZoneChip=function(z){
+  const zone=v10103ZoneData(z.id,state.progressBodyMode||'overall')||z;
+  return `<button class="body-overview-chip ${v10103ZoneVisual(zone)}" data-body-zone="${zone.id}"><span>${esc(zone.label)}</span><strong>${zone.score!=null?zone.score+'/100':zone.status?.label||'À évaluer'}</strong></button>`;
+};
+
+v1095PriorityZones=function(mode='overall',limit=3){
+  return Object.values(v1095BodyZoneLookup(mode)).map(z=>v10103ZoneData(z.id,mode)).filter(Boolean)
+    .sort((a,b)=>{
+      const au=a.confidence.id==='none'?2:a.confidence.id==='low'?1:0, bu=b.confidence.id==='none'?2:b.confidence.id==='low'?1:0;
+      if(au!==bu)return bu-au;
+      return (a.score??999)-(b.score??999);
+    }).slice(0,limit);
+};
+v1095StrongZones=function(mode='overall',limit=3){
+  return Object.values(v1095BodyZoneLookup(mode)).map(z=>v10103ZoneData(z.id,mode))
+    .filter(z=>z&&z.score!=null&&['medium','high'].includes(z.confidence.id)).sort((a,b)=>b.score-a.score).slice(0,limit);
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});

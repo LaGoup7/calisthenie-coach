@@ -52,3 +52,11 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Zones musculaires mieux intégrées à la silhouette, face et dos.
 - Sélection conservée avec halo violet, score et confiance inchangés.
 - Cache PWA et versions des assets passés à 10.102.
+
+
+## V10.103 — Body Map V5
+- Silhouette humaine neutre et continue, séparée de la heatmap de données.
+- Les zones peu fiables restent gris-bleu au lieu de simuler une faiblesse anatomique précise.
+- Confiance basée sur couverture des données + niveau de preuve (déclaré / séance / test).
+- Panneau de droite : niveau provisoire, données disponibles, données manquantes et CTA pour compléter la zone.
+- Corps agrandi et simplification des contours pour supprimer l’effet mannequin articulé.
