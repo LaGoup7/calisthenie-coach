@@ -7334,6 +7334,87 @@ v1085ProgressionChain=function(active='performance',compact=false){
   </details>`;
 };
 
+
+/* ========================================================================== */
+/* V10.93 · Fix navigation in Progression chain                               */
+/* Performance always opens Progression/Performance; Rang opens rank details. */
+/* ========================================================================== */
+const _v1085ProgressionChainV1093=v1085ProgressionChain;
+v1085ProgressionChain=function(active='performance',compact=false){
+  if(compact)return _v1085ProgressionChainV1093(active,true);
+  const steps=[
+    {id:'performance',label:'Performance'},
+    {id:'assessment',label:'Évaluation'},
+    {id:'capabilities',label:'Capacités'},
+    {id:'rank',label:'Rang'}
+  ];
+  return `<details class="p92-chain">
+    <summary>
+      <div class="p92-chain-title">
+        <div class="kicker">Comment KINETIK mesure ton niveau</div>
+        <strong>De tes performances à ton rang</strong>
+      </div>
+      <span>Comprendre <b>↓</b></span>
+    </summary>
+    <div class="p92-chain-flow" aria-label="Performance, Évaluation, Capacités, Rang">
+      ${steps.map((s,i)=>`
+        <button class="${active===s.id?'active':''}" data-progression-chain="${s.id}">
+          <i>${i+1}</i><strong>${s.label}</strong>
+        </button>${i<steps.length-1?'<span class="p92-chain-arrow">→</span>':''}
+      `).join('')}
+    </div>
+    <div class="p92-chain-explain">
+      <p><strong>Performance</strong> : ce que tu réalises en séance.</p>
+      <p><strong>Évaluation</strong> : confirme une performance seulement quand une preuve plus fiable est utile.</p>
+      <p><strong>Capacités</strong> : regroupe tes performances par domaine.</p>
+      <p><strong>Rang</strong> : synthétise plusieurs capacités validées.</p>
+    </div>
+    <p class="p92-chain-note">Tu n’as pas besoin de passer un test après chaque séance.</p>
+  </details>`;
+};
+
+function v1093OpenRank(){
+  const rank=getRankState();
+  state.selectedRankId=rank.current.id;
+  state.view='skills';
+  render();
+  requestAnimationFrame(()=>{
+    const details=document.querySelector('.cap-rank-details');
+    if(details){
+      details.open=true;
+      requestAnimationFrame(()=>details.scrollIntoView({behavior:'smooth',block:'start'}));
+    }
+  });
+}
+
+const _bindEventsV1093=bindEvents;
+bindEvents=function(){
+  _bindEventsV1093();
+  document.querySelectorAll('[data-progression-chain]').forEach(b=>b.onclick=()=>{
+    const target=b.dataset.progressionChain;
+    if(target==='performance'){
+      state.view='progress';
+      state.progressTab='performance';
+      state.selectedHistoryId=null;
+      render();
+      return;
+    }
+    if(target==='assessment'){
+      state.view='assessment';
+      render();
+      return;
+    }
+    if(target==='capabilities'){
+      state.view='skills';
+      render();
+      return;
+    }
+    if(target==='rank'){
+      v1093OpenRank();
+    }
+  });
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
