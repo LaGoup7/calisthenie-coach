@@ -7291,6 +7291,49 @@ renderAssessmentCenter=function(){
 /* Profil et sous-pages profil restent sans FAB.                               */
 /* ========================================================================== */
 
+
+/* ========================================================================== */
+/* V10.92 · Progression chain simplification                                  */
+/* Progression: short mental model, details on demand.                         */
+/* ========================================================================== */
+const _v1085ProgressionChainV1092=v1085ProgressionChain;
+v1085ProgressionChain=function(active='performance',compact=false){
+  /* Keep the smaller contextual version used inside Assessment/Capacities. */
+  if(compact)return _v1085ProgressionChainV1092(active,true);
+
+  const steps=[
+    {id:'performance',label:'Performance',action:'progress'},
+    {id:'assessment',label:'Évaluation',action:'assessment'},
+    {id:'capabilities',label:'Capacités',action:'skills'},
+    {id:'rank',label:'Rang',action:'skills'}
+  ];
+  return `<details class="p92-chain">
+    <summary>
+      <div class="p92-chain-title">
+        <div class="kicker">Comment KINETIK mesure ton niveau</div>
+        <strong>De tes performances à ton rang</strong>
+      </div>
+      <span>Comprendre <b>↓</b></span>
+    </summary>
+
+    <div class="p92-chain-flow" aria-label="Performance, Évaluation, Capacités, Rang">
+      ${steps.map((s,i)=>`
+        <button class="${active===s.id?'active':''}" ${s.action==='progress'?'data-progress-tab="performance"':`data-view="${s.action}"`}>
+          <i>${i+1}</i><strong>${s.label}</strong>
+        </button>${i<steps.length-1?'<span class="p92-chain-arrow">→</span>':''}
+      `).join('')}
+    </div>
+
+    <div class="p92-chain-explain">
+      <p><strong>Performance</strong> : ce que tu réalises en séance.</p>
+      <p><strong>Évaluation</strong> : confirme une performance seulement quand une preuve plus fiable est utile.</p>
+      <p><strong>Capacités</strong> : regroupe tes performances par domaine.</p>
+      <p><strong>Rang</strong> : synthétise plusieurs capacités validées.</p>
+    </div>
+    <p class="p92-chain-note">Tu n’as pas besoin de passer un test après chaque séance.</p>
+  </details>`;
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});

@@ -3368,3 +3368,28 @@ body{
 .p89-integrity-note{padding:16px 0;border-bottom:2px solid var(--line)}
 .p89-integrity-note>div{max-width:780px}.p89-integrity-note strong{display:block;font-size:.75rem;margin:4px 0}
 .p89-integrity-note p{font-size:.57rem;line-height:1.5;color:var(--muted);margin:0}
+
+/* v10.92 · simplified Progression explanation */
+.p92-chain{padding:15px 0;border-bottom:2px solid var(--line)}
+.p92-chain>summary{display:flex;align-items:center;justify-content:space-between;gap:18px;list-style:none;cursor:pointer}
+.p92-chain>summary::-webkit-details-marker{display:none}
+.p92-chain-title{display:grid;gap:2px}
+.p92-chain-title strong{font-size:.75rem}
+.p92-chain>summary>span{font-size:.55rem;font-weight:800;white-space:nowrap}
+.p92-chain>summary>span b{display:inline-block;transition:transform .18s ease}
+.p92-chain[open]>summary>span b{transform:rotate(180deg)}
+.p92-chain-flow{display:flex;align-items:center;gap:7px;margin-top:14px;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow-x:auto}
+.p92-chain-flow button{display:flex;align-items:center;gap:6px;background:transparent;color:inherit;white-space:nowrap;padding:5px 3px}
+.p92-chain-flow button i{font-style:normal;font-size:.47rem;color:var(--muted)}
+.p92-chain-flow button strong{font-size:.59rem}
+.p92-chain-flow button.active strong{font-weight:900}
+.p92-chain-flow button.active:after{content:"";width:4px;height:4px;border-radius:50%;background:currentColor;margin-left:1px}
+.p92-chain-arrow{font-size:.55rem;color:var(--muted);flex:0 0 auto}
+.p92-chain-explain{display:grid;grid-template-columns:1fr 1fr;gap:0 22px;padding-top:10px}
+.p92-chain-explain p{font-size:.54rem;line-height:1.45;color:var(--muted);margin:4px 0}
+.p92-chain-explain strong{color:var(--text)}
+.p92-chain-note{font-size:.53rem;color:var(--muted);margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line)}
+@media(max-width:560px){
+  .p92-chain-explain{grid-template-columns:1fr}
+  .p92-chain>summary{align-items:flex-start}
+}
