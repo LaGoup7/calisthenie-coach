@@ -5806,6 +5806,338 @@ bindEvents=function(){
   startCoreTimerTicker();
 };
 
+
+/* ========================================================================== */
+/* V10.75 · Gainage Routines                                                  */
+/* Parametric hold circuits · rounds · rests · guided automatic timer         */
+/* ========================================================================== */
+STORAGE.coreRoutines="kinetik_core_routines_v1";
+Object.assign(state,{
+  coreRoutineTab:"timer",
+  coreRoutineEditor:false,
+  coreRoutineDraft:null,
+  coreRoutineRun:null
+});
+
+const CORE_ROUTINE_EXERCISES=[
+  "Planche avant-bras",
+  "Side plank gauche",
+  "Side plank droite",
+  "Hollow hold",
+  "Reverse plank",
+  "Tuck L-sit",
+  "Side plank étoile"
+];
+
+function getCoreRoutines(){return parse(STORAGE.coreRoutines,[]);}
+function setCoreRoutines(v){save(STORAGE.coreRoutines,v);}
+function coreRoutineById(id){return getCoreRoutines().find(x=>String(x.id)===String(id))||null;}
+function defaultCoreRoutine(){
+  return {
+    id:null,
+    name:"Ma routine gainage",
+    rounds:3,
+    restBetweenSteps:0,
+    restBetweenRounds:90,
+    steps:[
+      {exercise:"Planche avant-bras",duration:60},
+      {exercise:"Side plank gauche",duration:30},
+      {exercise:"Side plank droite",duration:30}
+    ]
+  };
+}
+function normalizeCoreRoutine(r={}){
+  const d=defaultCoreRoutine();
+  return {
+    id:r.id??d.id,
+    name:String(r.name||d.name).slice(0,80),
+    rounds:clamp(Math.round(Number(r.rounds||d.rounds)),1,20),
+    restBetweenSteps:clamp(Math.round(Number(r.restBetweenSteps??d.restBetweenSteps)),0,600),
+    restBetweenRounds:clamp(Math.round(Number(r.restBetweenRounds??d.restBetweenRounds)),0,900),
+    steps:(Array.isArray(r.steps)&&r.steps.length?r.steps:d.steps).slice(0,20).map(x=>({
+      exercise:CORE_ROUTINE_EXERCISES.includes(x.exercise)?x.exercise:"Planche avant-bras",
+      duration:clamp(Math.round(Number(x.duration||30)),5,600)
+    }))
+  };
+}
+function coreRoutineTotalSeconds(r){
+  r=normalizeCoreRoutine(r);
+  const work=r.steps.reduce((s,x)=>s+x.duration,0)*r.rounds;
+  const stepRests=Math.max(0,r.steps.length-1)*r.restBetweenSteps*r.rounds;
+  const roundRests=Math.max(0,r.rounds-1)*r.restBetweenRounds;
+  return work+stepRests+roundRests;
+}
+function coreRoutineWorkSeconds(r){r=normalizeCoreRoutine(r);return r.steps.reduce((s,x)=>s+x.duration,0)*r.rounds;}
+function coreRoutineStepLogInfo(exercise){
+  if(exercise==="Side plank gauche")return {exercise:"Side plank",side:"G"};
+  if(exercise==="Side plank droite")return {exercise:"Side plank",side:"D"};
+  if(exercise==="Side plank étoile")return {exercise:"Side plank étoile",side:null};
+  return {exercise,side:null};
+}
+function saveCoreHold(exercise,seconds,source="core_timer",meta={}){
+  const info=coreRoutineStepLogInfo(exercise),sec=Math.max(1,Math.round(Number(seconds)||0));
+  const logs=getQuickLogs();
+  logs.unshift({
+    id:Date.now()+Math.floor(Math.random()*1000),
+    date:new Date().toISOString(),
+    exercise:info.exercise,
+    type:"hold",
+    value:sec,
+    band:null,
+    loadKg:null,
+    source,
+    side:info.side,
+    ...meta
+  });
+  setQuickLogs(logs.slice(0,5000));
+}
+function openCoreRoutineEditor(id=null){
+  const existing=id?coreRoutineById(id):null;
+  state.coreRoutineDraft=normalizeCoreRoutine(existing||defaultCoreRoutine());
+  state.coreRoutineEditor=true;
+  state.coreRoutineTab="routines";
+  render();
+}
+function syncCoreRoutineDraftFromDom(){
+  const d=state.coreRoutineDraft;if(!d)return;
+  const name=document.getElementById("coreRoutineName");if(name)d.name=name.value||"Ma routine gainage";
+  const rounds=document.getElementById("coreRoutineRounds");if(rounds)d.rounds=clamp(Math.round(Number(rounds.value||1)),1,20);
+  const rs=document.getElementById("coreRoutineStepRest");if(rs)d.restBetweenSteps=clamp(Math.round(Number(rs.value||0)),0,600);
+  const rr=document.getElementById("coreRoutineRoundRest");if(rr)d.restBetweenRounds=clamp(Math.round(Number(rr.value||0)),0,900);
+  const steps=[];
+  document.querySelectorAll(".core-routine-step-edit").forEach(row=>{
+    const exercise=row.querySelector(".core-routine-exercise")?.value||"Planche avant-bras";
+    const duration=clamp(Math.round(Number(row.querySelector(".core-routine-duration")?.value||30)),5,600);
+    steps.push({exercise,duration});
+  });
+  if(steps.length)d.steps=steps;
+}
+function saveCoreRoutineDraft(){
+  syncCoreRoutineDraftFromDom();
+  const d=normalizeCoreRoutine(state.coreRoutineDraft),rows=getCoreRoutines();
+  if(d.id){
+    const i=rows.findIndex(x=>String(x.id)===String(d.id));if(i>=0)rows[i]={...d,updatedAt:new Date().toISOString()};
+  }else{
+    d.id=`cr_${Date.now()}`;d.createdAt=new Date().toISOString();rows.unshift(d);
+  }
+  setCoreRoutines(rows.slice(0,50));
+  state.coreRoutineEditor=false;state.coreRoutineDraft=null;state.coreRoutineTab="routines";render();
+}
+function deleteCoreRoutine(id){
+  setCoreRoutines(getCoreRoutines().filter(x=>String(x.id)!==String(id)));
+  if(state.coreRoutineDraft&&String(state.coreRoutineDraft.id)===String(id)){state.coreRoutineDraft=null;state.coreRoutineEditor=false;}
+  render();
+}
+function coreRoutineSequence(r){
+  r=normalizeCoreRoutine(r);const seq=[];
+  for(let round=1;round<=r.rounds;round++){
+    r.steps.forEach((step,i)=>{
+      seq.push({kind:"work",round,index:i,exercise:step.exercise,duration:step.duration,label:step.exercise});
+      if(i<r.steps.length-1&&r.restBetweenSteps>0)seq.push({kind:"rest",round,index:i,duration:r.restBetweenSteps,label:"Repos"});
+    });
+    if(round<r.rounds&&r.restBetweenRounds>0)seq.push({kind:"roundRest",round,index:r.steps.length-1,duration:r.restBetweenRounds,label:`Repos avant série ${round+1}`});
+  }
+  return seq;
+}
+function startCoreRoutine(id){
+  const r=coreRoutineById(id);if(!r)return;
+  coreTimerPause();stopCoreTimerTicker();
+  const seq=coreRoutineSequence(r);
+  state.coreRoutineRun={
+    routine:normalizeCoreRoutine(r),
+    sequence:seq,
+    phaseIndex:0,
+    running:false,
+    startedAt:null,
+    elapsedMs:0,
+    completed:[],
+    startedDate:new Date().toISOString()
+  };
+  state.coreRoutineTab="run";state.coreRoutineEditor=false;render();
+}
+function coreRoutineRunPhase(){const x=state.coreRoutineRun;return x?.sequence?.[x.phaseIndex]||null;}
+function coreRoutineRunElapsedMs(){
+  const x=state.coreRoutineRun;if(!x)return 0;
+  return Math.max(0,Number(x.elapsedMs||0)+(x.running&&x.startedAt?Date.now()-Number(x.startedAt):0));
+}
+function coreRoutineRunElapsedSec(){return Math.floor(coreRoutineRunElapsedMs()/1000);}
+function coreRoutineRunRemaining(){const p=coreRoutineRunPhase();return p?Math.max(0,Number(p.duration||0)-coreRoutineRunElapsedSec()):0;}
+function coreRoutineRunPause(){
+  const x=state.coreRoutineRun;if(!x?.running)return;
+  x.elapsedMs=coreRoutineRunElapsedMs();x.startedAt=null;x.running=false;
+}
+function coreRoutineRunStart(){
+  const x=state.coreRoutineRun;if(!x||x.running||!coreRoutineRunPhase())return;
+  x.startedAt=Date.now();x.running=true;
+}
+function coreRoutineRunResetPhase(){const x=state.coreRoutineRun;if(!x)return;x.running=false;x.startedAt=null;x.elapsedMs=0;}
+function coreRoutineAdvance({saveWork=true}={}){
+  const x=state.coreRoutineRun,p=coreRoutineRunPhase();if(!x||!p)return;
+  coreRoutineRunPause();
+  const elapsed=Math.min(Number(p.duration||0),Math.max(0,Math.round(coreRoutineRunElapsedMs()/1000)));
+  if(p.kind==="work"&&saveWork&&elapsed>0){
+    saveCoreHold(p.exercise,elapsed,"core_routine",{routineId:x.routine.id,routineName:x.routine.name,round:p.round});
+    x.completed.push({exercise:p.exercise,seconds:elapsed,round:p.round});
+  }
+  x.phaseIndex++;
+  x.elapsedMs=0;x.startedAt=null;x.running=false;
+  if(x.phaseIndex>=x.sequence.length){
+    const summary={...x,finishedAt:new Date().toISOString()};
+    state.coreRoutineRun={...summary,finished:true};
+  }else{
+    /* Once the routine has started, phases chain automatically. */
+    x.startedAt=Date.now();x.running=true;
+  }
+  render();
+}
+function coreRoutineSkip(){
+  const p=coreRoutineRunPhase();if(!p)return;
+  const elapsed=coreRoutineRunElapsedSec();
+  /* On a work phase, ending early records the actual clean hold. */
+  coreRoutineAdvance({saveWork:p.kind==="work"&&elapsed>0});
+}
+function coreRoutineStop(){
+  coreRoutineRunPause();state.coreRoutineRun=null;state.coreRoutineTab="routines";render();
+}
+function coreRoutineCurrentProgress(){
+  const x=state.coreRoutineRun;if(!x)return 0;
+  return x.sequence.length?Math.round(Math.min(x.phaseIndex,x.sequence.length)/x.sequence.length*100):0;
+}
+function renderCoreRoutineEditor(){
+  const d=normalizeCoreRoutine(state.coreRoutineDraft||defaultCoreRoutine());
+  return `<section class="core-routine-editor">
+    <header><div><div class="kicker">Routine personnalisée</div><h3>${d.id?"Modifier":"Créer"} une routine</h3></div><button class="icon-btn" id="closeCoreRoutineEditor">×</button></header>
+    <label class="core-routine-field"><span>Nom</span><input id="coreRoutineName" value="${esc(d.name)}" maxlength="80"></label>
+    <div class="core-routine-settings">
+      <label><span>Séries</span><input id="coreRoutineRounds" type="number" min="1" max="20" value="${d.rounds}"></label>
+      <label><span>Repos entre exercices</span><div><input id="coreRoutineStepRest" type="number" min="0" max="600" step="5" value="${d.restBetweenSteps}"><b>s</b></div></label>
+      <label><span>Repos entre séries</span><div><input id="coreRoutineRoundRest" type="number" min="0" max="900" step="5" value="${d.restBetweenRounds}"><b>s</b></div></label>
+    </div>
+    <div class="core-routine-builder-head"><div><span>Enchaînement</span><small>Ordre exécuté à chaque série</small></div><button id="addCoreRoutineStep">＋ Exercice</button></div>
+    <div id="coreRoutineSteps" class="core-routine-steps-edit">${d.steps.map((s,i)=>renderCoreRoutineStepEditor(s,i)).join("")}</div>
+    <div class="core-routine-preview"><span>Durée estimée</span><strong id="coreRoutinePreviewDuration">${coreTimerFormat(coreRoutineTotalSeconds(d))}</strong><small>${coreTimerFormat(coreRoutineWorkSeconds(d))} de gainage effectif</small></div>
+    <div class="core-routine-editor-actions"><button class="btn btn-outline" id="cancelCoreRoutineEditor">Annuler</button><button class="btn btn-primary" id="saveCoreRoutine">Enregistrer la routine</button></div>
+  </section>`;
+}
+function renderCoreRoutineStepEditor(step,i){
+  return `<div class="core-routine-step-edit" data-step-index="${i}">
+    <span class="core-routine-order">${i+1}</span>
+    <select class="core-routine-exercise">${CORE_ROUTINE_EXERCISES.map(n=>`<option value="${esc(n)}" ${n===step.exercise?"selected":""}>${esc(n)}</option>`).join("")}</select>
+    <div class="core-routine-duration-wrap"><input class="core-routine-duration" type="number" min="5" max="600" step="5" value="${step.duration}"><b>s</b></div>
+    <div class="core-routine-step-actions"><button data-core-step-move="-1" ${i===0?"disabled":""}>↑</button><button data-core-step-move="1">↓</button><button data-core-step-delete="true" aria-label="Supprimer">×</button></div>
+  </div>`;
+}
+function renderCoreRoutineLibrary(){
+  const rows=getCoreRoutines();
+  return `<section class="core-routine-library">
+    <div class="core-routine-library-head"><div><div class="kicker">Mes routines</div><h3>${rows.length?`${rows.length} routine${rows.length>1?"s":""}`:"Crée ton premier circuit"}</h3></div><button id="newCoreRoutine">＋ Nouvelle</button></div>
+    ${rows.length?`<div class="core-routine-list">${rows.map(r=>{
+      const n=normalizeCoreRoutine(r),work=coreRoutineWorkSeconds(n),total=coreRoutineTotalSeconds(n);
+      return `<article class="core-routine-row"><button class="core-routine-main" data-start-core-routine="${n.id}"><div><strong>${esc(n.name)}</strong><span>${n.rounds} série${n.rounds>1?"s":""} · ${n.steps.length} exercice${n.steps.length>1?"s":""} · ${coreTimerFormat(total)}</span><small>${n.steps.map(x=>`${esc(x.exercise)} ${x.duration}s`).join(" · ")}</small></div><b>Démarrer →</b></button><div class="core-routine-row-actions"><button data-edit-core-routine="${n.id}">Modifier</button><button data-delete-core-routine="${n.id}">×</button></div></article>`;
+    }).join("")}</div>`:`<div class="core-routine-empty"><strong>Construis une routine exactement comme tu veux.</strong><span>Exemple : 60 s planche · 30 s côté gauche · 30 s côté droit · 3 séries · 90 s de repos entre séries.</span><button class="btn btn-primary" id="newCoreRoutineEmpty">Créer une routine</button></div>`}
+  </section>`;
+}
+function renderCoreRoutineRun(){
+  const x=state.coreRoutineRun;if(!x)return renderCoreRoutineLibrary();
+  if(x.finished){
+    const total=x.completed.reduce((s,a)=>s+a.seconds,0);
+    return `<section class="core-routine-finished"><div class="core-routine-complete-mark">✓</div><div class="kicker">Routine terminée</div><h3>${esc(x.routine.name)}</h3><strong>${coreTimerFormat(total)} de gainage</strong><span>${x.completed.length} maintien${x.completed.length>1?"s":""} enregistrés automatiquement dans Progression.</span><button class="btn btn-primary" id="finishCoreRoutine">Terminer</button></section>`;
+  }
+  const p=coreRoutineRunPhase(),remaining=coreRoutineRunRemaining(),progress=coreRoutineCurrentProgress(),next=x.sequence[x.phaseIndex+1]||null;
+  return `<section class="core-routine-run">
+    <header><button class="back-btn" id="stopCoreRoutine">← Routines</button><div><span>Série ${p.round}/${x.routine.rounds}</span><strong>${esc(x.routine.name)}</strong></div></header>
+    <div class="core-routine-run-progress"><i style="width:${progress}%"></i></div>
+    <div class="core-routine-run-phase ${p.kind}">
+      <span>${p.kind==="work"?"GAINAGE":"REPOS"}</span>
+      <h3>${esc(p.label)}</h3>
+      <strong id="coreRoutineRunClock">${coreTimerFormat(remaining)}</strong>
+      <small id="coreRoutineRunSub">${p.kind==="work"?`Objectif ${coreTimerFormat(p.duration)} · maintien propre`:`Récupère · prochain : ${next?esc(next.label):"fin"}`}</small>
+    </div>
+    <div class="core-routine-run-actions">
+      <button class="btn btn-outline" id="skipCoreRoutinePhase">${p.kind==="work"?(coreRoutineRunElapsedSec()>0?"Valider maintenant":"Passer"):"Passer le repos"}</button>
+      <button class="btn btn-primary" id="toggleCoreRoutineRun">${x.running?"Pause":"Démarrer"}</button>
+    </div>
+    <div class="core-routine-run-next"><span>Ensuite</span><strong>${next?`${next.kind==="work"?esc(next.exercise):"Repos"} · ${coreTimerFormat(next.duration)}`:"Fin de la routine"}</strong></div>
+    <details class="core-routine-run-plan"><summary>Voir toute la routine</summary><div>${x.sequence.map((s,i)=>`<span class="${i<x.phaseIndex?"done":i===x.phaseIndex?"current":""}"><b>${i+1}</b>${s.kind==="work"?esc(s.exercise):"Repos"} · ${coreTimerFormat(s.duration)}</span>`).join("")}</div></details>
+  </section>`;
+}
+
+/* Upgrade the Gainage overlay with Timer / Routines tabs. */
+const _renderCoreTimerOverlayV1075=renderCoreTimerOverlay;
+renderCoreTimerOverlay=function(){
+  if(!state.coreTimerOpen)return "";
+  if(state.coreRoutineRun)return `<div class="core-timer-overlay" role="dialog" aria-modal="true" aria-label="Routine de gainage"><section class="core-timer-sheet core-routine-sheet">${renderCoreRoutineRun()}</section></div>`;
+  const timerHtml=_renderCoreTimerOverlayV1075();
+  const start=timerHtml.indexOf('<section class="core-timer-sheet">'),headEnd=timerHtml.indexOf('</header>',start);
+  if(start<0||headEnd<0)return timerHtml;
+  const tabs=`<div class="core-mode-tabs"><button class="${state.coreRoutineTab==="timer"?"active":""}" data-core-tab="timer">Chrono libre</button><button class="${state.coreRoutineTab==="routines"?"active":""}" data-core-tab="routines">Routines</button></div>`;
+  if(state.coreRoutineTab==="timer"){
+    return timerHtml.slice(0,headEnd+9)+tabs+timerHtml.slice(headEnd+9);
+  }
+  const end=timerHtml.lastIndexOf("</section></div>");
+  const header=timerHtml.slice(0,headEnd+9);
+  const body=state.coreRoutineEditor?renderCoreRoutineEditor():renderCoreRoutineLibrary();
+  return header+tabs+body+(end>=0?timerHtml.slice(end):"</section></div>");
+};
+
+/* Today teaser shows routine count too. */
+renderTodayCoreTimer=function(){
+  const s=coreTimerTodaySummary(),r=getCoreRoutines();
+  return `<section class="today-core-timer"><button type="button" data-open-core-timer="true"><span class="today-core-icon">${uiIcon("clock")}</span><div><strong>Gainage</strong><small>${s.sets?`${s.sets} maintien${s.sets>1?"s":""} · ${coreTimerFormat(s.seconds)} aujourd’hui`:"Chronomètre + routines personnalisées"}${r.length?` · ${r.length} routine${r.length>1?"s":""}`:""}</small></div><b>Ouvrir →</b></button></section>`;
+};
+
+let coreRoutineTicker=null;
+function stopCoreRoutineTicker(){if(coreRoutineTicker){clearInterval(coreRoutineTicker);coreRoutineTicker=null;}}
+function updateCoreRoutineRunDom(){
+  const x=state.coreRoutineRun;if(!x||x.finished)return stopCoreRoutineTicker();
+  const p=coreRoutineRunPhase(),clock=document.getElementById("coreRoutineRunClock"),sub=document.getElementById("coreRoutineRunSub");if(!p||!clock)return;
+  const remaining=coreRoutineRunRemaining();clock.textContent=coreTimerFormat(remaining);
+  if(sub&&p.kind==="work")sub.textContent=`${coreTimerFormat(coreRoutineRunElapsedSec())} réalisé · objectif ${coreTimerFormat(p.duration)}`;
+  if(remaining<=0&&x.running){
+    coreRoutineRunPause();stopCoreRoutineTicker();
+    coreRoutineAdvance({saveWork:p.kind==="work"});
+  }
+}
+function startCoreRoutineTicker(){stopCoreRoutineTicker();if(state.coreRoutineRun?.running)coreRoutineTicker=setInterval(updateCoreRoutineRunDom,200);}
+
+/* Correct standalone left/right logs: one side is one measured hold, not doubled. */
+coreTimerSaveSet=function(){
+  coreTimerPause();
+  const sec=Math.max(1,Math.round(coreTimerElapsedMs()/1000));if(sec<1)return;
+  const def=coreTimerDef();
+  state.coreTimer.sessionSets=[...(state.coreTimer.sessionSets||[]),{label:def.name,seconds:sec,date:new Date().toISOString()}];
+  saveCoreHold(def.name,sec,"core_timer");
+  coreTimerReset();render();
+};
+
+const _bindEventsV1075=bindEvents;
+bindEvents=function(){
+  _bindEventsV1075();
+  document.querySelectorAll("[data-core-tab]").forEach(b=>b.onclick=()=>{coreTimerPause();stopCoreTimerTicker();state.coreRoutineTab=b.dataset.coreTab;state.coreRoutineEditor=false;state.coreRoutineDraft=null;render();});
+  const newRoutine=()=>openCoreRoutineEditor(null);
+  const nr=document.getElementById("newCoreRoutine");if(nr)nr.onclick=newRoutine;
+  const nre=document.getElementById("newCoreRoutineEmpty");if(nre)nre.onclick=newRoutine;
+  document.querySelectorAll("[data-edit-core-routine]").forEach(b=>b.onclick=()=>openCoreRoutineEditor(b.dataset.editCoreRoutine));
+  document.querySelectorAll("[data-delete-core-routine]").forEach(b=>b.onclick=()=>{if(confirm("Supprimer cette routine ?"))deleteCoreRoutine(b.dataset.deleteCoreRoutine);});
+  document.querySelectorAll("[data-start-core-routine]").forEach(b=>b.onclick=()=>startCoreRoutine(b.dataset.startCoreRoutine));
+  const closeEditor=()=>{state.coreRoutineEditor=false;state.coreRoutineDraft=null;render();};
+  const ce=document.getElementById("closeCoreRoutineEditor");if(ce)ce.onclick=closeEditor;
+  const ca=document.getElementById("cancelCoreRoutineEditor");if(ca)ca.onclick=closeEditor;
+  const save=document.getElementById("saveCoreRoutine");if(save)save.onclick=saveCoreRoutineDraft;
+  const add=document.getElementById("addCoreRoutineStep");if(add)add.onclick=()=>{syncCoreRoutineDraftFromDom();state.coreRoutineDraft.steps.push({exercise:"Planche avant-bras",duration:30});render();};
+  document.querySelectorAll(".core-routine-step-edit").forEach(row=>{
+    const del=row.querySelector("[data-core-step-delete]");if(del)del.onclick=()=>{syncCoreRoutineDraftFromDom();const i=Number(row.dataset.stepIndex);if(state.coreRoutineDraft.steps.length>1)state.coreRoutineDraft.steps.splice(i,1);render();};
+    row.querySelectorAll("[data-core-step-move]").forEach(b=>b.onclick=()=>{syncCoreRoutineDraftFromDom();const i=Number(row.dataset.stepIndex),j=i+Number(b.dataset.coreStepMove);if(j<0||j>=state.coreRoutineDraft.steps.length)return;const a=state.coreRoutineDraft.steps;[a[i],a[j]]=[a[j],a[i]];render();});
+  });
+  ["coreRoutineName","coreRoutineRounds","coreRoutineStepRest","coreRoutineRoundRest"].forEach(id=>{const e=document.getElementById(id);if(e)e.oninput=()=>{syncCoreRoutineDraftFromDom();const p=document.getElementById("coreRoutinePreviewDuration");if(p)p.textContent=coreTimerFormat(coreRoutineTotalSeconds(state.coreRoutineDraft));};});
+  document.querySelectorAll(".core-routine-duration,.core-routine-exercise").forEach(e=>e.onchange=()=>{syncCoreRoutineDraftFromDom();const p=document.getElementById("coreRoutinePreviewDuration");if(p)p.textContent=coreTimerFormat(coreRoutineTotalSeconds(state.coreRoutineDraft));});
+  const toggle=document.getElementById("toggleCoreRoutineRun");if(toggle)toggle.onclick=()=>{if(state.coreRoutineRun.running)coreRoutineRunPause();else coreRoutineRunStart();render();};
+  const skip=document.getElementById("skipCoreRoutinePhase");if(skip)skip.onclick=coreRoutineSkip;
+  const stop=document.getElementById("stopCoreRoutine");if(stop)stop.onclick=()=>{if(confirm("Quitter cette routine ? Les maintiens déjà terminés restent enregistrés."))coreRoutineStop();};
+  const finish=document.getElementById("finishCoreRoutine");if(finish)finish.onclick=coreRoutineStop;
+  startCoreRoutineTicker();
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
