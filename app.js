@@ -576,6 +576,10 @@ const EXERCISE_LIBRARY = [
   lib("One-arm assisted hang","Grip","Avancé","Barre",["Grip","Dos","Épaules"],{regression:"Towel hang",prescription:{type:"hold_side",target:10,rest:120},advanceAt:25,volume:{Grip:1,Dos:.25,Épaules:.2},query:"assisted one arm dead hang tutorial"}),
 
   // CORE
+  lib("Planche avant-bras","Core","Débutant","Tapis",["Core","Épaules"],{progression:"Hollow hold",substitutes:["Dead bug"],prescription:{type:"hold",target:30,rest:45},advanceAt:90,volume:{Core:1,Épaules:.1},query:"forearm plank proper form tutorial"}),
+  lib("Side plank","Core","Débutant","Tapis",["Core","Épaules"],{progression:"Side plank étoile",substitutes:["Pallof press avec bande"],prescription:{type:"hold_side",target:20,rest:45},advanceAt:60,volume:{Core:1,Épaules:.1},query:"side plank proper form tutorial"}),
+  lib("Side plank étoile","Core","Intermédiaire","Tapis",["Core","Hanches","Épaules"],{regression:"Side plank",prescription:{type:"hold_side",target:15,rest:60},advanceAt:45,volume:{Core:1,Hanches:.3,Épaules:.15},query:"star side plank tutorial"}),
+  lib("Reverse plank","Core","Débutant","Tapis",["Core","Fessiers","Épaules"],{substitutes:["Planche avant-bras"],prescription:{type:"hold",target:30,rest:45},advanceAt:75,volume:{Core:.8,Fessiers:.35,Épaules:.15},query:"reverse plank proper form tutorial"}),
   lib("Dead bug","Core","Débutant","Tapis",["Core"],{progression:"Hollow hold",prescription:{type:"reps_side",target:8,rest:45},advanceAt:12,volume:{Core:1},query:"dead bug exercise proper form"}),
   lib("Hollow hold","Core","Débutant","Tapis",["Core"],{regression:"Dead bug",progression:"Hollow rocks",substitutes:["Dead bug"],prescription:{type:"hold",target:20,rest:60},advanceAt:40,volume:{Core:1},query:"hollow body hold tutorial calisthenics"}),
   lib("Hollow rocks","Core","Intermédiaire","Tapis",["Core"],{regression:"Hollow hold",progression:"Dragon flag négatives",prescription:{type:"reps",target:8,rest:75},advanceAt:15,volume:{Core:1},query:"hollow body rocks tutorial"}),
@@ -5661,6 +5665,145 @@ bindEvents=function(){
       }
     });
   });
+};
+
+
+/* ========================================================================== */
+/* V10.74 · Gainage Timer                                                     */
+/* Standalone core holds · live timer · save every set into Quick Logs        */
+/* ========================================================================== */
+Object.assign(state,{
+  coreTimerOpen:false,
+  coreTimer:{
+    exercise:"Planche avant-bras",
+    target:0,
+    running:false,
+    startedAt:null,
+    elapsedMs:0,
+    sessionSets:[]
+  }
+});
+const CORE_TIMER_EXERCISES=[
+  {name:"Planche avant-bras",side:false},
+  {name:"Side plank gauche",logName:"Side plank",side:true,sideLabel:"G"},
+  {name:"Side plank droite",logName:"Side plank",side:true,sideLabel:"D"},
+  {name:"Hollow hold",side:false},
+  {name:"Reverse plank",side:false},
+  {name:"Tuck L-sit",side:false}
+];
+function coreTimerDef(){return CORE_TIMER_EXERCISES.find(x=>x.name===state.coreTimer.exercise)||CORE_TIMER_EXERCISES[0];}
+function coreTimerElapsedMs(){
+  const c=state.coreTimer;if(!c)return 0;
+  return Math.max(0,Number(c.elapsedMs||0)+(c.running&&c.startedAt?Date.now()-Number(c.startedAt):0));
+}
+function coreTimerElapsedSec(){return Math.max(0,Math.floor(coreTimerElapsedMs()/1000));}
+function coreTimerDisplaySeconds(){
+  const elapsed=coreTimerElapsedSec(),target=Number(state.coreTimer.target||0);
+  return target>0?Math.max(0,target-elapsed):elapsed;
+}
+function coreTimerFormat(sec){sec=Math.max(0,Math.round(Number(sec)||0));return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;}
+function coreTimerPause(){
+  const c=state.coreTimer;if(!c?.running)return;
+  c.elapsedMs=coreTimerElapsedMs();c.startedAt=null;c.running=false;
+}
+function coreTimerReset(){const c=state.coreTimer;c.running=false;c.startedAt=null;c.elapsedMs=0;}
+function coreTimerStart(){
+  const c=state.coreTimer;if(c.running)return;
+  c.startedAt=Date.now();c.running=true;
+}
+function coreTimerSavedToday(){
+  const names=new Set(["Planche avant-bras","Side plank","Hollow hold","Reverse plank","Tuck L-sit"]);
+  return getQuickLogs().filter(x=>localDateKey(x.date)===localDateKey(new Date())&&names.has(x.exercise)&&String(x.type||'').startsWith('hold'));
+}
+function coreTimerTodaySummary(){
+  const rows=coreTimerSavedToday(),seconds=rows.reduce((s,x)=>s+Number(x.value||0)*(x.type==='hold_side'?2:1),0);
+  return {sets:rows.length,seconds};
+}
+function renderCoreTimerOverlay(){
+  if(!state.coreTimerOpen)return '';
+  const c=state.coreTimer,def=coreTimerDef(),elapsed=coreTimerElapsedSec(),display=coreTimerDisplaySeconds(),target=Number(c.target||0),session=c.sessionSets||[],total=session.reduce((s,x)=>s+x.seconds,0),today=coreTimerTodaySummary();
+  return `<div class="core-timer-overlay" role="dialog" aria-modal="true" aria-label="Chronomètre de gainage">
+    <section class="core-timer-sheet">
+      <header class="core-timer-head"><div><div class="kicker">Gainage</div><h2>Chronomètre</h2></div><button class="icon-btn" id="closeCoreTimer" aria-label="Fermer">×</button></header>
+      <div class="core-timer-exercises" role="listbox" aria-label="Exercice">${CORE_TIMER_EXERCISES.map(x=>`<button type="button" class="${x.name===c.exercise?'active':''}" data-core-exercise="${encodeURIComponent(x.name)}">${esc(x.name)}</button>`).join('')}</div>
+      <div class="core-timer-targets"><span>Mode</span><button class="${target===0?'active':''}" data-core-target="0">Libre</button>${[30,45,60,90,120].map(n=>`<button class="${target===n?'active':''}" data-core-target="${n}">${n}s</button>`).join('')}</div>
+      <div class="core-timer-clock ${c.running?'running':''} ${target>0&&elapsed>=target?'finished':''}">
+        <span>${target>0?'RESTE':'CHRONO'}</span>
+        <strong id="coreTimerClock">${coreTimerFormat(display)}</strong>
+        <small id="coreTimerSub">${target>0?`${coreTimerFormat(elapsed)} réalisé · objectif ${coreTimerFormat(target)}`:'Appuie sur démarrer au début du maintien.'}</small>
+      </div>
+      <div class="core-timer-controls">
+        <button class="btn btn-outline" id="resetCoreTimer">Réinitialiser</button>
+        <button class="btn btn-primary core-timer-main" id="toggleCoreTimer">${c.running?'Pause':'Démarrer'}</button>
+      </div>
+      <button class="core-timer-save ${elapsed>0?'':'disabled'}" id="saveCoreTimerSet" ${elapsed>0?'':'disabled'}>
+        <span>✓ Enregistrer cette série</span><strong>${elapsed?coreTimerFormat(elapsed):'—'}</strong>
+      </button>
+      ${session.length?`<section class="core-timer-session"><div><span>Cette session</span><strong>${session.length} série${session.length>1?'s':''} · ${coreTimerFormat(total)}</strong></div><div class="core-timer-set-list">${session.map((x,i)=>`<span><b>${i+1}</b>${esc(x.label)} · ${coreTimerFormat(x.seconds)}</span>`).join('')}</div></section>`:''}
+      <footer class="core-timer-footer"><span>Aujourd’hui</span><strong>${today.sets} maintien${today.sets!==1?'s':''} · ${coreTimerFormat(today.seconds)}</strong><small>Chaque série enregistrée alimente Progression et le volume Core.</small></footer>
+    </section>
+  </div>`;
+}
+function coreTimerSaveSet(){
+  coreTimerPause();
+  const sec=Math.max(1,Math.round(coreTimerElapsedMs()/1000));if(sec<1)return;
+  const def=coreTimerDef(),logName=def.logName||def.name,type=def.side?'hold_side':'hold';
+  state.coreTimer.sessionSets=[...(state.coreTimer.sessionSets||[]),{label:def.name,seconds:sec,date:new Date().toISOString()}];
+  const logs=getQuickLogs();
+  logs.unshift({id:Date.now(),date:new Date().toISOString(),exercise:logName,type,value:sec,band:null,loadKg:null,source:'core_timer',side:def.sideLabel||null});
+  setQuickLogs(logs.slice(0,5000));
+  coreTimerReset();render();
+}
+function renderTodayCoreTimer(){
+  const s=coreTimerTodaySummary();
+  return `<section class="today-core-timer">
+    <button type="button" data-open-core-timer="true"><span class="today-core-icon">${uiIcon('clock')}</span><div><strong>Gainage</strong><small>${s.sets?`${s.sets} maintien${s.sets>1?'s':''} · ${coreTimerFormat(s.seconds)} aujourd’hui`:'Chronomètre + enregistrement des maintiens'}</small></div><b>Chrono →</b></button>
+  </section>`;
+}
+
+/* Put the gainage shortcut directly after the primary Today actions. */
+const _renderTodayV1074=renderToday;
+renderToday=function(){
+  let html=_renderTodayV1074(),marker='</section>';
+  const cockpit=html.indexOf('<section class="today-cockpit today-primary-actions">');
+  if(cockpit>=0){
+    const close=html.indexOf(marker,cockpit);
+    if(close>=0)html=html.slice(0,close+marker.length)+renderTodayCoreTimer()+html.slice(close+marker.length);
+  }
+  return html;
+};
+
+/* Overlay is available from every regular screen once opened. */
+const _shellV1074=shell;
+shell=function(content,activeTab=state.view){return _shellV1074(content,activeTab)+renderCoreTimerOverlay();};
+
+let coreTimerTicker=null;
+function stopCoreTimerTicker(){if(coreTimerTicker){clearInterval(coreTimerTicker);coreTimerTicker=null;}}
+function updateCoreTimerDom(){
+  if(!state.coreTimerOpen)return stopCoreTimerTicker();
+  const clock=document.getElementById('coreTimerClock'),sub=document.getElementById('coreTimerSub'),save=document.getElementById('saveCoreTimerSet');if(!clock)return;
+  const elapsed=coreTimerElapsedSec(),target=Number(state.coreTimer.target||0),display=target?Math.max(0,target-elapsed):elapsed;
+  clock.textContent=coreTimerFormat(display);
+  if(sub)sub.textContent=target?`${coreTimerFormat(elapsed)} réalisé · objectif ${coreTimerFormat(target)}`:'Chrono libre · arrête quand la position n’est plus propre.';
+  if(save){save.disabled=elapsed<=0;save.classList.toggle('disabled',elapsed<=0);const strong=save.querySelector('strong');if(strong)strong.textContent=elapsed?coreTimerFormat(elapsed):'—';}
+  if(target>0&&elapsed>=target&&state.coreTimer.running){
+    coreTimerPause();stopCoreTimerTicker();render();
+  }
+}
+function startCoreTimerTicker(){stopCoreTimerTicker();if(state.coreTimer.running)coreTimerTicker=setInterval(updateCoreTimerDom,250);}
+
+/* Timer interactions. */
+const _bindEventsV1074=bindEvents;
+bindEvents=function(){
+  _bindEventsV1074();
+  document.querySelectorAll('[data-open-core-timer]').forEach(b=>b.onclick=()=>{state.coreTimerOpen=true;render();});
+  const close=document.getElementById('closeCoreTimer');if(close)close.onclick=()=>{coreTimerPause();stopCoreTimerTicker();state.coreTimerOpen=false;render();};
+  const toggle=document.getElementById('toggleCoreTimer');if(toggle)toggle.onclick=()=>{if(state.coreTimer.running)coreTimerPause();else coreTimerStart();render();};
+  const reset=document.getElementById('resetCoreTimer');if(reset)reset.onclick=()=>{coreTimerReset();render();};
+  const save=document.getElementById('saveCoreTimerSet');if(save)save.onclick=coreTimerSaveSet;
+  document.querySelectorAll('[data-core-exercise]').forEach(b=>b.onclick=()=>{coreTimerPause();coreTimerReset();state.coreTimer.exercise=decodeURIComponent(b.dataset.coreExercise);render();});
+  document.querySelectorAll('[data-core-target]').forEach(b=>b.onclick=()=>{coreTimerPause();coreTimerReset();state.coreTimer.target=Number(b.dataset.coreTarget||0);render();});
+  startCoreTimerTicker();
 };
 
 applyAppTheme();
