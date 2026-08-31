@@ -3515,3 +3515,35 @@ body{
 .body-zone-caution{margin:9px 0 0;font-size:.73rem;line-height:1.45;color:var(--muted)}
 @media(max-width:720px){.body-overview-model-wrap{grid-template-columns:1fr}.body-overview-model{max-width:410px}.bodymap-v5{height:570px}}
 @media(max-width:430px){.bodymap-v5{height:auto;width:100%}.body-overview-model{padding:4px}}
+
+/* ==========================================================================
+   V10.104 · Body Map V6 — silhouette humaine anatomique stylisée
+   ========================================================================== */
+.body-overview-model{padding:8px 10px;background:linear-gradient(180deg,#fbfcfe 0%,#f4f7fb 100%)}
+.bodymap-v6{display:block;width:auto;max-width:100%;height:640px;margin:0 auto}
+.bodymap-v6-shell>*{fill:url(#v6Skin);stroke:none}
+.bodymap-v6-shell>path:nth-last-child(-n+2){fill:url(#v6SkinSide)}
+.bodymap-v6-guides{fill:none;stroke:#b8c4d2;stroke-width:1.15;stroke-linecap:round;opacity:.28;pointer-events:none}
+.bodymap-v6 .bodymap-overlay{cursor:pointer}
+.bodymap-v6 .bodymap-overlay>path{stroke:rgba(255,255,255,.88);stroke-width:1.55;stroke-linejoin:round;transition:opacity .16s ease,filter .16s ease,stroke .16s ease,stroke-width .16s ease}
+.bodymap-v6 .bodymap-overlay-secondary{opacity:.22;pointer-events:none}
+.bodymap-v6 .bodymap-anatomy-line{fill:none!important;stroke:rgba(255,255,255,.50)!important;stroke-width:1.45!important;stroke-linecap:round;pointer-events:none}
+.bodymap-v6 .tone-none>path{fill:#cbd5e1;opacity:.08;stroke:#cbd5e1;stroke-dasharray:3 5}
+.bodymap-v6 .tone-partial>path{fill:#a5b4fc;opacity:.32;stroke:#818cf8;stroke-dasharray:4 4}
+.bodymap-v6 .tone-low>path{fill:#f87171;opacity:.72}
+.bodymap-v6 .tone-watch>path{fill:#fb923c;opacity:.72}
+.bodymap-v6 .tone-ok>path{fill:#facc15;opacity:.68}
+.bodymap-v6 .tone-good>path{fill:#4ade80;opacity:.68}
+.bodymap-v6 .tone-great>path{fill:#6366f1;opacity:.70}
+.bodymap-v6 .confidence-medium>path{opacity:.52}
+.bodymap-v6 .confidence-high>path{opacity:.78}
+.bodymap-v6 .bodymap-overlay:hover>path{filter:brightness(1.035);stroke-width:2.1}
+.bodymap-v6 .bodymap-overlay.selected>path{stroke:#4f46e5;stroke-width:2.65;stroke-dasharray:none;filter:url(#v6Select)}
+@media(max-width:720px){
+  .bodymap-v6{height:590px}
+  .body-overview-model{max-width:430px}
+}
+@media(max-width:430px){
+  .bodymap-v6{height:auto;width:100%}
+  .body-overview-model{padding:2px 4px}
+}

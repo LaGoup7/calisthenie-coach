@@ -8325,6 +8325,323 @@ v1095StrongZones=function(mode='overall',limit=3){
     .filter(z=>z&&z.score!=null&&['medium','high'].includes(z.confidence.id)).sort((a,b)=>b.score-a.score).slice(0,limit);
 };
 
+
+/* ========================================================================== */
+/* V10.104 · Body Map V6 — silhouette humaine anatomique stylisée             */
+/* Base corporelle continue + overlays heatmap indépendants.                   */
+/* ========================================================================== */
+v1095BodyMapSVG=function(view='front',mode='overall',selectedId=''){
+  const ids=view==='back'
+    ?['shoulders','back','arms','forearms','wrists','core','hips','hamstrings','calves','ankles']
+    :['shoulders','chest','arms','forearms','wrists','core','hips','quads','calves','ankles'];
+  const zones=Object.fromEntries(ids.map(id=>[id,v10103ZoneData(id,mode)]));
+  const z=id=>zones[id]||{id,label:id,score:null,status:{id:'none',label:'À évaluer'},confidence:{id:'none',label:'Aucune donnée'}};
+  const attrs=id=>`class="bodymap-zone bodymap-overlay ${v10103ZoneVisual(z(id))}${selectedId===id?' selected':''}" data-body-zone="${id}" role="button" tabindex="0" aria-label="${esc(z(id).label)} ${z(id).score!=null?z(id).score+' sur 100':z(id).status.label}"`;
+  const front=view==='front';
+
+  return `<svg class="bodymap-figure bodymap-v6" viewBox="0 0 360 620" role="img" aria-label="Carte corporelle humaine ${front?'face':'dos'}">
+    <defs>
+      <filter id="v6ShellShadow" x="-30%" y="-20%" width="160%" height="150%">
+        <feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#64748b" flood-opacity=".12"/>
+      </filter>
+      <filter id="v6Select" x="-45%" y="-45%" width="190%" height="190%">
+        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#4f46e5" flood-opacity=".28"/>
+      </filter>
+      <linearGradient id="v6Skin" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f6f8fb"/>
+        <stop offset=".55" stop-color="#e8edf4"/>
+        <stop offset="1" stop-color="#dce4ee"/>
+      </linearGradient>
+      <linearGradient id="v6SkinSide" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#dbe3ed"/>
+        <stop offset=".5" stop-color="#f2f5f9"/>
+        <stop offset="1" stop-color="#dbe3ed"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Silhouette humaine neutre : aucune couleur de performance ici. -->
+    <g class="bodymap-v6-shell" filter="url(#v6ShellShadow)">
+      <!-- tête -->
+      <path d="M180 22
+               C160 22 148 38 149 59
+               C150 80 161 94 180 96
+               C199 94 210 80 211 59
+               C212 38 200 22 180 22 Z"/>
+      <!-- cou + trapèzes -->
+      <path d="M166 91
+               C167 102 165 110 158 116
+               C147 119 131 123 118 134
+               L129 155
+               C145 145 161 142 180 142
+               C199 142 215 145 231 155
+               L242 134
+               C229 123 213 119 202 116
+               C195 110 193 102 194 91
+               C186 97 174 97 166 91 Z"/>
+      <!-- torse -->
+      <path d="M121 137
+               C138 127 157 122 180 122
+               C203 122 222 127 239 137
+               C251 148 255 168 253 193
+               C251 224 246 251 238 279
+               C232 301 221 320 205 329
+               C196 334 188 337 180 338
+               C172 337 164 334 155 329
+               C139 320 128 301 122 279
+               C114 251 109 224 107 193
+               C105 168 109 148 121 137 Z"/>
+      <!-- bras gauche -->
+      <path d="M116 143
+               C101 147 91 160 87 180
+               C83 204 88 231 92 254
+               C96 277 98 292 94 313
+               C91 329 85 349 82 369
+               C80 385 84 398 94 403
+               C104 406 112 399 116 387
+               C122 368 124 347 125 327
+               C126 305 126 282 128 260
+               C131 227 136 195 133 167
+               C131 153 125 145 116 143 Z"/>
+      <!-- bras droit -->
+      <path d="M244 143
+               C259 147 269 160 273 180
+               C277 204 272 231 268 254
+               C264 277 262 292 266 313
+               C269 329 275 349 278 369
+               C280 385 276 398 266 403
+               C256 406 248 399 244 387
+               C238 368 236 347 235 327
+               C234 305 234 282 232 260
+               C229 227 224 195 227 167
+               C229 153 235 145 244 143 Z"/>
+      <!-- mains -->
+      <path d="M88 397
+               C80 401 77 412 80 424
+               C83 436 91 444 100 441
+               C108 438 111 428 108 416
+               C105 404 97 397 88 397 Z"/>
+      <path d="M272 397
+               C280 401 283 412 280 424
+               C277 436 269 444 260 441
+               C252 438 249 428 252 416
+               C255 404 263 397 272 397 Z"/>
+      <!-- bassin -->
+      <path d="M153 323
+               C162 329 171 333 180 334
+               C189 333 198 329 207 323
+               C218 337 222 353 220 370
+               C208 379 195 384 180 385
+               C165 384 152 379 140 370
+               C138 353 142 337 153 323 Z"/>
+      <!-- jambe gauche continue -->
+      <path d="M146 369
+               C158 367 166 378 168 395
+               C170 423 165 450 161 478
+               C158 500 158 522 156 545
+               C154 565 151 582 145 594
+               C139 603 127 601 124 590
+               C122 572 126 551 126 532
+               C126 511 121 491 118 470
+               C114 442 111 414 116 392
+               C120 378 132 370 146 369 Z"/>
+      <!-- jambe droite continue -->
+      <path d="M214 369
+               C202 367 194 378 192 395
+               C190 423 195 450 199 478
+               C202 500 202 522 204 545
+               C206 565 209 582 215 594
+               C221 603 233 601 236 590
+               C238 572 234 551 234 532
+               C234 511 239 491 242 470
+               C246 442 249 414 244 392
+               C240 378 228 370 214 369 Z"/>
+      <!-- pieds -->
+      <path d="M125 585 C135 580 148 581 154 590 C154 601 149 609 137 611 C124 612 116 606 116 598 C117 592 120 588 125 585 Z"/>
+      <path d="M235 585 C225 580 212 581 206 590 C206 601 211 609 223 611 C236 612 244 606 244 598 C243 592 240 588 235 585 Z"/>
+    </g>
+
+    <!-- Repères anatomiques neutres très légers. -->
+    <g class="bodymap-v6-guides">
+      ${front?`
+        <path d="M180 143 V321"/>
+        <path d="M145 192 C155 199 167 203 180 203 C193 203 205 199 215 192"/>
+        <path d="M153 227 H207 M151 256 H209"/>
+        <path d="M139 377 C147 391 155 401 164 407 M221 377 C213 391 205 401 196 407"/>
+      `:`
+        <path d="M180 143 V318"/>
+        <path d="M139 167 C151 180 165 187 180 189 C195 187 209 180 221 167"/>
+        <path d="M143 256 C154 268 167 275 180 277 C193 275 206 268 217 256"/>
+      `}
+    </g>
+
+    <!-- HEATMAP : seule cette couche porte le niveau / la confiance. -->
+    <g ${attrs('shoulders')}>
+      <path d="M119 142
+               C128 129 142 124 158 126
+               C164 132 166 142 164 153
+               C150 151 136 155 125 165
+               C117 160 114 151 119 142 Z"/>
+      <path d="M241 142
+               C232 129 218 124 202 126
+               C196 132 194 142 196 153
+               C210 151 224 155 235 165
+               C243 160 246 151 241 142 Z"/>
+      ${front?'':`<path d="M155 128 C164 133 172 136 180 136 C188 136 196 133 205 128 L201 146 C194 151 187 154 180 155 C173 154 166 151 159 146 Z" class="bodymap-overlay-secondary"/>`}
+    </g>
+
+    ${front?`
+      <g ${attrs('chest')}>
+        <path d="M132 158
+                 C145 147 160 146 176 154
+                 L176 202
+                 C158 208 143 204 131 191 Z"/>
+        <path d="M228 158
+                 C215 147 200 146 184 154
+                 L184 202
+                 C202 208 217 204 229 191 Z"/>
+      </g>
+    `:`
+      <g ${attrs('back')}>
+        <path d="M128 151
+                 C145 139 162 139 180 148
+                 C198 139 215 139 232 151
+                 C235 177 231 209 224 238
+                 C216 264 201 286 180 297
+                 C159 286 144 264 136 238
+                 C129 209 125 177 128 151 Z"/>
+        <path d="M151 157
+                 C160 170 170 178 180 182
+                 C190 178 200 170 209 157
+                 L202 248
+                 C194 261 187 267 180 270
+                 C173 267 166 261 158 248 Z" class="bodymap-overlay-secondary"/>
+      </g>
+    `}
+
+    <g ${attrs('arms')}>
+      <path d="M110 165
+               C100 170 96 185 98 203
+               L104 261
+               C106 278 113 289 122 290
+               C130 284 131 271 130 255
+               L127 198
+               C126 180 121 168 110 165 Z"/>
+      <path d="M250 165
+               C260 170 264 185 262 203
+               L256 261
+               C254 278 247 289 238 290
+               C230 284 229 271 230 255
+               L233 198
+               C234 180 239 168 250 165 Z"/>
+    </g>
+
+    <g ${attrs('forearms')}>
+      <path d="M104 286
+               C113 282 121 289 123 304
+               L119 363
+               C118 382 111 393 101 395
+               C92 390 91 377 94 361
+               L98 309
+               C98 298 99 290 104 286 Z"/>
+      <path d="M256 286
+               C247 282 239 289 237 304
+               L241 363
+               C242 382 249 393 259 395
+               C268 390 269 377 266 361
+               L262 309
+               C262 298 261 290 256 286 Z"/>
+    </g>
+
+    <g ${attrs('wrists')}>
+      <path d="M96 386 C104 383 112 388 114 399 L112 421 C108 431 100 434 92 428 C87 417 88 403 92 394 C93 390 94 388 96 386 Z"/>
+      <path d="M264 386 C256 383 248 388 246 399 L248 421 C252 431 260 434 268 428 C273 417 272 403 268 394 C267 390 266 388 264 386 Z"/>
+    </g>
+
+    <g ${attrs('core')}>
+      ${front?`
+        <path d="M143 205
+                 C154 211 167 214 180 214
+                 C193 214 206 211 217 205
+                 L220 286
+                 C211 310 197 323 180 326
+                 C163 323 149 310 140 286 Z"/>
+        <path d="M156 221 H174 V246 H153 Z
+                 M186 221 H204 L207 246 H186 Z
+                 M153 253 H174 V279 H150 Z
+                 M186 253 H207 L210 279 H186 Z" class="bodymap-overlay-secondary"/>
+      `:`
+        <path d="M142 209
+                 C154 218 167 222 180 222
+                 C193 222 206 218 218 209
+                 L220 284
+                 C210 306 196 318 180 321
+                 C164 318 150 306 140 284 Z"/>
+        <path d="M156 235 C164 244 172 249 180 251 C188 249 196 244 204 235 L202 286 C195 296 187 301 180 303 C173 301 165 296 158 286 Z" class="bodymap-overlay-secondary"/>
+      `}
+    </g>
+
+    <g ${attrs('hips')}>
+      ${front?`
+        <path d="M145 316
+                 C156 325 168 330 180 331
+                 C192 330 204 325 215 316
+                 L220 366
+                 C207 378 194 383 180 384
+                 C166 383 153 378 140 366 Z"/>
+      `:`
+        <path d="M140 318
+                 C153 309 166 311 180 322
+                 C194 311 207 309 220 318
+                 L222 367
+                 C208 382 194 387 180 386
+                 C166 387 152 382 138 367 Z"/>
+      `}
+    </g>
+
+    <g ${attrs(front?'quads':'hamstrings')}>
+      <path d="M132 374
+               C145 369 158 378 161 396
+               C162 426 157 455 153 483
+               C149 501 142 510 132 507
+               C123 496 122 478 121 461
+               L118 410
+               C117 390 121 378 132 374 Z"/>
+      <path d="M228 374
+               C215 369 202 378 199 396
+               C198 426 203 455 207 483
+               C211 501 218 510 228 507
+               C237 496 238 478 239 461
+               L242 410
+               C243 390 239 378 228 374 Z"/>
+      ${front?`
+        <path d="M137 390 C146 401 151 414 153 430 M223 390 C214 401 209 414 207 430" class="bodymap-anatomy-line"/>
+      `:''}
+    </g>
+
+    <g ${attrs('calves')}>
+      <path d="M132 498
+               C141 492 150 499 151 514
+               L148 565
+               C144 580 136 586 128 579
+               C123 566 125 549 126 535
+               C126 519 127 505 132 498 Z"/>
+      <path d="M228 498
+               C219 492 210 499 209 514
+               L212 565
+               C216 580 224 586 232 579
+               C237 566 235 549 234 535
+               C234 519 233 505 228 498 Z"/>
+    </g>
+
+    <g ${attrs('ankles')}>
+      <path d="M126 568 C134 564 143 568 147 578 L145 597 C138 607 126 607 120 598 C119 586 121 575 126 568 Z"/>
+      <path d="M234 568 C226 564 217 568 213 578 L215 597 C222 607 234 607 240 598 C241 586 239 575 234 568 Z"/>
+    </g>
+  </svg>`;
+};
+
+/* V6: "vrai corps" = davantage d'espace utile et moins d'effet schéma. */
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});

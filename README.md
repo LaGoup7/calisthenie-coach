@@ -60,3 +60,10 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Confiance basée sur couverture des données + niveau de preuve (déclaré / séance / test).
 - Panneau de droite : niveau provisoire, données disponibles, données manquantes et CTA pour compléter la zone.
 - Corps agrandi et simplification des contours pour supprimer l’effet mannequin articulé.
+
+
+## V10.104
+- Body Map V6 : silhouette humaine anatomique stylisée, plus proche d’un vrai corps.
+- Base corporelle neutre continue et overlays de données séparés.
+- Proportions, torse, bras, mains, bassin, cuisses, mollets et pieds redessinés.
+- Conservation de la logique V5 : faible confiance = couleur neutre/bleutée, pas de faux diagnostic visuel.
