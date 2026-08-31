@@ -7767,6 +7767,7 @@ function v1095RenderProgressOverview(){
           ${v1095ZoneDetailCard(mode,view)}
           <div class="body-overview-legend">
             <span><i class="tone-none"></i>À évaluer</span>
+            <span><i class="tone-partial"></i>Données limitées</span>
             <span><i class="tone-low"></i>Fragile</span>
             <span><i class="tone-watch"></i>À travailler</span>
             <span><i class="tone-ok"></i>Correct</span>
@@ -7820,6 +7821,230 @@ bindEvents=function(){
 /* V10.99 · Runtime scope + Service Worker fix                                */
 /* V10.95 body overview helpers moved to global scope.                         */
 /* ========================================================================== */
+
+
+/* ========================================================================== */
+/* V10.100 · Body Map V2 — anatomie + confiance + statuts fiables             */
+/* ========================================================================== */
+
+v1095Avg=function(){
+  const vals=[...arguments]
+    .filter(v=>v!==null && v!==undefined && v!=='')
+    .map(v=>Number(v))
+    .filter(v=>Number.isFinite(v)&&v>=0);
+  return vals.length?Math.round(vals.reduce((s,v)=>s+v,0)/vals.length):null;
+};
+
+function v10100ZoneInputs(id,mode='overall'){
+  const cap=key=>{const x=capabilityScores().find(c=>c.id===key);return x?.assessed?{label:x.label,value:Number(x.score),kind:'cap'}:null;};
+  const mob=key=>{const x=mobilityProfiles().find(c=>c.id===key);return x?.assessed?{label:x.label,value:Number(x.score),kind:'mob'}:null;};
+  const legs=()=>{const x=v1095LegsScore();return x==null?null:{label:'Jambes',value:x,kind:'cap'};};
+  const sources={
+    shoulders:[cap('push'),cap('balance'),mob('shoulders')],
+    chest:[cap('push'),mob('thorax')],
+    back:[cap('pull'),cap('explosive'),mob('thorax')],
+    arms:[cap('pull'),cap('push')],
+    forearms:[cap('grip')],
+    wrists:[cap('grip'),cap('balance'),mob('wrists')],
+    core:[cap('core'),cap('balance')],
+    hips:[legs(),cap('core'),mob('hips')],
+    quads:[legs(),mob('hips')],
+    hamstrings:[legs(),mob('posterior')],
+    calves:[legs(),mob('ankles')],
+    ankles:[mob('ankles'),legs()]
+  };
+  let rows=(sources[id]||[]).filter(Boolean);
+  if(mode==='strength') rows=rows.filter(x=>x.kind==='cap');
+  if(mode==='mobility') rows=rows.filter(x=>x.kind==='mob');
+  return rows;
+}
+function v10100Confidence(id,mode='overall'){
+  const count=v10100ZoneInputs(id,mode).length;
+  if(!count)return {id:'none',label:'Aucune donnée',score:0};
+  if(count===1)return {id:'low',label:'Faible',score:35};
+  if(count===2)return {id:'medium',label:'Moyenne',score:68};
+  return {id:'high',label:'Élevée',score:92};
+}
+function v10100ZoneStatus(score,confidence){
+  if(score==null || confidence?.id==='none') return {id:'none',label:'À évaluer'};
+  if(confidence?.id==='low') return {id:'partial',label:'Données limitées'};
+  return v1095BodyTone(score);
+}
+function v10100ZoneData(id,mode='overall'){
+  const lookup=v1095BodyZoneLookup(mode);
+  const zone=lookup[id];
+  if(!zone)return null;
+  const confidence=v10100Confidence(id,mode);
+  return {...zone,confidence,status:v10100ZoneStatus(zone.score,confidence),inputs:v10100ZoneInputs(id,mode)};
+}
+function v10100ZoneClass(z){
+  if(!z)return 'tone-none';
+  if(z.status?.id==='none')return 'tone-none';
+  if(z.status?.id==='partial')return 'tone-partial';
+  return `tone-${z.tone?.id||'none'}`;
+}
+function v10100InputText(rows=[]){
+  if(!rows.length)return 'Aucune donnée fiable enregistrée pour cette zone.';
+  return rows.map(x=>`${x.label} ${Math.round(x.value)}/100`).join(' · ');
+}
+
+v1095BodyMapSVG=function(view='front',mode='overall',selectedId=''){
+  const ids=view==='back'
+    ?['shoulders','back','arms','forearms','wrists','core','hips','hamstrings','calves','ankles']
+    :['shoulders','chest','arms','forearms','wrists','core','hips','quads','calves','ankles'];
+  const zones=Object.fromEntries(ids.map(id=>[id,v10100ZoneData(id,mode)]));
+  const z=id=>zones[id]||{id,label:id,score:null,status:{id:'none',label:'À évaluer'},confidence:{label:'Aucune donnée'}};
+  const attrs=id=>`class="bodymap-zone ${v10100ZoneClass(z(id))}${selectedId===id?' selected':''}" data-body-zone="${id}" role="button" tabindex="0" aria-label="${esc(z(id).label)} ${z(id).score!=null?z(id).score+' sur 100':z(id).status.label}"`;
+  const front=view==='front';
+
+  return `<svg class="bodymap-figure bodymap-v2" viewBox="0 0 260 470" role="img" aria-label="Carte corporelle ${front?'face':'dos'}">
+    <defs>
+      <filter id="bodyGlow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-opacity=".16"/></filter>
+      <linearGradient id="bodyNeutral" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef2f7"/><stop offset="1" stop-color="#dde4ee"/></linearGradient>
+    </defs>
+
+    <text x="130" y="18" text-anchor="middle" class="bodymap-caption">${front?'VUE FACE':'VUE DOS'}</text>
+    <ellipse cx="130" cy="53" rx="23" ry="28" class="bodymap-base"/>
+    <path d="M118 80 Q130 87 142 80 L145 96 Q130 103 115 96 Z" class="bodymap-base"/>
+
+    <g ${attrs('shoulders')}>
+      <path d="M82 99 Q103 88 118 94 L142 94 Q157 88 178 99 L169 123 Q151 112 142 116 L118 116 Q109 112 91 123 Z"/>
+      <ellipse cx="79" cy="112" rx="17" ry="23"/>
+      <ellipse cx="181" cy="112" rx="17" ry="23"/>
+    </g>
+
+    ${front?`
+      <g ${attrs('chest')}>
+        <path d="M98 116 Q112 109 128 117 L128 158 Q111 162 98 150 Z"/>
+        <path d="M132 117 Q148 109 162 116 L162 150 Q149 162 132 158 Z"/>
+      </g>
+    `:`
+      <g ${attrs('back')}>
+        <path d="M96 115 Q130 104 164 115 L171 176 Q154 196 130 200 Q106 196 89 176 Z"/>
+        <path d="M104 122 Q117 137 130 143 Q143 137 156 122 L150 174 Q141 184 130 188 Q119 184 110 174 Z" opacity=".22"/>
+      </g>
+    `}
+
+    <g ${attrs('arms')}>
+      <path d="M68 128 Q79 119 89 127 L84 205 Q78 214 70 207 Z"/>
+      <path d="M192 128 Q181 119 171 127 L176 205 Q182 214 190 207 Z"/>
+    </g>
+
+    <g ${attrs('forearms')}>
+      <path d="M70 211 Q78 205 84 213 L79 286 Q74 294 68 287 Z"/>
+      <path d="M190 211 Q182 205 176 213 L181 286 Q186 294 192 287 Z"/>
+    </g>
+
+    <g ${attrs('wrists')}>
+      <ellipse cx="72" cy="298" rx="10" ry="15"/>
+      <ellipse cx="188" cy="298" rx="10" ry="15"/>
+    </g>
+
+    <g ${attrs('core')}>
+      <path d="M106 160 Q130 168 154 160 L157 229 Q148 245 130 248 Q112 245 103 229 Z"/>
+      ${front?`
+        <path d="M112 174 H128 V199 H110 Z" opacity=".22"/>
+        <path d="M132 174 H148 L150 199 H132 Z" opacity=".22"/>
+        <path d="M110 203 H128 V230 H107 Z" opacity=".22"/>
+        <path d="M132 203 H150 L153 230 H132 Z" opacity=".22"/>
+      `:`<path d="M111 177 Q130 188 149 177 L151 225 Q139 237 130 239 Q121 237 109 225 Z" opacity=".18"/>`}
+    </g>
+
+    <g ${attrs('hips')}>
+      ${front
+        ?`<path d="M103 233 Q130 247 157 233 L161 267 Q145 278 130 278 Q115 278 99 267 Z"/>`
+        :`<path d="M99 232 Q113 226 130 241 Q147 226 161 232 L164 270 Q148 283 130 279 Q112 283 96 270 Z"/>`}
+    </g>
+
+    <g ${attrs(front?'quads':'hamstrings')}>
+      <path d="M101 271 Q114 263 126 276 L121 360 Q111 371 101 359 Z"/>
+      <path d="M159 271 Q146 263 134 276 L139 360 Q149 371 159 359 Z"/>
+      ${front?`
+        <path d="M108 280 L120 285 L116 347 L105 351 Z" opacity=".18"/>
+        <path d="M152 280 L140 285 L144 347 L155 351 Z" opacity=".18"/>
+      `:''}
+    </g>
+
+    <g ${attrs('calves')}>
+      <path d="M102 365 Q112 356 121 366 L117 423 Q110 434 103 424 Z"/>
+      <path d="M158 365 Q148 356 139 366 L143 423 Q150 434 157 424 Z"/>
+    </g>
+
+    <g ${attrs('ankles')}>
+      <path d="M104 425 H117 L116 447 Q108 455 100 449 Z"/>
+      <path d="M143 425 H156 L160 449 Q152 455 144 447 Z"/>
+    </g>
+
+    <path d="M96 113 Q91 152 94 199 Q97 238 96 271 Q91 326 99 364 Q98 405 103 426
+             M164 113 Q169 152 166 199 Q163 238 164 271 Q169 326 161 364 Q162 405 157 426"
+      class="bodymap-outline" fill="none"/>
+    <path d="M130 111 L130 274" class="bodymap-midline"/>
+  </svg>`;
+};
+
+v1095ZoneDetailCard=function(mode='overall',view='front'){
+  const base=v1095SelectedBodyZone(mode,view);
+  const zone=base?v10100ZoneData(base.id,mode):null;
+  if(!zone)return '';
+  const actionLabel=zone.action==='flexibility'?'Voir mobilité':zone.action==='measurements'?'Voir mesures':'Voir capacités';
+  const score=zone.score!=null?`${zone.score}<small>/100</small>`:'—';
+  return `<article class="body-zone-detail card body-zone-detail-v2">
+    <div class="body-zone-detail-head">
+      <div><div class="kicker">Zone sélectionnée</div><h3>${esc(zone.label)}</h3></div>
+      <div class="body-zone-score ${v10100ZoneClass(zone)}">${score}</div>
+    </div>
+
+    <div class="body-zone-state-grid">
+      <div><span>Statut</span><strong>${esc(zone.status.label)}</strong></div>
+      <div><span>Confiance</span><strong class="confidence-${zone.confidence.id}">${esc(zone.confidence.label)}</strong></div>
+    </div>
+
+    <p class="body-zone-description">${esc(zone.desc||'')}</p>
+
+    <div class="body-zone-sources">
+      <span>Basé sur</span>
+      <strong>${esc(v10100InputText(zone.inputs||[]))}</strong>
+    </div>
+
+    ${zone.score==null?`
+      <div class="body-zone-empty-note">
+        <strong>Pas encore de score.</strong>
+        <span>KINETIK attend au moins une donnée réellement enregistrée avant de colorer cette zone.</span>
+      </div>`:''}
+
+    <div class="body-zone-mini-actions">
+      <button class="btn btn-secondary compact" data-body-zone-cycle="prev">← Zone</button>
+      <button class="btn btn-secondary compact" data-body-zone-cycle="next">Zone →</button>
+      <button class="btn btn-outline compact" ${v1095ActionButton(zone.action)}>${actionLabel} →</button>
+    </div>
+  </article>`;
+};
+
+function v10100PriorityZones(mode='overall',limit=3){
+  return Object.values(v1095BodyZoneLookup(mode))
+    .map(z=>v10100ZoneData(z.id,mode))
+    .filter(z=>z && z.score!=null)
+    .sort((a,b)=>{
+      const aPartial=a.status.id==='partial'?1:0, bPartial=b.status.id==='partial'?1:0;
+      return bPartial-aPartial || a.score-b.score;
+    }).slice(0,limit);
+}
+function v10100StrongZones(mode='overall',limit=3){
+  return Object.values(v1095BodyZoneLookup(mode))
+    .map(z=>v10100ZoneData(z.id,mode))
+    .filter(z=>z && z.score!=null && z.confidence.id!=='low')
+    .sort((a,b)=>b.score-a.score).slice(0,limit);
+}
+v1095PriorityZones=function(mode='overall',limit=3){return v10100PriorityZones(mode,limit);};
+v1095StrongZones=function(mode='overall',limit=3){return v10100StrongZones(mode,limit);};
+
+v1095ZoneChip=function(z){
+  const zone=v10100ZoneData(z.id,state.progressBodyMode||'overall')||z;
+  return `<button class="body-overview-chip ${v10100ZoneClass(zone)}" data-body-zone="${zone.id}">
+    <span>${esc(zone.label)}</span>
+    <strong>${zone.score!=null?zone.score+'/100':zone.status?.label||'À évaluer'}</strong>
+  </button>`;
+};
 
 applyAppTheme();
 

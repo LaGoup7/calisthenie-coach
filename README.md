@@ -37,3 +37,11 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Correctif critique de déploiement : index.html, app.js, styles.css et vercel.json sont de nouveau à la racine du ZIP.
 - Le ZIP v10.96/v10.97 contenait par erreur un dossier parent supplémentaire, pouvant produire une page blanche sur Vercel.
 - Cache PWA incrémenté pour forcer le rechargement des bons fichiers.
+
+
+## V10.100
+- Corps humain V2 : silhouette plus anatomique et zones mieux séparées.
+- Correction importante : absence de données ≠ 0/100.
+- Ajout de la confiance par zone : aucune / faible / moyenne / élevée.
+- Panneau zone enrichi avec les données qui alimentent le score.
+- Nouveau statut « Données limitées » pour éviter de classer trop vite une zone comme faible.
