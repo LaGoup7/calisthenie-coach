@@ -3599,3 +3599,19 @@ body{
   .body-overview-model{max-width:none}
   .bodymap-v7{max-width:100%}
 }
+
+/* ==========================================================================
+   V10.106 · Body Map V7.1 — arm alignment polish
+   ========================================================================== */
+.bodymap-v7 .v7-zone.tone-partial>path{
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.bodymap-v7 .v7-zone[data-body-zone="arms"]>path,
+.bodymap-v7 .v7-zone[data-body-zone="forearms"]>path{
+  vector-effect:non-scaling-stroke;
+}
+.bodymap-v7 .v7-zone[data-body-zone="arms"].selected>path,
+.bodymap-v7 .v7-zone[data-body-zone="forearms"].selected>path{
+  stroke-width:2.35;
+}

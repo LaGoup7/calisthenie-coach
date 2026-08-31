@@ -76,3 +76,11 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Anatomie discrète face/dos et overlays mieux ajustés aux volumes du corps.
 - Données limitées rendues par hachure indigo subtile au lieu d'une fausse couleur de niveau.
 - Zone sélectionnée renforcée et zones secondaires atténuées.
+
+
+## V10.106
+- Correction ciblée du Body Map Premium : overlays bras/avant-bras/poignets réalignés sur la silhouette.
+- Les biceps/triceps suivent maintenant le contour du bras jusqu’au coude.
+- Les avant-bras démarrent au coude anatomique et suivent le shell jusqu’au poignet.
+- Les mains/poignets sont recentrés sur la silhouette réelle.
+- Deltoïdes légèrement resserrés pour supprimer l’effet de zones flottantes.
