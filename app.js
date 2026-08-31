@@ -6529,6 +6529,43 @@ renderProgress=function(){
     <div class="p80-content">${content}</div>`, "progress");
 };
 
+
+/* ========================================================================== */
+/* V10.81 · Actionable Progress Insight                                       */
+/* Problem → recommendation → supporting context                              */
+/* ========================================================================== */
+function v1081InsightSupportRow(s){
+  const items=[
+    {label:'Force',value:s.force?.value||'—',symbol:s.force?.symbol||'—'},
+    {label:'Skills',value:s.skills?.value||'—',symbol:s.skills?.symbol||'—'},
+    {label:'Charge',value:s.load?.value||'—',symbol:s.load?.symbol||'—'}
+  ];
+  return `<div class="p81-insight-support">${items.map(x=>`<span><b>${x.label}</b>${x.symbol} ${esc(String(x.value))}</span>`).join('')}</div>`;
+}
+v1080ProgressInsight=function(){
+  const i=v1060InsightDecision(30),s=i.state,lim=i.limiter?.limiter;
+  const issue=lim?.label||i.next?.label||'Progression générale';
+  let reason=i.text||'KINETIK rassemble tes dernières données pour identifier le point qui mérite le plus ton attention.';
+  let advice=i.next?.detail||'Continue ton cycle actuel et consolide les performances enregistrées.';
+  if(lim){
+    reason=`${issue} est actuellement le facteur le moins avancé parmi les dimensions mesurées de ton objectif.`;
+  }
+  return `<section class="p81-insight ${i.tone}">
+    <div class="p81-insight-head">
+      <div><div class="kicker">À surveiller maintenant</div><h2>${esc(issue)}</h2></div>
+      <button class="p80-text-action" data-progress-tab="performance">Voir pourquoi →</button>
+    </div>
+    <p class="p81-insight-reason">${esc(reason)}</p>
+    <div class="p81-advice">
+      <span>Ce que KINETIK te conseille</span>
+      <strong>${esc(i.next?.label||'Continuer le cycle')}</strong>
+      <p>${esc(advice)}</p>
+      <button ${i.next?.action==='assessment'?'data-view="assessment"':i.next?.action==='performance'?'data-progress-tab="performance"':'data-view="today"'}>Ouvrir →</button>
+    </div>
+    ${v1081InsightSupportRow(s)}
+  </section>`;
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});

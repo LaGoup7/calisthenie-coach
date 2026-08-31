@@ -3295,3 +3295,18 @@ body{
 .p80-empty{font-size:.64rem;color:var(--muted);padding:18px 0}
 @media(max-width:720px){.p80-week{grid-template-columns:1fr}.p80-week-stats>div{text-align:left}.p80-record-grid{grid-template-columns:repeat(2,1fr)}.p80-history-head{grid-template-columns:1fr}.p80-history-stats>div{text-align:left}}
 @media(max-width:460px){.p80-week h1{font-size:1.45rem}.p80-week-stats{gap:10px}.p80-week-stats strong{font-size:1.08rem}.p80-week-stats span{font-size:.55rem}.p80-signal-row{grid-template-columns:1fr}.p80-signal-row>div{border-right:0;border-bottom:1px solid var(--line)}.p80-signal-row>div:last-child{border-bottom:0}.p80-insight-next{grid-template-columns:1fr}.p80-insight-next button{justify-self:start}.p80-main-trends button{grid-template-columns:1fr auto}.p80-main-trends small{grid-column:1/-1}.p80-record-grid{grid-template-columns:1fr 1fr}.p80-volume-kpis{grid-template-columns:1fr 1fr}.p80-volume-kpis>div:nth-child(2){border-right:0}.p80-volume-kpis>div:nth-child(-n+2){border-bottom:1px solid var(--line)}.p80-history-stats{gap:14px}.p80-tests>summary{grid-template-columns:1fr}.p80-tests>summary>b{justify-self:start}}
+
+/* v10.81 · Actionable Progress Insight */
+.p81-insight{padding:25px 0;border-bottom:2px solid var(--line)}
+.p81-insight-head{display:flex;justify-content:space-between;align-items:end;gap:16px}
+.p81-insight h2{font-size:1.28rem;margin:4px 0}
+.p81-insight-reason{font-size:.76rem;line-height:1.5;color:var(--muted);max-width:760px;margin:10px 0 16px}
+.p81-advice{display:grid;grid-template-columns:1fr auto;gap:3px 16px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.p81-advice>span{grid-column:1/-1;font-size:.55rem;color:var(--muted)}
+.p81-advice>strong{font-size:.82rem}
+.p81-advice>p{grid-column:1;font-size:.62rem;color:var(--muted);margin:2px 0 0;line-height:1.45}
+.p81-advice>button{grid-column:2;grid-row:2/4;align-self:center;background:transparent;color:var(--text);font-size:.63rem;font-weight:850}
+.p81-insight-support{display:flex;gap:16px;flex-wrap:wrap;padding-top:11px}
+.p81-insight-support span{font-size:.56rem;color:var(--muted)}
+.p81-insight-support b{color:var(--text);margin-right:5px}
+@media(max-width:520px){.p81-insight-head{align-items:start}.p81-advice{grid-template-columns:1fr}.p81-advice>button{grid-column:1;grid-row:auto;justify-self:start;margin-top:4px}.p81-insight-support{gap:10px}}
