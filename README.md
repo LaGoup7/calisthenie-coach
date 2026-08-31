@@ -67,3 +67,12 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Base corporelle neutre continue et overlays de données séparés.
 - Proportions, torse, bras, mains, bassin, cuisses, mollets et pieds redessinés.
 - Conservation de la logique V5 : faible confiance = couleur neutre/bleutée, pas de faux diagnostic visuel.
+
+
+## V10.105
+- Body Map Premium V7 : silhouette athlétique entièrement redessinée.
+- Base corporelle neutre distincte des overlays de données.
+- Proportions plus humaines : tête, cou, cage thoracique, bassin, bras, mains, cuisses, mollets et pieds.
+- Anatomie discrète face/dos et overlays mieux ajustés aux volumes du corps.
+- Données limitées rendues par hachure indigo subtile au lieu d'une fausse couleur de niveau.
+- Zone sélectionnée renforcée et zones secondaires atténuées.
