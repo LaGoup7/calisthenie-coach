@@ -3655,3 +3655,10 @@ body{
 .body-zone-method{display:grid;gap:4px;padding:10px 12px;border-radius:14px;background:var(--surface-2);margin:8px 0}
 .body-zone-method span{font-size:.68rem;color:var(--muted)}
 .body-zone-method strong{font-size:.76rem;line-height:1.42;font-weight:650}
+
+/* V10.112 · Body 3D dezoom */
+.body3d-stage{padding:14px 14px 10px}
+.body3d-canvas{transform:translateZ(0)}
+@media (max-width: 760px){
+  .body3d-stage{min-height:520px}
+}

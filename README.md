@@ -129,3 +129,10 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Les cartes du Body Map indiquent maintenant explicitement si le score est une estimation dérivée, une mesure de mobilité ou une lecture combinée.
 - Pas de faux score séparé épaule gauche/droite en force sans données unilatérales.
 - Audit transversal développeur exposé dans window.__KINETIK_BODY_SYSTEM_AUDIT__.
+
+
+## V10.112 — Body 3D dezoom
+- Vue 3D légèrement dézoomée pour mieux voir l’ensemble du corps.
+- Caméra reculée et légèrement recentrée verticalement.
+- Limites de zoom molette ajustées pour conserver plus de recul par défaut.
+- Petit ajustement de framing sur mobile.
