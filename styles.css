@@ -3240,3 +3240,11 @@ body{
 .planning-no-kinetik-v1076{font-size:.68rem;color:var(--muted);padding:10px 0}
 @media(max-width:760px){.planning-day-content-v1076{margin-left:0}.planning-day-v1076.today{padding-left:12px}.planning-session-v1076{padding:16px}.planning-session-title-v1076 h3{font-size:1.16rem}.planning-preview-v1076{gap:5px 14px}.planning-preview-v1076 span{font-size:.73rem}}
 @media(max-width:430px){.planning-week-header-v1076{grid-template-columns:34px 1fr 34px;padding:18px 0}.planning-week-header-v1076 h1{font-size:1.3rem}.planning-week-header-v1076 p{font-size:.64rem}.planning-day-v1076{padding:22px 0 24px}.planning-day-v1076.today{padding-left:10px}.planning-date-v1076>strong{font-size:1.45rem}.planning-date-v1076>span{font-size:.64rem}.planning-date-v1076>em{font-size:.59rem}.planning-day-add-v1076{width:34px;height:34px}.planning-session-v1076{border-radius:15px;padding:15px 14px}.planning-session-title-v1076 h3{font-size:1.08rem}.planning-session-title-v1076 p{font-size:.69rem}.planning-preview-v1076{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}.planning-preview-v1076 span{font-size:.69rem}.planning-session-meta-v1076 span{font-size:.61rem}.planning-exercises-action-v1076{font-size:.7rem;padding-top:11px}.planning-mobility-v1076 span,.planning-mobility-v1076 strong{font-size:.62rem}}
+
+/* v10.78 · Programmes heatmap cleanup */
+.cycle-heat-card-v1078 .cycle-heat-head-v1078{align-items:flex-start}
+.cycle-heat-head-v1078>div:first-child>p{font-size:.62rem;line-height:1.4;color:var(--muted);margin:4px 0 0;max-width:520px}
+.cycle-adherence-v1078{display:grid;text-align:right;flex:0 0 auto}.cycle-adherence-v1078 strong{font-size:1.35rem;line-height:1}.cycle-adherence-v1078 span{font-size:.55rem;color:var(--muted);margin-top:3px}
+.cycle-heat-summary-v1078{margin-top:4px}
+.cycle-heat-note-v1078{font-size:.56rem;line-height:1.45;color:var(--muted);margin:12px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+@media(max-width:520px){.cycle-heat-head-v1078{display:grid!important;grid-template-columns:1fr auto;gap:10px}.cycle-heat-head-v1078>div:first-child>p{font-size:.58rem}.cycle-adherence-v1078 strong{font-size:1.2rem}.cycle-heat-summary-v1078{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}.cycle-heat-summary-v1078 span:last-child{grid-column:1/-1}}

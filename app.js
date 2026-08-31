@@ -6226,6 +6226,57 @@ renderWeek=function(){
 
 /* V10.77 · Programmes heatmap moved to top for immediate cycle regularity visibility. */
 
+
+/* ========================================================================== */
+/* V10.78 · Planning consistency cleanup                                      */
+/* Heatmap = regularity only. No XP/rank implication.                         */
+/* ========================================================================== */
+const _renderCycleHeatmapV1078=renderCycleHeatmap;
+renderCycleHeatmap=function(weeks=16){
+  const today=new Date(),end=mondayDate(today);end.setDate(end.getDate()+6);
+  const start=new Date(end);start.setDate(start.getDate()-(weeks*7-1));
+  const cells=[],counts={done:0,'done-express':0,'rest-ok':0,missed:0,'rest-broken':0};
+  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+    const st=dailyCycleStatus(new Date(d));
+    if(counts[st.status]!=null)counts[st.status]++;
+    const label=st.status==='done'?'séance complète':
+      st.status==='done-express'?'séance express':
+      st.status==='rest-ok'?'repos respecté':
+      st.status==='rest-planned'?'repos prévu':
+      st.status==='rest-broken'?'repos interrompu':
+      st.status==='missed'?'séance manquée':
+      st.status==='planned'?'séance prévue':
+      st.status==='untracked'?'avant suivi':'à venir';
+    const title=`${st.key} · ${st.cycle.name} · ${label}`;
+    cells.push(`<i class="cycle-heat-cell ${st.status}" title="${esc(title)}" aria-label="${esc(title)}"></i>`);
+  }
+  const completed=counts.done+counts['done-express'],planned=completed+counts.missed;
+  const adherence=planned?Math.round(completed/planned*100):null;
+  return `<section class="card cycle-heat-card cycle-heat-card-v1078">
+    <div class="section-head cycle-heat-head-v1078">
+      <div><div class="kicker">Régularité · ${weeks} semaines</div><h2>Historique du cycle</h2><p>Un aperçu simple de la façon dont le programme a réellement été suivi.</p></div>
+      ${adherence!=null?`<div class="cycle-adherence-v1078"><strong>${adherence}%</strong><span>séances suivies</span></div>`:''}
+    </div>
+    <div class="cycle-heat-summary cycle-heat-summary-v1078">
+      <span><strong>${completed}</strong> séances terminées</span>
+      <span><strong>${counts['rest-ok']}</strong> repos respectés</span>
+      <span><strong>${counts.missed}</strong> séances manquées</span>
+    </div>
+    <div class="cycle-heat-wrap">
+      <div class="cycle-heat-days"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="cycle-heat-grid">${cells.join('')}</div>
+    </div>
+    <div class="cycle-heat-legend">
+      <span><i class="done"></i>Complète</span>
+      <span><i class="done-express"></i>Express</span>
+      <span><i class="rest-ok"></i>Repos</span>
+      <span><i class="missed"></i>Manquée</span>
+      <span><i class="rest-broken"></i>Repos interrompu</span>
+    </div>
+    <p class="cycle-heat-note-v1078">Cette visualisation mesure uniquement la régularité du cycle. Elle n’influence pas ton rang KINETIK, qui reste basé sur les performances validées.</p>
+  </section>`;
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
