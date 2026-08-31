@@ -47,8 +47,8 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Nouveau statut « Données limitées » pour éviter de classer trop vite une zone comme faible.
 
 
-## V10.101
+## V10.102
 - Body Map V3 : silhouette plus naturelle et continue.
 - Zones musculaires mieux intégrées à la silhouette, face et dos.
 - Sélection conservée avec halo violet, score et confiance inchangés.
-- Cache PWA et versions des assets passés à 10.101.
+- Cache PWA et versions des assets passés à 10.102.

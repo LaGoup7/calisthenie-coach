@@ -7888,6 +7888,7 @@ function v10100InputText(rows=[]){
   return rows.map(x=>`${x.label} ${Math.round(x.value)}/100`).join(' · ');
 }
 
+
 v1095BodyMapSVG=function(view='front',mode='overall',selectedId=''){
   const ids=view==='back'
     ?['shoulders','back','arms','forearms','wrists','core','hips','hamstrings','calves','ankles']
@@ -7897,129 +7898,130 @@ v1095BodyMapSVG=function(view='front',mode='overall',selectedId=''){
   const attrs=id=>`class="bodymap-zone ${v10100ZoneClass(z(id))}${selectedId===id?' selected':''}" data-body-zone="${id}" role="button" tabindex="0" aria-label="${esc(z(id).label)} ${z(id).score!=null?z(id).score+' sur 100':z(id).status.label}"`;
   const front=view==='front';
 
-  return `<svg class="bodymap-figure bodymap-v3" viewBox="0 0 300 500" role="img" aria-label="Carte corporelle ${front?'face':'dos'}">
+  return `<svg class="bodymap-figure bodymap-v4" viewBox="0 0 320 560" role="img" aria-label="Carte corporelle ${front?'face':'dos'}">
     <defs>
-      <filter id="bodyGlowV3" x="-30%" y="-30%" width="160%" height="160%">
-        <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#4f46e5" flood-opacity=".22"/>
+      <filter id="bodyGlowV4" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#4f46e5" flood-opacity=".20"/>
       </filter>
-      <linearGradient id="bodyShell" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#f3f6fb"/>
+      <linearGradient id="bodyShellV4" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f8fbff"/>
         <stop offset="1" stop-color="#dde5f0"/>
       </linearGradient>
-      <linearGradient id="bodyShellDark" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#e8eef7"/>
-        <stop offset="1" stop-color="#d5deeb"/>
+      <linearGradient id="bodyHeadV4" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#eef3fa"/>
+        <stop offset="1" stop-color="#dbe4ef"/>
+      </linearGradient>
+      <linearGradient id="bodyLimbV4" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#eef3fa"/>
+        <stop offset="1" stop-color="#d7e0eb"/>
       </linearGradient>
     </defs>
 
-    <text x="150" y="20" text-anchor="middle" class="bodymap-caption">${front?'VUE FACE':'VUE DOS'}</text>
+    <text x="160" y="20" text-anchor="middle" class="bodymap-caption">${front?'VUE FACE':'VUE DOS'}</text>
 
-    <g class="bodymap-shell">
-      <ellipse cx="150" cy="54" rx="25" ry="31" class="bodymap-base bodymap-head"/>
-      <path d="M139 84 Q150 91 161 84 L163 102 Q150 106 137 102 Z" class="bodymap-base"/>
-      <path d="M99 103
-               Q114 90 135 94
-               L165 94
-               Q186 90 201 103
-               Q207 109 211 120
-               L207 161
-               Q204 198 199 227
-               Q195 250 176 262
-               Q165 269 150 271
-               Q135 269 124 262
-               Q105 250 101 227
-               Q96 198 93 161
-               L89 120
-               Q93 109 99 103 Z" class="bodymap-shell-torso"/>
-      <path d="M122 262 Q150 280 178 262 L184 298 Q167 313 150 314 Q133 313 116 298 Z" class="bodymap-shell-pelvis"/>
-      <path d="M108 298 Q127 305 128 329 L124 390 Q121 430 116 461 Q112 469 104 463 Q103 425 99 388 Q96 353 96 326 Q97 307 108 298 Z" class="bodymap-shell-leg"/>
-      <path d="M192 298 Q173 305 172 329 L176 390 Q179 430 184 461 Q188 469 196 463 Q197 425 201 388 Q204 353 204 326 Q203 307 192 298 Z" class="bodymap-shell-leg"/>
-      <path d="M103 107 Q82 113 75 131 Q69 148 73 171 L79 219 Q82 240 90 272 Q92 280 100 277 Q105 271 103 258 L97 214 L102 161 Q105 132 103 107 Z" class="bodymap-shell-arm"/>
-      <path d="M197 107 Q218 113 225 131 Q231 148 227 171 L221 219 Q218 240 210 272 Q208 280 200 277 Q195 271 197 258 L203 214 L198 161 Q195 132 197 107 Z" class="bodymap-shell-arm"/>
-      <path d="M87 274 Q96 272 102 279 L108 352 Q109 366 100 376 Q90 376 86 366 L80 300 Q79 282 87 274 Z" class="bodymap-shell-arm"/>
-      <path d="M213 274 Q204 272 198 279 L192 352 Q191 366 200 376 Q210 376 214 366 L220 300 Q221 282 213 274 Z" class="bodymap-shell-arm"/>
+    <g class="bodymap-v4-shell">
+      <ellipse cx="160" cy="58" rx="28" ry="34" class="bodymap-head-shell"/>
+      <path d="M148 89 Q160 97 172 89 L176 109 Q160 114 144 109 Z" class="bodymap-neck-shell"/>
+      <path d="M110 116
+               Q126 101 147 104
+               L173 104
+               Q194 101 210 116
+               Q218 124 221 137
+               L218 170
+               Q216 214 208 247
+               Q200 279 181 292
+               Q171 298 160 299
+               Q149 298 139 292
+               Q120 279 112 247
+               Q104 214 102 170
+               L99 137
+               Q102 124 110 116 Z" class="bodymap-shell-torso"/>
+      <path d="M132 295 Q160 309 188 295 L194 325 Q180 339 160 341 Q140 339 126 325 Z" class="bodymap-shell-pelvis"/>
+      <path d="M102 127 Q84 136 78 157 Q74 175 78 198 L85 236 Q88 251 94 268 Q98 279 108 275 Q114 268 111 253 L108 209 L112 161 Q114 137 102 127 Z" class="bodymap-shell-arm"/>
+      <path d="M218 127 Q236 136 242 157 Q246 175 242 198 L235 236 Q232 251 226 268 Q222 279 212 275 Q206 268 209 253 L212 209 L208 161 Q206 137 218 127 Z" class="bodymap-shell-arm"/>
+      <path d="M95 272 Q106 270 112 280 L116 359 Q116 378 103 388 Q92 386 88 373 L82 303 Q81 282 95 272 Z" class="bodymap-shell-forearm"/>
+      <path d="M225 272 Q214 270 208 280 L204 359 Q204 378 217 388 Q228 386 232 373 L238 303 Q239 282 225 272 Z" class="bodymap-shell-forearm"/>
+      <path d="M132 326 Q145 318 150 334 L149 408 Q147 441 142 476 Q138 486 128 480 Q127 446 124 414 Q121 360 122 342 Q123 331 132 326 Z" class="bodymap-shell-leg"/>
+      <path d="M188 326 Q175 318 170 334 L171 408 Q173 441 178 476 Q182 486 192 480 Q193 446 196 414 Q199 360 198 342 Q197 331 188 326 Z" class="bodymap-shell-leg"/>
+      <path d="M129 481 Q139 478 145 484 L145 505 Q138 513 126 508 Q123 494 129 481 Z" class="bodymap-shell-foot"/>
+      <path d="M191 481 Q181 478 175 484 L175 505 Q182 513 194 508 Q197 494 191 481 Z" class="bodymap-shell-foot"/>
+      <ellipse cx="99" cy="404" rx="13" ry="18" class="bodymap-shell-hand"/>
+      <ellipse cx="221" cy="404" rx="13" ry="18" class="bodymap-shell-hand"/>
     </g>
 
     <g ${attrs('shoulders')}>
-      ${front
-        ?`<path d="M106 111 Q123 97 139 102 L161 102 Q177 97 194 111 L190 132 Q176 126 163 127 L137 127 Q124 126 110 132 Z"/>
-          <ellipse cx="106" cy="128" rx="19" ry="24"/>
-          <ellipse cx="194" cy="128" rx="19" ry="24"/>`
-        :`<path d="M104 110 Q121 97 138 102 L162 102 Q179 97 196 110 L190 133 Q176 128 162 128 L138 128 Q124 128 110 133 Z"/>
-          <ellipse cx="106" cy="128" rx="18" ry="23"/>
-          <ellipse cx="194" cy="128" rx="18" ry="23"/>`}
+      <path d="M116 121 Q133 108 149 112 L171 112 Q187 108 204 121 L198 143 Q183 137 168 137 L152 137 Q137 137 122 143 Z"/>
+      <ellipse cx="113" cy="140" rx="22" ry="27"/>
+      <ellipse cx="207" cy="140" rx="22" ry="27"/>
     </g>
 
     ${front?`
-      <g ${attrs('chest')}>
-        <path d="M116 130 Q131 120 145 129 L145 173 Q131 180 118 171 Z"/>
-        <path d="M184 130 Q169 120 155 129 L155 173 Q169 180 182 171 Z"/>
-      </g>
-    `:`
-      <g ${attrs('back')}>
-        <path d="M110 128 Q129 118 150 121 Q171 118 190 128 L197 172 Q193 211 178 228 Q166 241 150 245 Q134 241 122 228 Q107 211 103 172 Z"/>
-        <path d="M124 134 Q136 151 150 158 Q164 151 176 134 L171 208 Q162 219 150 223 Q138 219 129 208 Z" class="bodymap-subshape"/>
-      </g>
-    `}
+    <g ${attrs('chest')}>
+      <path d="M123 145 Q140 132 154 140 L154 195 Q138 202 124 191 Z"/>
+      <path d="M197 145 Q180 132 166 140 L166 195 Q182 202 196 191 Z"/>
+      <path d="M146 147 Q160 155 174 147" class="bodymap-muscle-line"/>
+    </g>`:`
+    <g ${attrs('back')}>
+      <path d="M118 141 Q139 129 160 132 Q181 129 202 141 L205 194 Q198 226 180 244 Q171 253 160 256 Q149 253 140 244 Q122 226 115 194 Z"/>
+      <path d="M132 149 Q144 168 160 175 Q176 168 188 149 L184 225 Q173 236 160 239 Q147 236 136 225 Z" class="bodymap-subshape"/>
+    </g>`}
 
     <g ${attrs('arms')}>
-      ${front
-        ?`<path d="M94 137 Q83 143 82 159 L85 215 Q87 231 98 240 Q108 235 108 221 L106 165 Q106 147 94 137 Z"/>
-          <path d="M206 137 Q217 143 218 159 L215 215 Q213 231 202 240 Q192 235 192 221 L194 165 Q194 147 206 137 Z"/>`
-        :`<path d="M95 139 Q84 148 84 164 L88 219 Q92 232 101 238 Q109 233 109 220 L105 164 Q104 150 95 139 Z"/>
-          <path d="M205 139 Q216 148 216 164 L212 219 Q208 232 199 238 Q191 233 191 220 L195 164 Q196 150 205 139 Z"/>`}
+      <path d="M101 156 Q90 164 89 181 L92 237 Q94 255 108 264 Q119 258 119 242 L117 185 Q117 166 101 156 Z"/>
+      <path d="M219 156 Q230 164 231 181 L228 237 Q226 255 212 264 Q201 258 201 242 L203 185 Q203 166 219 156 Z"/>
     </g>
 
     <g ${attrs('forearms')}>
-      <path d="M89 244 Q99 242 104 251 L108 320 Q108 337 97 347 Q88 345 84 334 L80 266 Q80 251 89 244 Z"/>
-      <path d="M211 244 Q201 242 196 251 L192 320 Q192 337 203 347 Q212 345 216 334 L220 266 Q220 251 211 244 Z"/>
+      <path d="M98 270 Q109 268 114 278 L118 355 Q118 372 105 382 Q94 380 90 367 L85 296 Q84 278 98 270 Z"/>
+      <path d="M222 270 Q211 268 206 278 L202 355 Q202 372 215 382 Q226 380 230 367 L235 296 Q236 278 222 270 Z"/>
     </g>
 
     <g ${attrs('wrists')}>
-      <ellipse cx="95" cy="359" rx="12" ry="18"/>
-      <ellipse cx="205" cy="359" rx="12" ry="18"/>
+      <ellipse cx="99" cy="404" rx="15" ry="20"/>
+      <ellipse cx="221" cy="404" rx="15" ry="20"/>
     </g>
 
     <g ${attrs('core')}>
-      ${front
-        ?`<path d="M120 177 Q135 186 150 186 Q165 186 180 177 L183 236 Q173 252 150 255 Q127 252 117 236 Z"/>
-          <path d="M132 191 H147 V215 H129 Z" class="bodymap-subshape"/>
-          <path d="M153 191 H168 V215 H153 Z" class="bodymap-subshape"/>
-          <path d="M129 219 H147 V244 H126 Z" class="bodymap-subshape"/>
-          <path d="M153 219 H171 L174 244 H153 Z" class="bodymap-subshape"/>`
-        :`<path d="M121 178 Q137 188 150 188 Q163 188 179 178 L182 234 Q171 250 150 253 Q129 250 118 234 Z"/>
-          <path d="M132 190 Q150 202 168 190 L170 235 Q160 243 150 245 Q140 243 130 235 Z" class="bodymap-subshape"/>`}
+      ${front?`
+        <path d="M128 198 Q144 207 160 207 Q176 207 192 198 L195 265 Q184 282 160 286 Q136 282 125 265 Z"/>
+        <rect x="143" y="214" width="14" height="24" rx="5" class="bodymap-subshape"/>
+        <rect x="163" y="214" width="14" height="24" rx="5" class="bodymap-subshape"/>
+        <rect x="139" y="243" width="16" height="25" rx="5" class="bodymap-subshape"/>
+        <rect x="165" y="243" width="16" height="25" rx="5" class="bodymap-subshape"/>
+        <path d="M148 198 Q160 204 172 198" class="bodymap-muscle-line"/>
+      `:`
+        <path d="M129 198 Q145 208 160 208 Q175 208 191 198 L194 264 Q183 279 160 283 Q137 279 126 264 Z"/>
+        <path d="M140 214 Q160 225 180 214 L182 259 Q171 268 160 270 Q149 268 138 259 Z" class="bodymap-subshape"/>
+      `}
     </g>
 
     <g ${attrs('hips')}>
-      ${front
-        ?`<path d="M120 257 Q135 268 150 270 Q165 268 180 257 L186 290 Q170 304 150 305 Q130 304 114 290 Z"/>`
-        :`<path d="M118 256 Q135 249 150 260 Q165 249 182 256 L188 292 Q171 309 150 307 Q129 309 112 292 Z"/>`}
+      <path d="M129 291 Q144 303 160 304 Q176 303 191 291 L198 320 Q181 335 160 336 Q139 335 122 320 Z"/>
     </g>
 
     <g ${attrs(front?'quads':'hamstrings')}>
-      <path d="M111 297 Q124 289 132 302 L130 384 Q125 397 114 396 Q106 384 105 366 L104 318 Q104 304 111 297 Z"/>
-      <path d="M189 297 Q176 289 168 302 L170 384 Q175 397 186 396 Q194 384 195 366 L196 318 Q196 304 189 297 Z"/>
-      ${front?`<path d="M116 308 L128 313 L126 374 L114 379 Z" class="bodymap-subshape"/>
-                <path d="M184 308 L172 313 L174 374 L186 379 Z" class="bodymap-subshape"/>`:''}
+      <path d="M133 325 Q145 320 150 333 L149 405 Q146 423 135 425 Q126 416 125 398 L124 346 Q124 332 133 325 Z"/>
+      <path d="M187 325 Q175 320 170 333 L171 405 Q174 423 185 425 Q194 416 195 398 L196 346 Q196 332 187 325 Z"/>
+      ${front?`<path d="M135 338 L148 343 L146 396 L133 402 Z" class="bodymap-subshape"/>
+               <path d="M185 338 L172 343 L174 396 L187 402 Z" class="bodymap-subshape"/>`:``}
     </g>
 
     <g ${attrs('calves')}>
-      <path d="M111 398 Q119 392 126 400 L123 454 Q118 466 109 462 Q104 452 105 436 Z"/>
-      <path d="M189 398 Q181 392 174 400 L177 454 Q182 466 191 462 Q196 452 195 436 Z"/>
+      <path d="M132 427 Q141 421 147 428 L145 478 Q140 490 130 486 Q125 475 126 460 Z"/>
+      <path d="M188 427 Q179 421 173 428 L175 478 Q180 490 190 486 Q195 475 194 460 Z"/>
     </g>
 
     <g ${attrs('ankles')}>
-      <path d="M110 456 H123 L121 474 Q114 482 104 476 Z"/>
-      <path d="M177 456 H190 L196 476 Q186 482 179 474 Z"/>
+      <path d="M129 481 Q140 478 146 484 L146 505 Q138 513 126 508 Q123 494 129 481 Z"/>
+      <path d="M191 481 Q180 478 174 484 L174 505 Q182 513 194 508 Q197 494 191 481 Z"/>
     </g>
 
-    <path d="M100 112 Q92 151 95 194 Q99 242 102 290 Q105 332 105 368 Q105 417 110 456
-             M200 112 Q208 151 205 194 Q201 242 198 290 Q195 332 195 368 Q195 417 190 456"
-      class="bodymap-outline" fill="none"/>
-    <path d="M150 116 L150 305" class="bodymap-midline"/>
+    <path d="M106 125 Q95 166 98 214 Q101 268 108 322 Q111 353 111 392 Q111 438 125 480
+             M214 125 Q225 166 222 214 Q219 268 212 322 Q209 353 209 392 Q209 438 195 480" class="bodymap-outline" fill="none"/>
+    <path d="M160 115 L160 338" class="bodymap-midline"/>
   </svg>`;
 };
+
 
 v1095ZoneDetailCard=function(mode='overall',view='front'){
   const base=v1095SelectedBodyZone(mode,view);
