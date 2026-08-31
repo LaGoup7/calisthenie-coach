@@ -6660,6 +6660,80 @@ renderProgressVolume=function(){
     .replace(/Quick Log/g,'enregistrement rapide');
 };
 
+
+/* ========================================================================== */
+/* V10.83 · Étape 2 — Recommandations par contexte                            */
+/* Aujourd’hui = focus d’exécution · Planning = importance · Mobilité = zone  */
+/* Progression = analyse · Capacités = données, pas un second coach.           */
+/* ========================================================================== */
+
+/* TODAY — one coaching voice only: execute today's session. */
+renderTodayCoachStrip=function(){
+  const d=v1060PrimaryExerciseDecision(),r=v1060ReadinessState(),a=d.workout?.coachAdaptation;
+  const adjusted=a&&a.mode!=='normal';
+  return `<section class="today-coach-strip mode-${r.mode} today-focus-v1083">
+    <div class="today-coach-main">
+      <div class="kicker">Focus du jour</div>
+      <strong>${esc(d.label)}</strong>
+      <span>${esc(d.detail)}</span>
+    </div>
+    <div class="today-coach-side">
+      <span>État de séance</span>
+      <strong>${r.label}</strong>
+      ${adjusted?`<small>${esc(a.label)}</small>`:'<small>Programme prévu conservé</small>'}
+    </div>
+    ${a?.mode==='reduce-accessories'?`<div class="today-coach-adaptation"><span>Ajustement du jour</span><strong>${esc(a.reason)}</strong></div>`:''}
+  </section>`;
+};
+
+/* Tests, rank and progression opportunities belong to Progression, not Today. */
+renderTodayUsefulActions=function(){return '';};
+
+/* PLANNING — the stored "priority" field means scheduling importance, not coaching priority. */
+v1070PriorityLabel=function(id){
+  return ({priority:'Fixe',important:'À préserver',flexible:'Flexible'})[id]||'Flexible';
+};
+const _renderPlanningEventEditorV1083=renderPlanningEventEditor;
+renderPlanningEventEditor=function(){
+  let html=_renderPlanningEventEditorV1083();
+  return html
+    .replace('<div class="planning-priority"><span>Priorité</span>','<div class="planning-priority"><span>Importance dans la semaine</span>')
+    .replace(/>Prioritaire</g,'>Fixe<')
+    .replace(/>Importante</g,'>À préserver<')
+    .replace('KINETIK ne la déplace pas','ne sera pas déplacée')
+    .replace('à protéger si possible','à conserver si possible')
+    .replace('peut être proposée ailleurs','peut être déplacée si nécessaire')
+    .replace(/RPE prévu/g,'Effort prévu')
+    .replace('utilise la durée et le RPE prévus','utilise la durée et l’effort prévus');
+};
+
+/* PROGRESSION — this remains the only place making a cross-domain recommendation. */
+const _v1080ProgressInsightV1083=v1080ProgressInsight;
+v1080ProgressInsight=function(){
+  let html=_v1080ProgressInsightV1083();
+  return html
+    .replace('Ce que KINETIK te conseille','Action recommandée')
+    .replace('Voir pourquoi →','Comprendre →');
+};
+
+/* CAPACITÉS — describe evidence; do not behave like a second coaching surface. */
+const _renderSkillsV1083=renderSkills;
+renderSkills=function(){
+  let html=_renderSkillsV1083();
+  return html
+    .replace(/<div class="kicker">Lecture objectif<\/div>/g,'<div class="kicker">Données de l’objectif</div>')
+    .replace(/Facteur limitant · /g,'Point le moins avancé mesuré · ')
+    .replace(/Facteur limitant à confirmer/g,'Données à compléter');
+};
+
+/* MOBILITY — reinforce that the concept is a local body zone, never a global priority. */
+const _renderFlexibilityV1083=renderFlexibility;
+renderFlexibility=function(){
+  return _renderFlexibilityV1083()
+    .replace(/priorité réelle/gi,'zone à travailler fiable')
+    .replace(/cette priorité/gi,'cette zone à travailler');
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});

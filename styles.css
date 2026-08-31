@@ -3313,3 +3313,7 @@ body{
 
 /* v10.82 · product vocabulary */
 .mob79-zone em{white-space:nowrap}
+
+/* v10.83 · recommendations by context */
+.today-focus-v1083 .today-coach-main .kicker{letter-spacing:.08em}
+.today-focus-v1083 .today-coach-adaptation>span{font-weight:800}
