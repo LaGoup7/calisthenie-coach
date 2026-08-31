@@ -3363,3 +3363,8 @@ body{
 .p88-settings-action{width:100%;display:grid;grid-template-columns:1fr auto;gap:14px;text-align:left;align-items:center;background:transparent;color:inherit;padding:12px 0;border-top:1px solid var(--line)}.p88-settings-action:last-of-type{border-bottom:1px solid var(--line)}.p88-settings-action>div{display:grid}.p88-settings-action strong{font-size:.66rem}.p88-settings-action span{font-size:.53rem;color:var(--muted)}.p88-settings-action>b{font-size:.58rem}.p88-settings-details{padding:12px 0;border-bottom:1px solid var(--line)}.p88-settings-details>summary{display:flex;justify-content:space-between;cursor:pointer}.p88-settings-details>summary>div{display:grid}.p88-settings-details>summary strong{font-size:.64rem}.p88-settings-details>summary span{font-size:.52rem;color:var(--muted)}.p88-danger-zone{padding-top:20px;margin-top:18px;border-top:1px solid var(--line)}
 @media(max-width:650px){.p88-identity{grid-template-columns:auto 1fr}.p88-completion{grid-column:2;text-align:left}.p88-equipment{grid-template-columns:1fr 1fr}}
 @media(max-width:430px){.p88-context-grid,.p88-goal-cycle{grid-template-columns:1fr}.p88-context-grid>div:nth-child(even),.p88-goal-cycle>div+div{padding-left:0;border-left:0}.p88-equipment{grid-template-columns:1fr}}
+
+/* v10.89 · evidence integrity */
+.p89-integrity-note{padding:16px 0;border-bottom:2px solid var(--line)}
+.p89-integrity-note>div{max-width:780px}.p89-integrity-note strong{display:block;font-size:.75rem;margin:4px 0}
+.p89-integrity-note p{font-size:.57rem;line-height:1.5;color:var(--muted);margin:0}

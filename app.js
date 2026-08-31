@@ -7116,6 +7116,168 @@ renderProfile=function(){
     </section>`, 'profile');
 };
 
+
+/* ========================================================================== */
+/* V10.89 · Étape 8 — Performance Evidence Integrity                         */
+/* Une valeur et son niveau de preuve sont désormais indissociables.           */
+/* ========================================================================== */
+function v1089EvidenceFromLegacySource(source){
+  return source==='kinetik'?3:source==='workout'?2:1;
+}
+function v1089PerformanceEvent({value=0,date=null,source=null,evidence=0,exercise=null,testId=null,protocolId=null,id=null}={}){
+  return {
+    id:id||null,
+    value:Number(value||0),
+    date:date||null,
+    source:source||null,
+    evidence:clamp(Number(evidence||0),0,3),
+    exercise:exercise||null,
+    testId:testId||null,
+    protocolId:protocolId||null
+  };
+}
+function v1089TestEvents(testId){
+  const names=TEST_GUIDED_EXERCISES[testId]||[],out=[];
+  getAssessments().filter(a=>a.testId===testId&&Number(a.value)>0).forEach(a=>out.push(v1089PerformanceEvent({
+    id:`assessment:${a.id}`,value:a.value,date:a.date,source:evidenceInfo(a.evidenceLevel).label,
+    evidence:a.evidenceLevel,exercise:a.exercise,testId,protocolId:a.protocolId
+  })));
+  getHistory().forEach(s=>(s.entries||[]).forEach((e,idx)=>{
+    if(names.includes(e.exercise)&&Number(e.value)>0&&e.type!=='reps_band')out.push(v1089PerformanceEvent({
+      id:`session:${s.id}:${idx}`,value:e.value,date:s.date,source:'Séance',evidence:2,exercise:e.exercise,testId
+    }));
+  }));
+  getQuickLogs().forEach(q=>{
+    if(names.includes(q.exercise)&&Number(q.value)>0&&q.type!=='timer'&&q.type!=='reps_band')out.push(v1089PerformanceEvent({
+      id:`quick:${q.id}`,value:q.value,date:q.date,source:'Déclaré / série libre',evidence:1,exercise:q.exercise,testId
+    }));
+  });
+  getTests().filter(x=>x.testId===testId&&Number(x.value)>0).forEach(x=>out.push(v1089PerformanceEvent({
+    id:`legacy-test:${x.id}`,value:x.value,date:x.date,source:x.source==='kinetik'?'Test KINETIK':x.source==='workout'?'Séance':'Déclaré',
+    evidence:v1089EvidenceFromLegacySource(x.source),testId
+  })));
+  return out;
+}
+function v1089ExerciseEvents(name){
+  const out=[];
+  getAssessments().filter(a=>a.exercise===name&&Number(a.value)>0).forEach(a=>out.push(v1089PerformanceEvent({
+    id:`assessment:${a.id}`,value:a.value,date:a.date,source:evidenceInfo(a.evidenceLevel).label,
+    evidence:a.evidenceLevel,exercise:name,protocolId:a.protocolId
+  })));
+  getHistory().forEach(s=>(s.entries||[]).forEach((e,idx)=>{
+    if(e.exercise===name&&Number(e.value)>0&&e.type!=='reps_band')out.push(v1089PerformanceEvent({
+      id:`session:${s.id}:${idx}`,value:e.value,date:s.date,source:'Séance',evidence:2,exercise:name
+    }));
+  }));
+  getQuickLogs().filter(q=>q.exercise===name&&Number(q.value)>0&&q.type!=='timer'&&q.type!=='reps_band').forEach(q=>out.push(v1089PerformanceEvent({
+    id:`quick:${q.id}`,value:q.value,date:q.date,source:'Déclaré / série libre',evidence:1,exercise:name
+  })));
+  return out;
+}
+function v1089BestEvent(events,minEvidence=0){
+  return (events||[]).filter(e=>Number(e.value)>0&&Number(e.evidence)>=Number(minEvidence||0))
+    .sort((a,b)=>Number(b.value)-Number(a.value)||Number(b.evidence)-Number(a.evidence)||new Date(b.date||0)-new Date(a.date||0))[0]||v1089PerformanceEvent();
+}
+function v1089BestTestEvent(testId,minEvidence=0){return v1089BestEvent(v1089TestEvents(testId),minEvidence);}
+function v1089BestExerciseEvent(name,minEvidence=0){return v1089BestEvent(v1089ExerciseEvents(name),minEvidence);}
+
+/* Current record = one concrete event. Never graft stronger evidence from another attempt. */
+performanceDetailsForTest=function(id){
+  const e=v1089BestTestEvent(id,0);
+  return {value:e.value,date:e.date,source:e.source,exercise:e.exercise,evidence:e.evidence,eventId:e.id};
+};
+assessmentEvidenceForTest=function(testId){return Number(v1089BestTestEvent(testId,0).evidence||0);};
+assessmentBestForTest=function(testId){
+  const e=v1089BestTestEvent(testId,0);if(!e.value)return null;
+  return {id:e.id,date:e.date,testId,value:e.value,evidenceLevel:e.evidence,source:e.source,exercise:e.exercise};
+};
+assessmentEvidenceForExercise=function(name){return Number(v1089BestExerciseEvent(name,0).evidence||0);};
+assessmentBestForExercise=function(name){
+  const e=v1089BestExerciseEvent(name,0);if(!e.value)return null;
+  return {id:e.id,date:e.date,exercise:name,value:e.value,evidenceLevel:e.evidence,source:e.source};
+};
+bestExerciseValue=function(name){return Number(v1089BestExerciseEvent(name,0).value||0);};
+
+/* Assessment UI also binds the badge to the displayed record. */
+protocolCurrent=function(p){
+  if(p.kind==='test'){
+    const e=v1089BestTestEvent(p.testId,0);
+    return {value:e.value,source:e.source,evidence:e.evidence,date:e.date,eventId:e.id};
+  }
+  if(p.kind==='exercise'){
+    const e=v1089BestExerciseEvent(p.exercise,0);
+    return {value:e.value,source:e.source,evidence:e.evidence,date:e.date,eventId:e.id};
+  }
+  const a=assessmentLatest(p.id);
+  return {value:Number(a?.value||0),source:a?evidenceInfo(a.evidenceLevel).label:null,evidence:Number(a?.evidenceLevel||0),date:a?.date||null,eventId:a?.id||null};
+};
+protocolEvidence=function(p){return Number(protocolCurrent(p).evidence||0);};
+
+function v1089VerifiedBenchmark(p){
+  const e=p.kind==='test'?v1089BestTestEvent(p.testId,3):p.kind==='exercise'?v1089BestExerciseEvent(p.exercise,3):v1089BestEvent(getAssessments().filter(a=>a.protocolId===p.id).map(a=>v1089PerformanceEvent({id:a.id,value:a.value,date:a.date,source:evidenceInfo(a.evidenceLevel).label,evidence:a.evidenceLevel,protocolId:a.protocolId})),3);
+  return e?.value?e:null;
+}
+renderAssessmentProtocolRow=function(p){
+  const current=protocolCurrent(p),verified=v1089VerifiedBenchmark(p),sameVerified=verified&&verified.id===current.eventId;
+  const secondary=verified&&!sameVerified?` · max vérifié ${verified.value} ${p.unit}`:'';
+  return `<div class="assessment-protocol-row"><div class="assessment-row-main"><strong>${esc(p.name)}</strong><span>${current.value?`${current.value} ${p.unit} · ${esc(current.source||'référence')}${secondary}`:'Pas encore confirmé'}</span></div>${evidenceMark(current.evidence)}<button class="assessment-start" data-assessment-start="${p.id}">${current.value?'Retester':'Confirmer'} →</button></div>`;
+};
+
+/* Rank proofs query the best performance that independently satisfies the
+   required evidence threshold. */
+function v1089RankProofEvent(proof){
+  if(!proof)return v1089PerformanceEvent();
+  if(proof.kind==='skill')return v1089PerformanceEvent({value:skillDoneSafe(proof.id)?1:0,source:'Validation technique',evidence:skillDoneSafe(proof.id)?2:0});
+  const minEv=Number(proof.evidenceMin||0);
+  return proof.kind==='test'?v1089BestTestEvent(proof.id,minEv):v1089BestExerciseEvent(proof.name,minEv);
+}
+rankProofValue=function(proof){return Number(v1089RankProofEvent(proof).value||0);};
+rankProofEvidenceLevel=function(proof){return Number(v1089RankProofEvent(proof).evidence||0);};
+
+rankGateRows=function(rank){
+  const rule=rankRuleFor(rank),caps=capabilityScores(),capMap=Object.fromEntries(caps.map(x=>[x.id,x])),
+        skillPoints=technicalSkillPoints(),mastery=masterySkillCount(),majorMastery=majorMasterySkillCount();
+  const avg=Math.round(caps.reduce((s,x)=>s+(x.assessed?x.score:0),0)/Math.max(1,caps.length)),rows=[];
+  if(rule.avg)rows.push({id:'avg',label:'Moyenne des 6 capacités',current:avg,target:rule.avg,unit:'/100',detail:'les capacités non évaluées comptent comme 0'});
+  Object.entries(rule.caps||{}).forEach(([id,target])=>rows.push({
+    id:`cap-${id}`,label:capMap[id]?.label||id,current:capMap[id]?.assessed?capMap[id].score:0,target,unit:'/100',
+    detail:capMap[id]?.assessed?capMap[id].detail:'non évalué'
+  }));
+  (rule.proofs||[]).forEach((proof,i)=>{
+    const event=v1089RankProofEvent(proof),current=Number(event.value||0),minEv=Number(proof.evidenceMin||0);
+    const strongestAny=proof.kind==='test'?v1089BestTestEvent(proof.id,0):proof.kind==='exercise'?v1089BestExerciseEvent(proof.name,0):event;
+    let detail=proof.kind==='skill'?'validation technique requise':'barème de performance';
+    if(minEv){
+      detail=current
+        ?`${evidenceInfo(event.evidence).label} · valeur et preuve issues du même enregistrement`
+        :strongestAny.value
+          ?`Record ${strongestAny.value}${proof.unit?` ${proof.unit}`:''} (${evidenceInfo(strongestAny.evidence).label}) · preuve ${evidenceInfo(minEv).label} requise`
+          :`preuve ${evidenceInfo(minEv).label} requise`;
+    }
+    rows.push({
+      id:`proof-${i}-${proof.kind}`,label:proof.label,current,target:Number(proof.value||1),unit:proof.unit||'',detail,
+      forceDone:current>=Number(proof.value||1),evidence:event.evidence,evidenceMin:minEv,eventId:event.id
+    });
+  });
+  if(rule.skillPoints)rows.push({id:'skills',label:'Difficulté technique cumulée',current:skillPoints,target:rule.skillPoints,unit:'pts'});
+  if(rule.mastery)rows.push({id:'mastery',label:'Skills de maîtrise',current:mastery,target:rule.mastery,unit:''});
+  if(rule.majorMastery)rows.push({id:'major-mastery',label:'Skills majeurs de maîtrise',current:majorMastery,target:rule.majorMastery,unit:'',detail:'Muscle-up avancé · HSPU libre · Front lever · Human flag'});
+  return rows.map(x=>{
+    const valueProgress=clamp(Number(x.current)/Math.max(1,Number(x.target)),0,1);
+    const done=x.forceDone!==undefined?x.forceDone:Number(x.current)>=Number(x.target);
+    return {...x,done,progress:valueProgress};
+  });
+};
+
+/* Small integrity explanation where evidence matters most. */
+const _renderAssessmentCenterV1089=renderAssessmentCenter;
+renderAssessmentCenter=function(){
+  let html=_renderAssessmentCenterV1089();
+  const marker='<section class="assessment-next">';
+  const note=`<section class="p89-integrity-note"><div><div class="kicker">Intégrité des performances</div><strong>Une preuve valide uniquement la performance avec laquelle elle a été enregistrée.</strong><p>Exemple : 20 tractions déclarées et un test KINETIK à 10 restent deux références distinctes. Le rang ne traitera jamais les 20 comme un test KINETIK.</p></div></section>`;
+  return html.includes(marker)?html.replace(marker,note+marker):note+html;
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
