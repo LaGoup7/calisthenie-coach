@@ -31,3 +31,9 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 ## V10.97
 - Suppression du bloc explicatif « Comment KINETIK mesure ton niveau » dans Progression > Vue d’ensemble.
 - Le corps humain reste le repère visuel principal.
+
+
+## V10.98
+- Correctif critique de déploiement : index.html, app.js, styles.css et vercel.json sont de nouveau à la racine du ZIP.
+- Le ZIP v10.96/v10.97 contenait par erreur un dossier parent supplémentaire, pouvant produire une page blanche sur Vercel.
+- Cache PWA incrémenté pour forcer le rechargement des bons fichiers.
