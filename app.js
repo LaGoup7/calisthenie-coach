@@ -6869,6 +6869,142 @@ function v1086RankIntegrity(){
   return {rank:r.displayName,readiness:r.readiness,criteria:r.nextEval?.gates||[],performanceOnly:true};
 }
 
+
+/* ========================================================================== */
+/* V10.87 · Étape 6 — Intégrité du coaching                                   */
+/* KINETIK observe et propose. Aucune adaptation contextuelle n'est appliquée  */
+/* silencieusement : l'utilisateur valide avant toute modification de séance.  */
+/* ========================================================================== */
+Object.assign(state,{
+  multisportProposalChoice:null, /* null | "apply" | "keep" */
+  multisportProposalDate:null
+});
+
+function v1087TodayKey(){return localDateKey(new Date());}
+function v1087ResetProposalIfNeeded(){
+  const key=v1087TodayKey();
+  if(state.multisportProposalDate!==key){
+    state.multisportProposalDate=key;
+    state.multisportProposalChoice=null;
+  }
+}
+function v1087MultisportProposal(){
+  v1087ResetProposalIfNeeded();
+  const a=v1060MultisportAdjustment();
+  if(a.mode!=='reduce-accessories')return null;
+  const base=_preparedWorkoutV1060(todayDay(),null,'full');
+  if(!base?.exercises?.length)return null;
+  const keep=v1060GoalPriorityRegex(),changes=[];let mainSeen=0;
+  for(const e of base.exercises){
+    if((e.phase||'main')!=='main'||e.type==='timer')continue;
+    mainSeen++;
+    if(mainSeen<=2||keep.test(String(e.name||''))||Number(e.sets||0)<3)continue;
+    changes.push({name:e.name,from:Number(e.sets||1),to:Math.max(2,Number(e.sets||1)-1)});
+  }
+  if(!changes.length)return null;
+  return {...a,changes,minutesSaved:changes.length*3};
+}
+function v1087ApplyMultisportProposal(w,proposal){
+  if(!w||!proposal?.changes?.length)return w;
+  const map=new Map(proposal.changes.map(x=>[x.name,x]));
+  let changed=0;
+  w.exercises=w.exercises.map(e=>{
+    const c=map.get(e.name);
+    if(!c)return e;
+    changed++;
+    return {...e,sets:c.to,coachAdjusted:true,prescriptionStatus:e.prescriptionStatus==='progress'?'maintain':e.prescriptionStatus,
+      prescriptionNote:`${e.prescriptionNote||''}${e.prescriptionNote?' · ':''}Adaptation multisport validée : ${c.from} → ${c.to} séries.`};
+  });
+  if(changed){
+    w.duration=Math.max(20,Number(w.duration||45)-changed*3);
+    w.coachAdaptation={...proposal,changed,userApproved:true};
+  }
+  return w;
+}
+
+/* Authoritative workout preparation:
+   - retains cycle/readiness rules already chosen by the user;
+   - bypasses the old automatic multisport mutation;
+   - applies multisport only after explicit approval. */
+preparedWorkout=function(day,readiness=null,sessionLength="full"){
+  const w=_preparedWorkoutV1060(day,readiness,sessionLength);
+  if(!w?.exercises?.length)return w;
+  if(Number(day)!==Number(todayDay())||sessionLength==='short')return w;
+  if(readiness&&readinessPlan(readiness).mode!=='normal')return w;
+  const proposal=v1087MultisportProposal();
+  if(!proposal)return w;
+  w.coachAdaptation={...proposal,proposed:true,userApproved:false};
+  if(state.multisportProposalChoice==='apply')return v1087ApplyMultisportProposal(w,proposal);
+  return w;
+};
+
+function v1087ProposalBlock(){
+  const p=v1087MultisportProposal();
+  if(!p)return '';
+  const choice=state.multisportProposalChoice;
+  return `<section class="today-proposal-v1087 ${choice||''}">
+    <div class="today-proposal-head">
+      <div><div class="kicker">Proposition pour aujourd’hui</div><h2>Réduire légèrement les accessoires ?</h2></div>
+      <span>${choice==='apply'?'Appliquée':choice==='keep'?'Refusée':'À valider'}</span>
+    </div>
+    <p>${esc(p.reason)}</p>
+    <div class="today-proposal-changes">${p.changes.map(x=>`<div><strong>${esc(x.name)}</strong><span>${x.from} → ${x.to} séries</span></div>`).join('')}</div>
+    <small>Les mouvements principaux restent inchangés. Estimation : ≈ ${p.minutesSaved} min de moins.</small>
+    <div class="today-proposal-actions">
+      <button class="btn btn-outline compact" id="keepMultisportPlan">${choice==='keep'?'Programme conservé':'Garder le programme prévu'}</button>
+      <button class="btn btn-primary compact" id="applyMultisportProposal">${choice==='apply'?'Adaptation appliquée':'Appliquer cette adaptation'}</button>
+    </div>
+  </section>`;
+}
+
+/* TODAY = execution only. The proposal is visible, specific and reversible. */
+renderTodayCoachStrip=function(){
+  const d=v1060PrimaryExerciseDecision(),r=v1060ReadinessState();
+  return `<section class="today-coach-strip mode-${r.mode} today-focus-v1083">
+    <div class="today-coach-main"><div class="kicker">Focus du jour</div><strong>${esc(d.label)}</strong><span>${esc(d.detail)}</span></div>
+    <div class="today-coach-side"><span>État de séance</span><strong>${r.label}</strong><small>${r.mode==='good'?'Programme prévu conservé':'À prendre en compte avant de démarrer'}</small></div>
+  </section>${v1087ProposalBlock()}`;
+};
+
+/* PLANNING = organisation, never a second coach. Strip legacy auto-adaptation banners. */
+const _renderWeekV1087=renderWeek;
+renderWeek=function(){
+  let html=_renderWeekV1087();
+  html=html.replace(/<section class="planning-coach-banner[\s\S]*?<\/section>/g,'');
+  return html;
+};
+
+/* Old long-form report becomes analysis only; recommendations remain in the
+   single Progression "À surveiller" surface. */
+renderAdaptiveReport=function(){
+  const days=state.reportPeriod==='90d'?90:30,i=v1060InsightDecision(days),s=i.state,lim=i.limiter;
+  return `<section class="card adaptive-report intelligence-report ${i.tone}">
+    <div class="section-head"><div><div class="kicker">Analyse · ${days} jours</div><h2>${esc(i.title)}</h2></div><div class="report-tabs"><button data-report-period="30d" class="${days===30?'active':''}">30 j</button><button data-report-period="90d" class="${days===90?'active':''}">90 j</button></div></div>
+    <p class="intelligence-lead">${esc(i.text)}</p>
+    <div class="athlete-state-grid">${[s.force,s.skills,s.mobility,s.cardio,s.load,s.data].map(renderV1060StateItem).join('')}</div>
+    <p class="muted small">Analyse descriptive uniquement. Les changements de programme ou de séance demandent une action explicite de ta part.</p>
+  </section>`;
+};
+
+/* Update the confidence-aware Progression copy: it can suggest where to look,
+   but it never claims that opening Today has changed the workout. */
+const _v1060NextBestChoiceV1087=v1060NextBestChoice;
+v1060NextBestChoice=function(){
+  const x=_v1060NextBestChoiceV1087();
+  if(x.id==='recover')return {...x,label:'Examiner la charge du jour',detail:`${x.detail} Si une adaptation est proposée sur Aujourd’hui, elle restera à valider.`};
+  if(x.id==='focus')return {...x,label:x.label.replace(/^Travailler /,'Surveiller '),action:'performance',detail:`${x.detail} KINETIK ne modifie pas le cycle automatiquement.`};
+  return x;
+};
+
+const _bindEventsV1087=bindEvents;
+bindEvents=function(){
+  _bindEventsV1087();
+  const apply=document.getElementById('applyMultisportProposal');
+  if(apply)apply.onclick=()=>{v1087ResetProposalIfNeeded();state.multisportProposalChoice='apply';render();};
+  const keep=document.getElementById('keepMultisportPlan');
+  if(keep)keep.onclick=()=>{v1087ResetProposalIfNeeded();state.multisportProposalChoice='keep';render();};
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});

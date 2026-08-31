@@ -3336,3 +3336,17 @@ body{
 .p85-chain.compact{padding:12px 0 0;border:0}.p85-chain.compact .p85-chain-steps{margin-top:0}
 @media(max-width:720px){.p85-chain-steps{grid-template-columns:1fr 1fr}}
 @media(max-width:430px){.p85-chain>summary{align-items:flex-start}.p85-chain-steps{grid-template-columns:1fr}.p85-chain-steps button.active{box-shadow:inset 3px 0 0 var(--text)}}
+
+/* v10.87 · explicit coaching proposals */
+.today-proposal-v1087{padding:16px 0 20px;border-bottom:2px solid var(--line)}
+.today-proposal-head{display:flex;justify-content:space-between;align-items:start;gap:16px}
+.today-proposal-head h2{font-size:.9rem;margin:3px 0}
+.today-proposal-head>span{font-size:.52rem;font-weight:800;color:var(--muted)}
+.today-proposal-v1087>p{font-size:.62rem;color:var(--muted);line-height:1.45;margin:8px 0 12px}
+.today-proposal-changes{border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.today-proposal-changes>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.today-proposal-changes>div:last-child{border-bottom:0}.today-proposal-changes strong,.today-proposal-changes span{font-size:.59rem}
+.today-proposal-v1087>small{display:block;font-size:.52rem;color:var(--muted);margin-top:8px}
+.today-proposal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.today-proposal-v1087.apply .today-proposal-head>span{color:var(--text)}
+@media(max-width:520px){.today-proposal-actions{display:grid;grid-template-columns:1fr}.today-proposal-actions button{width:100%}}
