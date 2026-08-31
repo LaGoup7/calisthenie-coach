@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-112-body-3d-dezoom';
-const ASSETS = ['./','./index.html','./styles.css?v=10.112','./app.js?v=10.112','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-113-body-3d-dezoom-more';
+const ASSETS = ['./','./index.html','./styles.css?v=10.113','./app.js?v=10.113','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {

@@ -136,3 +136,9 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Caméra reculée et légèrement recentrée verticalement.
 - Limites de zoom molette ajustées pour conserver plus de recul par défaut.
 - Petit ajustement de framing sur mobile.
+
+
+## V10.113 — Body 3D encore plus dézoomé
+- Recul supplémentaire de la caméra sur la vue 3D.
+- Recentrage vertical léger pour garder la silhouette entière plus lisible.
+- Molette de zoom ajustée pour rester cohérente avec le nouveau cadrage.
