@@ -21,3 +21,8 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Refonte de Progression > Vue d’ensemble avec un corps humain interactif.
 - Lecture simplifiée par zones, avec modes Vue d’ensemble / Force / Mobilité et switch Face / Dos.
 - Réduction du texte au profit d’un résumé visuel et de raccourcis clairs.
+
+
+## V10.96
+- Correctif : le corps humain de Progression > Vue d’ensemble est maintenant le renderer final et ne peut plus être écrasé par un ancien override.
+- Cache PWA incrémenté pour forcer le chargement de la nouvelle interface.

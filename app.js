@@ -4756,7 +4756,7 @@ function v1095CycleBodyZone(dir=1,mode='overall',view='front'){
   idx=(idx+dir+zones.length)%zones.length;
   state.progressBodyZone=zones[idx].id;
 }
-renderProgressOverview=function(){
+function v1095RenderProgressOverview(){
   const mode=state.progressBodyMode||'overall';
   const view=state.progressBodyView||'front';
   const summary=v1095OverviewSummary();
@@ -7776,6 +7776,27 @@ renderAssessmentProtocolRow=function(p){
     </div>
     <button class="assessment-start" data-assessment-start="${p.id}">${current.value?'Retester':'Tester'} →</button>
   </div>`;
+};
+
+
+
+/* ========================================================================== */
+/* V10.96 · Correctif affichage Vue d’ensemble visuelle                       */
+/* Le renderer V10.95 est réappliqué en dernier : les anciens overrides ne    */
+/* peuvent plus le remplacer.                                                  */
+/* ========================================================================== */
+renderProgressOverview=v1095RenderProgressOverview;
+
+const _bindEventsV1096=bindEvents;
+bindEvents=function(){
+  _bindEventsV1096();
+  document.querySelectorAll('[data-body-mode]').forEach(b=>b.onclick=()=>{state.progressBodyMode=b.dataset.bodyMode||'overall';state.progressBodyZone=null;render();});
+  document.querySelectorAll('[data-body-view]').forEach(b=>b.onclick=()=>{state.progressBodyView=b.dataset.bodyView||'front';state.progressBodyZone=null;render();});
+  document.querySelectorAll('[data-body-zone]').forEach(b=>{
+    b.onclick=()=>{state.progressBodyZone=b.dataset.bodyZone||null;render();};
+    b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();state.progressBodyZone=b.dataset.bodyZone||null;render();}};
+  });
+  document.querySelectorAll('[data-body-zone-cycle]').forEach(b=>b.onclick=()=>{const dir=b.dataset.bodyZoneCycle==='prev'?-1:1;v1095CycleBodyZone(dir,state.progressBodyMode||'overall',state.progressBodyView||'front');render();});
 };
 
 applyAppTheme();
