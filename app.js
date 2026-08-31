@@ -9044,6 +9044,446 @@ v1095BodyMapSVG=function(view='front',mode='overall',selectedId=''){
   </svg>`;
 };
 
+
+/* ========================================================================== */
+/* V10.107 · Body Map 3D Beta                                                  */
+/* Three.js procedural athlete · 360° rotation · clickable KINETIK zones.      */
+/* SVG V7 remains the automatic fallback.                                      */
+/* ========================================================================== */
+
+function v10107DisplayMode(){
+  if(!state.progressBodyDisplay) state.progressBodyDisplay='3d';
+  return state.progressBodyDisplay;
+}
+function v10107ThreeAvailable(){
+  return typeof window!=='undefined' && !!window.THREE;
+}
+function v10107ColorForZone(zone){
+  if(!zone || zone.status?.id==='none') return {color:0x94a3b8,opacity:.035,emissive:0x000000};
+  if(zone.confidence?.id==='low') return {color:0x818cf8,opacity:.30,emissive:0x312e81};
+  const id=zone.tone?.id||'none';
+  const map={
+    low:{color:0xef6f78,opacity:.72,emissive:0x3b080d},
+    watch:{color:0xf59e62,opacity:.72,emissive:0x421704},
+    ok:{color:0xe8c85e,opacity:.68,emissive:0x332702},
+    good:{color:0x5fc987,opacity:.69,emissive:0x073b1b},
+    great:{color:0x6868de,opacity:.72,emissive:0x181852},
+    none:{color:0x94a3b8,opacity:.04,emissive:0x000000}
+  };
+  return map[id]||map.none;
+}
+
+function v10107RenderBodyVisual(view,mode,selectedId){
+  const display=v10107DisplayMode();
+  if(display==='3d' && v10107ThreeAvailable()){
+    return `<div class="body3d-stage" id="body3DStage" aria-label="Modèle corporel 3D interactif">
+      <div class="body3d-help">
+        <span>360°</span>
+        <strong>Glisse pour tourner</strong>
+        <small>Tap sur une zone pour l’analyser</small>
+      </div>
+      <button class="body3d-reset" type="button" data-body3d-reset aria-label="Recentrer le modèle">↺</button>
+    </div>`;
+  }
+  return `<div class="body3d-fallback">${v1095BodyMapSVG(view,mode,selectedId)}</div>`;
+}
+
+const _v1095RenderProgressOverviewV10107=v1095RenderProgressOverview;
+v1095RenderProgressOverview=function(){
+  const mode=state.progressBodyMode||'overall';
+  const view=state.progressBodyView||'front';
+  const display=v10107DisplayMode();
+  const summary=v1095OverviewSummary();
+  const selected=v1095SelectedBodyZone(mode,view);
+  state.progressBodyZone=selected?.id||state.progressBodyZone;
+  const priority=v1095PriorityZones(mode,3),strong=v1095StrongZones(mode,3);
+  const modeLabel=mode==='strength'?'Force':mode==='mobility'?'Mobilité':'Vue d’ensemble';
+
+  return `
+    <section class="card body-overview-hero">
+      <div class="section-head">
+        <div><div class="kicker">Vue d’ensemble</div><h2>Ton corps en un coup d’œil</h2></div>
+        <span class="pill">Objectif · ${esc(v1095GoalText())}</span>
+      </div>
+      <div class="body-overview-stats">
+        <article><span>Niveau global</span><strong>${summary.global!=null?summary.global+'/100':'—'}</strong><small>${esc(summary.globalLabel)}</small></article>
+        <article><span>Plus solide</span><strong>${esc(summary.strong?.label||'—')}</strong><small>${summary.strong?.score!=null?summary.strong.score+'/100':'À construire'}</small></article>
+        <article><span>Zone prioritaire</span><strong>${esc(summary.weak?.label||'—')}</strong><small>${summary.weak?.score!=null?summary.weak.score+'/100':'À évaluer'}</small></article>
+        <article><span>Équilibre</span><strong>${esc(summary.balance)}</strong><small>${esc(summary.coverage)} · ${esc(summary.evidence)}</small></article>
+      </div>
+    </section>
+
+    <section class="card body-overview-card body-overview-card-3d">
+      <div class="body-overview-toolbar">
+        <div class="body-overview-toggle" role="tablist" aria-label="Mode de lecture">
+          <button class="${mode==='overall'?'active':''}" data-body-mode="overall">Vue d’ensemble</button>
+          <button class="${mode==='strength'?'active':''}" data-body-mode="strength">Force</button>
+          <button class="${mode==='mobility'?'active':''}" data-body-mode="mobility">Mobilité</button>
+        </div>
+        <div class="body-toolbar-right">
+          <div class="body-overview-toggle body-display-toggle" role="tablist" aria-label="Affichage du corps">
+            <button class="${display==='2d'?'active':''}" data-body-display="2d">2D</button>
+            <button class="${display==='3d'?'active':''}" data-body-display="3d">3D</button>
+          </div>
+          <div class="body-overview-toggle" role="tablist" aria-label="Orientation du corps">
+            <button class="${view==='front'?'active':''}" data-body-view="front">Face</button>
+            <button class="${view==='back'?'active':''}" data-body-view="back">Dos</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="body-overview-model-wrap">
+        <div class="body-overview-model body-overview-model-3d">
+          ${v10107RenderBodyVisual(view,mode,selected?.id||'')}
+        </div>
+        <div class="body-overview-side">
+          ${v1095ZoneDetailCard(mode,view)}
+          <div class="body-overview-legend">
+            <span><i class="tone-none"></i>À évaluer</span>
+            <span><i class="tone-partial"></i>Données limitées</span>
+            <span><i class="tone-low"></i>Fragile</span>
+            <span><i class="tone-watch"></i>À travailler</span>
+            <span><i class="tone-ok"></i>Correct</span>
+            <span><i class="tone-good"></i>Solide</span>
+            <span><i class="tone-great"></i>Avancé</span>
+          </div>
+          ${display==='3d'?`<p class="body3d-note">Rotation libre à 360° · Face/Dos recentrent rapidement le modèle.</p>`:''}
+        </div>
+      </div>
+    </section>
+
+    <section class="body-overview-grid">
+      <article class="card body-overview-list-card">
+        <div class="section-head"><div><div class="kicker">À travailler</div><h3>Les zones les moins avancées</h3></div><span class="pill">${modeLabel}</span></div>
+        <div class="body-overview-chip-list">
+          ${priority.length?priority.map(v1095ZoneChip).join(''):'<div class="empty">Pas assez de données pour identifier une priorité.</div>'}
+        </div>
+      </article>
+      <article class="card body-overview-list-card">
+        <div class="section-head"><div><div class="kicker">Points forts</div><h3>Ce qui soutient ton objectif</h3></div><span class="pill">${modeLabel}</span></div>
+        <div class="body-overview-chip-list">
+          ${strong.length?strong.map(v1095ZoneChip).join(''):'<div class="empty">Tes points forts apparaîtront ici avec plus de données.</div>'}
+        </div>
+      </article>
+    </section>
+
+    <section class="card body-overview-actions">
+      <div class="section-head"><div><div class="kicker">Actions rapides</div><h3>Aller au bon endroit</h3></div></div>
+      <div class="body-overview-action-grid">
+        <button data-progress-tab="performance"><span>Performances</span><strong>Voir les records et tendances</strong><b>→</b></button>
+        <button data-view="skills"><span>Capacités</span><strong>Voir le profil détaillé</strong><b>→</b></button>
+        <button data-view="flexibility"><span>Mobilité</span><strong>Voir les zones à travailler</strong><b>→</b></button>
+        <button data-view="assessment"><span>Évaluation</span><strong>Confirmer les repères utiles</strong><b>→</b></button>
+      </div>
+    </section>`;
+};
+
+let v10107Body3DInstance=null;
+function v10107DisposeBody3D(){
+  const inst=v10107Body3DInstance;
+  if(!inst)return;
+  try{
+    inst.stopped=true;
+    inst.resizeObserver?.disconnect?.();
+    inst.renderer?.setAnimationLoop?.(null);
+    inst.renderer?.dispose?.();
+    inst.scene?.traverse?.(obj=>{
+      if(obj.geometry?.dispose)obj.geometry.dispose();
+      if(obj.material){
+        const mats=Array.isArray(obj.material)?obj.material:[obj.material];
+        mats.forEach(m=>m?.dispose?.());
+      }
+    });
+  }catch(e){}
+  v10107Body3DInstance=null;
+}
+
+function v10107InitBody3D(){
+  const host=document.getElementById('body3DStage');
+  if(!host || !v10107ThreeAvailable()) return;
+  v10107DisposeBody3D();
+
+  const THREE=window.THREE;
+  const scene=new THREE.Scene();
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.8));
+  renderer.setClearColor(0x000000,0);
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.05;
+  host.prepend(renderer.domElement);
+  renderer.domElement.className='body3d-canvas';
+
+  const camera=new THREE.PerspectiveCamera(29,1,.1,50);
+  camera.position.set(0,.05,8.65);
+
+  const hemi=new THREE.HemisphereLight(0xffffff,0xb9c3d3,2.05);
+  scene.add(hemi);
+  const key=new THREE.DirectionalLight(0xffffff,3.0);
+  key.position.set(3.4,5.4,5.8);
+  scene.add(key);
+  const fill=new THREE.DirectionalLight(0xdde5ff,1.55);
+  fill.position.set(-4,2.5,3);
+  scene.add(fill);
+  const rim=new THREE.DirectionalLight(0xb8c4ff,1.35);
+  rim.position.set(0,3,-5);
+  scene.add(rim);
+
+  const body=new THREE.Group();
+  scene.add(body);
+
+  const shellMat=new THREE.MeshPhysicalMaterial({
+    color:0xe8edf4,roughness:.56,metalness:0,
+    clearcoat:.16,clearcoatRoughness:.7,
+    transparent:true,opacity:.98
+  });
+  const jointMat=new THREE.MeshPhysicalMaterial({
+    color:0xf1f4f8,roughness:.58,metalness:0,
+    clearcoat:.12,transparent:true,opacity:.98
+  });
+
+  function addMesh(geometry,material,pos=[0,0,0],scale=[1,1,1],rot=[0,0,0],parent=body){
+    const m=new THREE.Mesh(geometry,material);
+    m.position.set(...pos);m.scale.set(...scale);m.rotation.set(...rot);
+    parent.add(m);return m;
+  }
+  function capsuleGeom(radius,length){
+    if(THREE.CapsuleGeometry) return new THREE.CapsuleGeometry(radius,length,8,24);
+    return new THREE.CylinderGeometry(radius,radius,length+radius*2,24,1,false);
+  }
+  function addCapsule(material,pos,radius,length,scale=[1,1,1],rot=[0,0,0],parent=body){
+    return addMesh(capsuleGeom(radius,length),material,pos,scale,rot,parent);
+  }
+  function lathe(points,segments=48){
+    return new THREE.LatheGeometry(points.map(([r,y])=>new THREE.Vector2(r,y)),segments);
+  }
+
+  // --- Neutral athlete shell ---
+  addMesh(new THREE.SphereGeometry(.39,40,28),jointMat,[0,2.63,0],[.78,1.0,.72]);
+  addMesh(new THREE.CylinderGeometry(.18,.21,.42,28),shellMat,[0,2.22,0]);
+
+  const torso=addMesh(lathe([
+    [.40,-.98],[.47,-.78],[.52,-.48],[.59,-.05],[.66,.43],[.62,.72],[.50,.96]
+  ]),shellMat,[0,1.20,0],[1.0,1.0,.67]);
+  const pelvis=addMesh(lathe([
+    [.47,-.43],[.54,-.25],[.58,.04],[.54,.31],[.46,.45]
+  ]),shellMat,[0,-.18,0],[1.0,1.0,.73]);
+
+  // Shoulder base makes the torso read as one body rather than separate limbs.
+  addCapsule(shellMat,[0,1.93,0],.23,1.08,[1,1,.84],[0,0,Math.PI/2]);
+
+  const armRot=.105;
+  addCapsule(shellMat,[-.79,1.25,0],.16,.76,[1,1,.95],[0,0,-armRot]);
+  addCapsule(shellMat,[ .79,1.25,0],.16,.76,[1,1,.95],[0,0, armRot]);
+  addCapsule(shellMat,[-.86,.35,.01],.14,.78,[1,1,.92],[0,0,-.045]);
+  addCapsule(shellMat,[ .86,.35,.01],.14,.78,[1,1,.92],[0,0, .045]);
+  addMesh(new THREE.SphereGeometry(.18,28,20),jointMat,[-.89,-.20,.05],[.80,1.18,.70]);
+  addMesh(new THREE.SphereGeometry(.18,28,20),jointMat,[ .89,-.20,.05],[.80,1.18,.70]);
+
+  addCapsule(shellMat,[-.31,-1.22,0],.225,.92,[1,1,.94],[0,0,-.025]);
+  addCapsule(shellMat,[ .31,-1.22,0],.225,.92,[1,1,.94],[0,0, .025]);
+  addCapsule(shellMat,[-.31,-2.30,.02],.175,.88,[1,1,.92],[0,0,.012]);
+  addCapsule(shellMat,[ .31,-2.30,.02],.175,.88,[1,1,.92],[0,0,-.012]);
+  addMesh(new THREE.SphereGeometry(.22,30,20),jointMat,[-.31,-3.00,.16],[.76,.48,1.42]);
+  addMesh(new THREE.SphereGeometry(.22,30,20),jointMat,[ .31,-3.00,.16],[.76,.48,1.42]);
+
+  // --- Zone overlays ---
+  const zoneMeshes=[];
+  const mode=state.progressBodyMode||'overall';
+  const selectedId=state.progressBodyZone||'';
+
+  function zoneMaterial(zoneId){
+    const zone=v10103ZoneData(zoneId,mode);
+    const style=v10107ColorForZone(zone);
+    const selected=selectedId===zoneId;
+    return new THREE.MeshStandardMaterial({
+      color:style.color,
+      roughness:.46,
+      metalness:0,
+      transparent:true,
+      opacity:selected?Math.max(style.opacity,.62):style.opacity,
+      depthWrite:false,
+      emissive:selected?0x312e81:style.emissive,
+      emissiveIntensity:selected?.28:.035,
+      side:THREE.DoubleSide
+    });
+  }
+  function tag(mesh,zoneId){
+    mesh.userData.zoneId=zoneId;
+    zoneMeshes.push(mesh);
+    return mesh;
+  }
+  function zSphere(zoneId,pos,scale){
+    return tag(addMesh(new THREE.SphereGeometry(1,30,22),zoneMaterial(zoneId),pos,scale),zoneId);
+  }
+  function zCapsule(zoneId,pos,radius,length,scale=[1,1,1],rot=[0,0,0]){
+    return tag(addCapsule(zoneMaterial(zoneId),pos,radius,length,scale,rot),zoneId);
+  }
+
+  // Shoulders / deltoids.
+  zSphere('shoulders',[-.67,1.85,.02],[.31,.26,.30]);
+  zSphere('shoulders',[ .67,1.85,.02],[.31,.26,.30]);
+
+  // Front chest and posterior back are separate clickable surfaces.
+  zSphere('chest',[-.28,1.45,.39],[.37,.34,.105]);
+  zSphere('chest',[ .28,1.45,.39],[.37,.34,.105]);
+  zSphere('back',[0,1.36,-.39],[.63,.72,.105]);
+
+  // Arms / forearms / wrists follow the neutral limb axes.
+  zCapsule('arms',[-.79,1.25,.015],.168,.76,[1,1,.98],[0,0,-armRot]);
+  zCapsule('arms',[ .79,1.25,.015],.168,.76,[1,1,.98],[0,0, armRot]);
+  zCapsule('forearms',[-.86,.35,.025],.147,.78,[1,1,.95],[0,0,-.045]);
+  zCapsule('forearms',[ .86,.35,.025],.147,.78,[1,1,.95],[0,0, .045]);
+  zSphere('wrists',[-.89,-.20,.07],[.15,.22,.14]);
+  zSphere('wrists',[ .89,-.20,.07],[.15,.22,.14]);
+
+  // Core front + lower-back surface.
+  zSphere('core',[0,.70,.405],[.45,.68,.095]);
+  zSphere('core',[0,.70,-.405],[.45,.68,.095]);
+
+  // Hips / glutes.
+  zSphere('hips',[0,-.22,.30],[.56,.38,.17]);
+  zSphere('hips',[0,-.22,-.30],[.56,.38,.17]);
+
+  // Thighs: front quads and posterior hamstrings.
+  zCapsule('quads',[-.31,-1.22,.16],.19,.90,[1,.98,.72],[0,0,-.025]);
+  zCapsule('quads',[ .31,-1.22,.16],.19,.90,[1,.98,.72],[0,0, .025]);
+  zCapsule('hamstrings',[-.31,-1.22,-.16],.19,.90,[1,.98,.72],[0,0,-.025]);
+  zCapsule('hamstrings',[ .31,-1.22,-.16],.19,.90,[1,.98,.72],[0,0, .025]);
+
+  // Calves and ankle/foot zones.
+  zCapsule('calves',[-.31,-2.30,.03],.18,.86,[1,1,.94],[0,0,.012]);
+  zCapsule('calves',[ .31,-2.30,.03],.18,.86,[1,1,.94],[0,0,-.012]);
+  zSphere('ankles',[-.31,-2.88,.09],[.17,.20,.19]);
+  zSphere('ankles',[ .31,-2.88,.09],[.17,.20,.19]);
+
+  // Ground shadow.
+  const shadow=new THREE.Mesh(
+    new THREE.CircleGeometry(1.25,64),
+    new THREE.MeshBasicMaterial({color:0x94a3b8,transparent:true,opacity:.09,depthWrite:false})
+  );
+  shadow.rotation.x=-Math.PI/2;
+  shadow.position.set(0,-3.18,0);
+  scene.add(shadow);
+
+  // Initial orientation: face/dos button snaps the 3D model.
+  if(!Number.isFinite(state.progressBody3DYaw)){
+    state.progressBody3DYaw=(state.progressBodyView||'front')==='back'?Math.PI:0;
+  }
+  body.rotation.y=Number(state.progressBody3DYaw||0);
+  body.rotation.x=Number(state.progressBody3DPitch||0);
+
+  const raycaster=new THREE.Raycaster();
+  const pointer=new THREE.Vector2();
+  let downX=0,downY=0,lastX=0,lastY=0,dragging=false,moved=false;
+
+  function resize(){
+    if(!host.isConnected)return;
+    const rect=host.getBoundingClientRect();
+    const w=Math.max(260,Math.round(rect.width));
+    const h=Math.max(430,Math.round(rect.height));
+    renderer.setSize(w,h,false);
+    camera.aspect=w/h;
+    camera.updateProjectionMatrix();
+  }
+
+  function pointerToNdc(ev){
+    const r=renderer.domElement.getBoundingClientRect();
+    pointer.x=((ev.clientX-r.left)/r.width)*2-1;
+    pointer.y=-((ev.clientY-r.top)/r.height)*2+1;
+  }
+  function pick(ev){
+    pointerToNdc(ev);
+    raycaster.setFromCamera(pointer,camera);
+    const hits=raycaster.intersectObjects(zoneMeshes,false);
+    const hit=hits.find(h=>h.object?.userData?.zoneId);
+    if(!hit)return;
+    const zoneId=hit.object.userData.zoneId;
+    state.progressBodyZone=zoneId;
+    // Keep a sensible 2D context for the right-side panel and fallback.
+    if(['back','hamstrings'].includes(zoneId)) state.progressBodyView='back';
+    render();
+  }
+
+  renderer.domElement.addEventListener('pointerdown',ev=>{
+    dragging=true;moved=false;
+    downX=lastX=ev.clientX;downY=lastY=ev.clientY;
+    renderer.domElement.setPointerCapture?.(ev.pointerId);
+  });
+  renderer.domElement.addEventListener('pointermove',ev=>{
+    if(!dragging)return;
+    const dx=ev.clientX-lastX,dy=ev.clientY-lastY;
+    if(Math.hypot(ev.clientX-downX,ev.clientY-downY)>5)moved=true;
+    body.rotation.y+=dx*.012;
+    body.rotation.x=Math.max(-.24,Math.min(.24,body.rotation.x+dy*.0045));
+    lastX=ev.clientX;lastY=ev.clientY;
+    state.progressBody3DYaw=body.rotation.y;
+    state.progressBody3DPitch=body.rotation.x;
+  });
+  const endPointer=ev=>{
+    if(!dragging)return;
+    dragging=false;
+    renderer.domElement.releasePointerCapture?.(ev.pointerId);
+    if(!moved)pick(ev);
+  };
+  renderer.domElement.addEventListener('pointerup',endPointer);
+  renderer.domElement.addEventListener('pointercancel',()=>{dragging=false;});
+
+  renderer.domElement.addEventListener('wheel',ev=>{
+    ev.preventDefault();
+    camera.position.z=Math.max(7.2,Math.min(10.2,camera.position.z+ev.deltaY*.003));
+  },{passive:false});
+
+  const resizeObserver=new ResizeObserver(resize);
+  resizeObserver.observe(host);
+  resize();
+
+  const inst={renderer,scene,camera,body,resizeObserver,stopped:false};
+  v10107Body3DInstance=inst;
+  function loop(){
+    if(inst.stopped)return;
+    if(!host.isConnected){v10107DisposeBody3D();return;}
+    renderer.render(scene,camera);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+const _bindEventsV10107=bindEvents;
+bindEvents=function(){
+  _bindEventsV10107();
+
+  document.querySelectorAll('[data-body-display]').forEach(b=>b.onclick=()=>{
+    state.progressBodyDisplay=b.dataset.bodyDisplay||'2d';
+    if(state.progressBodyDisplay==='3d'){
+      state.progressBody3DYaw=(state.progressBodyView||'front')==='back'?Math.PI:0;
+      state.progressBody3DPitch=0;
+    }
+    render();
+  });
+
+  // In 3D, Face/Dos are camera/model snap controls as well.
+  if(v10107DisplayMode()==='3d'){
+    document.querySelectorAll('[data-body-view]').forEach(b=>b.onclick=()=>{
+      const next=b.dataset.bodyView||'front';
+      state.progressBodyView=next;
+      state.progressBody3DYaw=next==='back'?Math.PI:0;
+      state.progressBody3DPitch=0;
+      render();
+    });
+  }
+
+  document.querySelectorAll('[data-body3d-reset]').forEach(b=>b.onclick=()=>{
+    state.progressBody3DYaw=(state.progressBodyView||'front')==='back'?Math.PI:0;
+    state.progressBody3DPitch=0;
+    render();
+  });
+
+  if(document.getElementById('body3DStage')){
+    requestAnimationFrame(v10107InitBody3D);
+  }
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});

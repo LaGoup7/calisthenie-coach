@@ -84,3 +84,13 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Les avant-bras démarrent au coude anatomique et suivent le shell jusqu’au poignet.
 - Les mains/poignets sont recentrés sur la silhouette réelle.
 - Deltoïdes légèrement resserrés pour supprimer l’effet de zones flottantes.
+
+
+## V10.107 — Body Map 3D Beta
+- Nouveau mode 3D avec rotation libre à 360° souris/tactile.
+- Modèle athlétique 3D procédural construit avec Three.js.
+- Zones KINETIK cliquables : épaules, poitrine, dos, bras, avant-bras, poignets, core, hanches, quadriceps, ischios, mollets et chevilles.
+- Les mêmes scores/confiances/états que la Body Map 2D pilotent les couleurs 3D.
+- Face/Dos recentrent le modèle ; molette = zoom léger.
+- Toggle 2D / 3D. La Body Map SVG V7 reste le fallback si Three.js/WebGL n’est pas disponible.
+- Three.js 0.160.1 chargé depuis cdnjs dans index.html.

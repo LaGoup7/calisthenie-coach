@@ -3615,3 +3615,34 @@ body{
 .bodymap-v7 .v7-zone[data-body-zone="forearms"].selected>path{
   stroke-width:2.35;
 }
+
+/* ==========================================================================
+   V10.107 · Body Map 3D Beta
+   ========================================================================== */
+.body-toolbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.body-display-toggle button{min-width:46px}
+.body-overview-model-3d{position:relative;min-height:650px;overflow:hidden}
+.body3d-stage{position:relative;width:100%;height:650px;min-height:520px;border-radius:20px;overflow:hidden;background:
+  radial-gradient(circle at 50% 34%,rgba(255,255,255,.98),rgba(244,247,252,.80) 48%,rgba(237,242,248,.64) 100%);
+  cursor:grab;user-select:none;-webkit-user-select:none}
+.body3d-stage:active{cursor:grabbing}
+.body3d-canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
+.body3d-help{position:absolute;z-index:3;left:14px;top:14px;display:grid;gap:1px;padding:9px 11px;border:1px solid rgba(226,232,240,.82);
+  border-radius:14px;background:rgba(255,255,255,.74);backdrop-filter:blur(10px);pointer-events:none}
+.body3d-help span{font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:900}
+.body3d-help strong{font-size:.68rem}.body3d-help small{font-size:.54rem;color:var(--muted)}
+.body3d-reset{position:absolute;z-index:4;right:12px;top:12px;width:38px;height:38px;border-radius:13px;border:1px solid rgba(226,232,240,.9);
+  background:rgba(255,255,255,.80);backdrop-filter:blur(10px);color:var(--text);font-weight:900;font-size:1rem;cursor:pointer}
+.body3d-note{font-size:.54rem;color:var(--muted);margin:2px 0 0}
+.body3d-fallback{width:100%;height:100%;display:grid;place-items:center}
+.body3d-fallback .bodymap-figure{max-height:630px}
+@media(max-width:760px){
+  .body-toolbar-right{width:100%;justify-content:space-between}
+  .body-overview-model-3d{min-height:560px}
+  .body3d-stage{height:580px;min-height:520px}
+}
+@media(max-width:460px){
+  .body3d-stage{height:530px;min-height:500px}
+  .body3d-help small{display:none}
+  .body3d-help{padding:7px 9px}
+}
