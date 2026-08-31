@@ -26,3 +26,8 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 ## V10.96
 - Correctif : le corps humain de Progression > Vue d’ensemble est maintenant le renderer final et ne peut plus être écrasé par un ancien override.
 - Cache PWA incrémenté pour forcer le chargement de la nouvelle interface.
+
+
+## V10.97
+- Suppression du bloc explicatif « Comment KINETIK mesure ton niveau » dans Progression > Vue d’ensemble.
+- Le corps humain reste le repère visuel principal.

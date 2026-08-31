@@ -7799,6 +7799,19 @@ bindEvents=function(){
   document.querySelectorAll('[data-body-zone-cycle]').forEach(b=>b.onclick=()=>{const dir=b.dataset.bodyZoneCycle==='prev'?-1:1;v1095CycleBodyZone(dir,state.progressBodyMode||'overall',state.progressBodyView||'front');render();});
 };
 
+
+
+/* ========================================================================== */
+/* V10.97 · Suppression du bloc explicatif Progression                        */
+/* La chaîne Performance → Évaluation → Capacités → Rang n'est plus affichée */
+/* dans la vue d'ensemble : le corps humain devient le repère visuel principal. */
+/* ========================================================================== */
+const _v1085ProgressionChainV1097=v1085ProgressionChain;
+v1085ProgressionChain=function(active='performance',compact=false){
+  if(!compact)return '';
+  return _v1085ProgressionChainV1097(active,true);
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
