@@ -7415,6 +7415,101 @@ bindEvents=function(){
   });
 };
 
+
+/* ========================================================================== */
+/* V10.94 · Évaluation simplifiée                                             */
+/* Mission unique : confirmer les performances importantes, sans jargon.       */
+/* ========================================================================== */
+renderAssessmentCenter=function(){
+  const coverage=assessmentCoverage(),recommended=assessmentRecommended().slice(0,3),cat=state.assessmentCategory||'all';
+  const confirmed=coverage.verified;
+  const known=coverage.tested;
+
+  return shell(`<header class="topbar assessment94-topbar">
+    <div>
+      <button class="profile-back-link" data-view="progress">← Progression</button>
+      <div class="brand">Évaluation</div>
+      <div class="daylabel">Confirme uniquement les performances qui en ont besoin</div>
+    </div>
+  </header>
+
+  <section class="assessment94-intro">
+    <div>
+      <div class="kicker">À quoi sert cette page ?</div>
+      <h1>Confirmer ton niveau.</h1>
+      <p>Les performances enregistrées pendant tes séances comptent déjà. Ici, KINETIK te propose seulement quelques tests lorsqu’une mesure plus fiable est utile pour tes Capacités ou ton Rang.</p>
+    </div>
+    <div class="assessment94-summary">
+      <div><strong>${known}</strong><span>références connues</span></div>
+      <div><strong>${confirmed}</strong><span>confirmées par un test</span></div>
+    </div>
+  </section>
+
+  <section class="assessment94-recommended">
+    <div class="assessment94-head">
+      <div><div class="kicker">À faire maintenant</div><h2>${recommended.length?'Tests utiles':'Rien d’urgent'}</h2></div>
+      <span>${recommended.length?`${recommended.length} proposition${recommended.length>1?'s':''}`:'Profil suffisant'}</span>
+    </div>
+
+    ${recommended.length?`<div class="assessment94-list">
+      ${recommended.map(p=>{
+        const cur=protocolCurrent(p);
+        return `<button class="assessment94-test" data-assessment-start="${p.id}">
+          <div>
+            <strong>${esc(p.name)}</strong>
+            <span>${cur.value?`Référence actuelle · ${cur.value} ${p.unit}`:'Aucune référence fiable pour le moment'}</span>
+          </div>
+          <div class="assessment94-test-action"><small>≈ ${p.duration} min</small><b>${cur.value?'Confirmer':'Faire le test'} →</b></div>
+        </button>`;
+      }).join('')}
+    </div>`:`<div class="assessment94-empty"><strong>Aucun test nécessaire maintenant.</strong><span>Continue simplement ton entraînement. KINETIK te proposera une évaluation lorsqu’elle apportera quelque chose d’utile.</span></div>`}
+  </section>
+
+  <details class="assessment94-all">
+    <summary>
+      <div><div class="kicker">Tous les tests</div><strong>Voir la bibliothèque d’évaluations</strong><span>Force, grip, compétences, mobilité et cardio</span></div>
+      <b>↓</b>
+    </summary>
+
+    <div class="assessment94-all-body">
+      <div class="assessment94-tabs">
+        <button class="${cat==='all'?'active':''}" data-assessment-category="all">Tout</button>
+        ${ASSESSMENT_CATEGORIES.map(c=>`<button class="${cat===c.id?'active':''}" data-assessment-category="${c.id}">${c.label}</button>`).join('')}
+      </div>
+
+      <div class="assessment94-categories">
+        ${ASSESSMENT_CATEGORIES.filter(c=>cat==='all'||cat===c.id).map(c=>{
+          const s=assessmentCategoryStatus(c.id);
+          return `<section class="assessment94-category">
+            <div class="assessment94-category-head"><div><strong>${c.label}</strong><span>${c.description}</span></div><small>${s.tested}/${s.total} renseignés</small></div>
+            <div>${c.id==='mobility'
+              ?renderMobilityAssessmentRows()
+              :ASSESSMENT_PROTOCOLS.filter(p=>p.category===c.id).map(renderAssessmentProtocolRow).join('')}</div>
+          </section>`;
+        }).join('')}
+      </div>
+    </div>
+  </details>
+
+  <section class="assessment94-help">
+    <strong>Pas besoin de tout tester.</strong>
+    <span>Une séance normale peut déjà créer une référence. Un Test KINETIK sert seulement à confirmer une performance importante dans des conditions reproductibles.</span>
+  </section>`, 'progress');
+};
+
+/* Keep row wording simple throughout the full test library. */
+const _renderAssessmentProtocolRowV1094=renderAssessmentProtocolRow;
+renderAssessmentProtocolRow=function(p){
+  const current=protocolCurrent(p),verified=v1089VerifiedBenchmark(p);
+  return `<div class="assessment-protocol-row assessment94-protocol-row">
+    <div class="assessment-row-main">
+      <strong>${esc(p.name)}</strong>
+      <span>${current.value?`${current.value} ${p.unit}${verified?` · confirmé ${verified.value} ${p.unit}`:''}`:'Pas encore mesuré'}</span>
+    </div>
+    <button class="assessment-start" data-assessment-start="${p.id}">${current.value?'Retester':'Tester'} →</button>
+  </div>`;
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
