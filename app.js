@@ -9508,3 +9508,343 @@ if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serv
 const _stravaQs=new URLSearchParams(location.search),stravaParam=_stravaQs.get('strava'),stravaReason=_stravaQs.get('reason');if(stravaParam){const reasonLabel=({missing_config:'configuration Vercel incomplète',token_exchange:'échange du code refusé par Strava',missing_scope:'permission activité non accordée',session_error:'session sécurisée impossible',callback_domain:'domaine de callback invalide',access_denied:'autorisation refusée'})[stravaReason]||stravaReason;state.stravaMessage=stravaParam==='connected'?'Strava connecté ✓':stravaParam==='error'?`Erreur de connexion Strava${reasonLabel?' · '+reasonLabel:''}`:'Connexion Strava non terminée';sessionStorage.setItem('cc_strava_return',stravaParam);history.replaceState({},'',location.pathname);}
 render();
 setTimeout(async()=>{await loadStravaStatus();const returned=sessionStorage.getItem('cc_strava_return');if(returned==='connected'&&state.stravaStatus.connected){sessionStorage.removeItem('cc_strava_return');if(!getStravaMeta().lastSync)syncStravaActivities();}},80);
+
+
+/* ========================================================================== */
+/* V10.109 · Haut du corps détaillé                                           */
+/* Bras remplacés par biceps + triceps. Trapèzes ajoutés.                     */
+/* ========================================================================== */
+function v10109ZoneIds(view='front'){
+  return view==='back'
+    ?['shoulders','traps','back','triceps','biceps','forearms','wrists','core','hips','hamstrings','calves','ankles']
+    :['shoulders','traps','chest','biceps','triceps','forearms','wrists','core','hips','quads','calves','ankles'];
+}
+
+v1095BodyZones=function(mode='overall',view='front'){
+  const pull=v1095CapabilityScore('pull'),push=v1095CapabilityScore('push'),core=v1095CapabilityScore('core'),grip=v1095CapabilityScore('grip'),balance=v1095CapabilityScore('balance'),explosive=v1095CapabilityScore('explosive');
+  const mShoulders=v1095MobilityScore('shoulders'),mThorax=v1095MobilityScore('thorax'),mWrists=v1095MobilityScore('wrists'),mHips=v1095MobilityScore('hips'),mPosterior=v1095MobilityScore('posterior'),mAnkles=v1095MobilityScore('ankles');
+  const legs=v1095LegsScore();
+  const data={
+    overall:{
+      shoulders:{score:v1095Avg(push,balance,mShoulders),label:'Épaules',desc:'Stabilité scapulaire, poussée et contrôle des deltoïdes.',action:'skills'},
+      traps:{score:v1095Avg(pull,explosive,mThorax,mShoulders),label:'Trapèzes',desc:'Stabilité haute du dos, tirage et posture scapulaire.',action:'skills'},
+      chest:{score:v1095Avg(push,balance),label:'Pectoraux',desc:'Lecture surtout basée sur la poussée.',action:'skills'},
+      back:{score:v1095Avg(pull,explosive,mThorax),label:'Dos',desc:'Tractions, tirage haut et ouverture thoracique.',action:'skills'},
+      biceps:{score:v1095Avg(pull,grip),label:'Biceps',desc:'Tirage, flexion du coude et contribution au grip.',action:'skills'},
+      triceps:{score:v1095Avg(push,balance,core),label:'Triceps',desc:'Extension du coude, poussée et verrouillage des appuis.',action:'skills'},
+      forearms:{score:v1095Avg(grip),label:'Avant-bras',desc:'Grip et tenue à la barre.',action:'skills'},
+      wrists:{score:v1095Avg(grip,mWrists,balance),label:'Poignets',desc:'Grip, stabilité et extension utile.',action:'flexibility'},
+      core:{score:v1095Avg(core,balance),label:'Core / abdos',desc:'Gainage, compression et contrôle.',action:'skills'},
+      hips:{score:v1095Avg(legs,mHips,core),label:'Hanches',desc:'Force unilatérale et mobilité de hanche.',action:'flexibility'},
+      quads:{score:v1095Avg(legs,mHips),label:'Quadriceps',desc:'Jambes unilatérales et squat.',action:'skills'},
+      hamstrings:{score:v1095Avg(legs,mPosterior),label:'Ischios',desc:'Chaîne postérieure et contrôle des jambes.',action:'flexibility'},
+      calves:{score:v1095Avg(legs,mAnkles),label:'Mollets',desc:'Appui et contrôle du bas de jambe.',action:'skills'},
+      ankles:{score:v1095Avg(mAnkles,legs),label:'Chevilles',desc:'Mobilité utile au squat et à la course.',action:'flexibility'}
+    },
+    strength:{
+      shoulders:{score:v1095Avg(push,balance),label:'Épaules',desc:'Poussée verticale et stabilité inversée.',action:'skills'},
+      traps:{score:v1095Avg(pull,explosive),label:'Trapèzes',desc:'Tirage haut, stabilité scapulaire et explosivité.',action:'skills'},
+      chest:{score:v1095Avg(push),label:'Pectoraux',desc:'Basé sur les dips et variantes de poussée.',action:'skills'},
+      back:{score:v1095Avg(pull,explosive),label:'Dos',desc:'Basé sur le tirage et l’explosivité.',action:'skills'},
+      biceps:{score:v1095Avg(pull,grip),label:'Biceps',desc:'Lecture via les tirages et la suspension.',action:'skills'},
+      triceps:{score:v1095Avg(push,balance),label:'Triceps',desc:'Lecture via la poussée et la stabilité des appuis.',action:'skills'},
+      forearms:{score:v1095Avg(grip),label:'Avant-bras',desc:'Grip et suspension.',action:'skills'},
+      wrists:{score:v1095Avg(grip,balance),label:'Poignets',desc:'Stabilité utile au handstand et au grip.',action:'skills'},
+      core:{score:v1095Avg(core,balance),label:'Core / abdos',desc:'Compression et maintien.',action:'skills'},
+      hips:{score:v1095Avg(legs,core),label:'Hanches',desc:'Contrôle du bassin et jambes.',action:'skills'},
+      quads:{score:v1095Avg(legs),label:'Quadriceps',desc:'Lecture via les skills jambes.',action:'skills'},
+      hamstrings:{score:v1095Avg(legs),label:'Ischios',desc:'Lecture via les skills jambes.',action:'skills'},
+      calves:{score:v1095Avg(legs),label:'Mollets',desc:'Lecture globale des jambes.',action:'skills'},
+      ankles:{score:null,label:'Chevilles',desc:'Pas de score force dédié pour le moment.',action:'flexibility'}
+    },
+    mobility:{
+      shoulders:{score:v1095Avg(mShoulders),label:'Épaules',desc:'Flexion et confort au-dessus de la tête.',action:'flexibility'},
+      traps:{score:v1095Avg(mThorax,mShoulders),label:'Trapèzes',desc:'Ouverture haute du thorax et aisance scapulaire.',action:'flexibility'},
+      chest:{score:v1095Avg(mThorax),label:'Thorax',desc:'Ouverture du haut du tronc.',action:'flexibility'},
+      back:{score:v1095Avg(mThorax),label:'Thorax / dos',desc:'Rotation thoracique et ouverture.',action:'flexibility'},
+      biceps:{score:null,label:'Biceps',desc:'Pas de test mobilité direct pour le moment.',action:'flexibility'},
+      triceps:{score:v1095Avg(mShoulders),label:'Triceps',desc:'Lecture indirecte via la flexion d’épaule.',action:'flexibility'},
+      forearms:{score:null,label:'Avant-bras',desc:'Les avant-bras n’ont pas de test mobilité direct.',action:'flexibility'},
+      wrists:{score:v1095Avg(mWrists),label:'Poignets',desc:'Extension utile pour appuis et handstand.',action:'flexibility'},
+      core:{score:v1095Avg(mThorax,mHips),label:'Tronc',desc:'Mobilité du tronc et des hanches.',action:'flexibility'},
+      hips:{score:v1095Avg(mHips),label:'Hanches',desc:'Rotation interne et squat profond.',action:'flexibility'},
+      quads:{score:v1095Avg(mHips),label:'Quadriceps / hanches',desc:'Lecture indirecte via squat profond.',action:'flexibility'},
+      hamstrings:{score:v1095Avg(mPosterior),label:'Chaîne postérieure',desc:'Flexion avant et ischios.',action:'flexibility'},
+      calves:{score:v1095Avg(mAnkles),label:'Bas de jambe',desc:'Lecture indirecte via chevilles.',action:'flexibility'},
+      ankles:{score:v1095Avg(mAnkles),label:'Chevilles',desc:'Knee-to-wall gauche et droite.',action:'flexibility'}
+    }
+  };
+  const base=(data[mode]||data.overall);
+  return v10109ZoneIds(view).map(id=>({id,...base[id],tone:v1095BodyTone(base[id]?.score)}));
+};
+
+v10103ExpectedInputs=function(id,mode='overall'){
+  const e={
+    shoulders:[['cap','push','Poussée'],['cap','balance','Équilibre'],['mob','shoulders','Mobilité épaules']],
+    traps:[['cap','pull','Tirage'],['cap','explosive','Explosivité'],['mob','thorax','Mobilité thorax']],
+    chest:[['cap','push','Poussée'],['mob','thorax','Mobilité thorax']],
+    back:[['cap','pull','Tirage'],['cap','explosive','Explosivité'],['mob','thorax','Mobilité thorax']],
+    biceps:[['cap','pull','Tirage'],['cap','grip','Grip']],
+    triceps:[['cap','push','Poussée'],['cap','balance','Équilibre'],['mob','shoulders','Mobilité épaules']],
+    forearms:[['cap','grip','Grip']],
+    wrists:[['cap','grip','Grip'],['cap','balance','Équilibre'],['mob','wrists','Mobilité poignets']],
+    core:[['cap','core','Core'],['cap','balance','Équilibre']],
+    hips:[['cap','legs','Jambes'],['cap','core','Core'],['mob','hips','Mobilité hanches']],
+    quads:[['cap','legs','Jambes'],['mob','hips','Mobilité hanches']],
+    hamstrings:[['cap','legs','Jambes'],['mob','posterior','Chaîne postérieure']],
+    calves:[['cap','legs','Jambes'],['mob','ankles','Mobilité chevilles']],
+    ankles:[['cap','legs','Jambes'],['mob','ankles','Mobilité chevilles']]
+  };
+  let rows=(e[id]||[]).map(([kind,key,label])=>({kind,key,label}));
+  if(mode==='strength')rows=rows.filter(x=>x.kind==='cap');
+  if(mode==='mobility')rows=rows.filter(x=>x.kind==='mob');
+  return rows;
+};
+
+function v10109BodyMapAttrs(id,z,selectedId){
+  return `class="bodymap-zone v7-zone ${v10103ZoneVisual(z(id))}${selectedId===id?' selected':''}" data-body-zone="${id}" role="button" tabindex="0" aria-label="${esc(z(id).label)} ${z(id).score!=null?z(id).score+' sur 100':z(id).status.label}"`;
+}
+
+v1095BodyMapSVG=function(view='front',mode='overall',selectedId=''){
+  const ids=v10109ZoneIds(view);
+  const zones=Object.fromEntries(ids.map(id=>[id,v10103ZoneData(id,mode)]));
+  const z=id=>zones[id]||{id,label:id,score:null,status:{id:'none',label:'À évaluer'},confidence:{id:'none',label:'Aucune donnée'}};
+  const attrs=id=>v10109BodyMapAttrs(id,z,selectedId);
+  const front=view==='front';
+  return `<svg class="bodymap-figure bodymap-v7 bodymap-v109" viewBox="0 0 420 720" role="img" aria-label="Profil corporel KINETIK ${front?'face':'dos'}">
+    <defs>
+      <linearGradient id="v109Body" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#fbfcfe"/>
+        <stop offset=".46" stop-color="#eef2f7"/>
+        <stop offset="1" stop-color="#dfe6ef"/>
+      </linearGradient>
+      <linearGradient id="v109BodyEdge" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#d7e0eb"/>
+        <stop offset=".48" stop-color="#f7f9fc"/>
+        <stop offset="1" stop-color="#d7e0eb"/>
+      </linearGradient>
+      <linearGradient id="v109BodyLeg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f4f7fb"/>
+        <stop offset="1" stop-color="#dde5ef"/>
+      </linearGradient>
+      <filter id="v109BodyShadow" x="-25%" y="-15%" width="150%" height="145%">
+        <feDropShadow dx="0" dy="12" stdDeviation="13" flood-color="#64748b" flood-opacity=".13"/>
+      </filter>
+      <filter id="v109SelectedGlow" x="-45%" y="-45%" width="190%" height="190%">
+        <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#4f46e5" flood-opacity=".32"/>
+      </filter>
+      <pattern id="v109LimitedPattern" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+        <rect width="8" height="8" fill="rgba(165,180,252,.20)"/>
+        <rect width="2" height="8" fill="rgba(99,102,241,.22)"/>
+      </pattern>
+    </defs>
+
+    <g class="v7-shell" filter="url(#v109BodyShadow)">
+      <path class="v7-head" d="M210 24 C188 24 173 41 173 65 C173 91 188 108 210 110 C232 108 247 91 247 65 C247 41 232 24 210 24 Z"/>
+      <path class="v7-ear" d="M173 59 C166 57 163 64 165 74 C167 83 171 87 176 84 L178 64 Z"/>
+      <path class="v7-ear" d="M247 59 C254 57 257 64 255 74 C253 83 249 87 244 84 L242 64 Z"/>
+      <path class="v7-neck" d="M193 101 C195 116 192 126 183 133 C192 142 201 147 210 147 C219 147 228 142 237 133 C228 126 225 116 227 101 C218 108 202 108 193 101 Z"/>
+      <path class="v7-torso" d="M174 131 C157 134 140 143 128 156 C116 170 113 194 117 223 C120 248 126 274 132 298 C139 326 151 349 168 361 C180 369 194 373 210 374 C226 373 240 369 252 361 C269 349 281 326 288 298 C294 274 300 248 303 223 C307 194 304 170 292 156 C280 143 263 134 246 131 C236 136 224 139 210 139 C196 139 184 136 174 131 Z"/>
+      <path class="v7-upper-arm" d="M134 151 C117 153 104 166 98 188 C92 212 96 241 101 269 C105 290 108 310 105 329 C103 343 103 359 108 373 C114 388 128 389 136 377 C142 365 144 346 145 328 C146 302 145 275 147 248 C149 222 155 189 149 166 C147 157 142 152 134 151 Z"/>
+      <path class="v7-upper-arm" d="M286 151 C303 153 316 166 322 188 C328 212 324 241 319 269 C315 290 312 310 315 329 C317 343 317 359 312 373 C306 388 292 389 284 377 C278 365 276 346 275 328 C274 302 275 275 273 248 C271 222 265 189 271 166 C273 157 278 152 286 151 Z"/>
+      <path class="v7-forearm" d="M107 370 C119 367 130 378 132 395 L130 451 C127 472 122 492 111 501 C100 505 92 497 90 483 L90 409 C91 392 95 375 107 370 Z"/>
+      <path class="v7-forearm" d="M313 370 C301 367 290 378 288 395 L290 451 C293 472 298 492 309 501 C320 505 328 497 330 483 L330 409 C329 392 325 375 313 370 Z"/>
+      <ellipse class="v7-hand" cx="109" cy="519" rx="18" ry="26"/>
+      <ellipse class="v7-hand" cx="311" cy="519" rx="18" ry="26"/>
+      <path class="v7-pelvis" d="M169 359 C181 366 195 370 210 371 C225 370 239 366 251 359 C262 375 267 397 263 420 C247 434 229 441 210 442 C191 441 173 434 157 420 C153 397 158 375 169 359 Z"/>
+      <path class="v7-thigh" d="M166 422 C182 418 193 431 197 454 C201 497 194 541 188 584 C185 604 183 626 177 645 C170 654 156 653 151 642 C147 622 150 600 150 580 C150 553 145 526 141 499 C136 470 135 441 142 430 C147 425 156 422 166 422 Z"/>
+      <path class="v7-thigh" d="M254 422 C238 418 227 431 223 454 C219 497 226 541 232 584 C235 604 237 626 243 645 C250 654 264 653 269 642 C273 622 270 600 270 580 C270 553 275 526 279 499 C284 470 285 441 278 430 C273 425 264 422 254 422 Z"/>
+      <path class="v7-shin" d="M160 641 C171 637 181 644 183 661 L180 705 C174 716 162 718 153 710 C149 690 151 665 160 641 Z"/>
+      <path class="v7-shin" d="M260 641 C249 637 239 644 237 661 L240 705 C246 716 258 718 267 710 C271 690 269 665 260 641 Z"/>
+      <ellipse class="v7-foot" cx="165" cy="710" rx="23" ry="14"/>
+      <ellipse class="v7-foot" cx="255" cy="710" rx="23" ry="14"/>
+    </g>
+
+    <g class="v7-guides">
+      <path d="M210 148 V442"/>
+      <path d="M164 421 C177 430 193 435 210 435 C227 435 243 430 256 421"/>
+      ${front?`<path d="M144 216 C164 225 183 228 210 228 C237 228 256 225 276 216"/><path d="M154 287 H266 M160 324 H260"/>`:`<path d="M147 182 C166 199 187 206 210 208 C233 206 254 199 273 182"/><path d="M162 324 C178 340 194 347 210 349 C226 347 242 340 258 324"/>`}
+    </g>
+
+    <g ${attrs('shoulders')}>
+      <path d="M152 145 C164 136 176 134 188 139 C190 152 184 167 172 178 C160 176 151 166 148 153 C147 150 148 147 152 145 Z"/>
+      <path d="M268 145 C256 136 244 134 232 139 C230 152 236 167 248 178 C260 176 269 166 272 153 C273 150 272 147 268 145 Z"/>
+    </g>
+
+    <g ${attrs('traps')}>
+      ${front
+        ?`<path d="M170 136 C182 130 196 127 210 127 C224 127 238 130 250 136 L243 165 C232 173 222 177 210 178 C198 177 188 173 177 165 Z"/><path d="M188 164 C195 169 203 171 210 171 C217 171 225 169 232 164" class="bodymap-overlay-secondary"/>`
+        :`<path d="M165 132 C179 125 194 122 210 122 C226 122 241 125 255 132 L245 168 C235 177 223 182 210 184 C197 182 185 177 175 168 Z"/><path d="M177 144 C187 151 198 155 210 155 C222 155 233 151 243 144" class="bodymap-overlay-secondary"/>`}
+    </g>
+
+    ${front
+      ?`<g ${attrs('chest')}><path d="M151 182 C168 170 187 169 204 177 L204 255 C186 264 168 263 151 252 Z"/><path d="M269 182 C252 170 233 169 216 177 L216 255 C234 264 252 263 269 252 Z"/><path d="M188 190 C194 194 202 197 210 197 C218 197 226 194 232 190" class="bodymap-overlay-secondary"/></g>`
+      :`<g ${attrs('back')}><path d="M149 173 C168 161 188 160 210 171 C232 160 252 161 271 173 C274 223 267 270 251 306 C240 331 226 346 210 352 C194 346 180 331 169 306 C153 270 146 223 149 173 Z"/><path d="M179 184 C188 198 198 206 210 210 C222 206 232 198 241 184 L234 292 C226 306 218 314 210 317 C202 314 194 306 186 292 Z" class="bodymap-overlay-secondary"/></g>`}
+
+    <g ${attrs('biceps')}>
+      <path d="M122 193 C113 198 109 212 111 228 L117 287 C120 304 128 314 140 316 C149 311 152 300 151 284 L148 228 C147 210 139 197 122 193 Z"/>
+      <path d="M298 193 C307 198 311 212 309 228 L303 287 C300 304 292 314 280 316 C271 311 268 300 269 284 L272 228 C273 210 281 197 298 193 Z"/>
+    </g>
+
+    <g ${attrs('triceps')}>
+      <path d="M145 182 C132 188 125 203 124 222 L126 292 C129 307 136 318 147 320 C154 314 156 302 156 286 L157 227 C157 207 154 192 145 182 Z"/>
+      <path d="M275 182 C288 188 295 203 296 222 L294 292 C291 307 284 318 273 320 C266 314 264 302 264 286 L263 227 C263 207 266 192 275 182 Z"/>
+    </g>
+
+    <g ${attrs('forearms')}>
+      <path d="M123 319 C134 315 144 322 147 337 L144 425 C141 447 134 466 123 476 C113 479 105 471 103 455 L104 366 C106 347 111 328 123 319 Z"/>
+      <path d="M297 319 C286 315 276 322 273 337 L276 425 C279 447 286 466 297 476 C307 479 315 471 317 455 L316 366 C314 347 309 328 297 319 Z"/>
+    </g>
+
+    <g ${attrs('wrists')}>
+      <ellipse cx="109" cy="519" rx="15" ry="22"/>
+      <ellipse cx="311" cy="519" rx="15" ry="22"/>
+    </g>
+
+    <g ${attrs('core')}>
+      ${front
+        ?`<path d="M159 258 C174 267 191 271 210 271 C229 271 246 267 261 258 L264 360 C253 388 236 402 210 408 C184 402 167 388 156 360 Z"/><path d="M181 290 H201 V328 H177 Z M219 290 H239 V328 H219 Z M177 338 H201 V378 H173 Z M219 338 H243 V378 H219 Z" class="bodymap-overlay-secondary"/>`
+        :`<path d="M160 265 C175 274 192 278 210 278 C228 278 245 274 260 265 L262 357 C252 384 235 397 210 401 C185 397 168 384 158 357 Z"/><path d="M180 301 C189 313 199 320 210 323 C221 320 231 313 240 301 L238 364 C229 376 220 382 210 384 C200 382 191 376 182 364 Z" class="bodymap-overlay-secondary"/>`}
+    </g>
+
+    <g ${attrs('hips')}>
+      ${front
+        ?`<path d="M159 408 C173 420 191 426 210 427 C229 426 247 420 261 408 L266 460 C250 476 231 484 210 485 C189 484 170 476 154 460 Z"/>`
+        :`<path d="M154 410 C171 399 189 403 210 417 C231 403 249 399 266 410 L268 460 C251 479 231 487 210 486 C189 487 169 479 152 460 Z"/>`}
+    </g>
+
+    <g ${attrs(front?'quads':'hamstrings')}>
+      <path d="M166 486 C181 481 192 492 196 513 C199 552 194 591 188 631 C185 648 178 656 166 654 C157 643 155 623 154 604 L152 531 C152 511 156 492 166 486 Z"/>
+      <path d="M254 486 C239 481 228 492 224 513 C221 552 226 591 232 631 C235 648 242 656 254 654 C263 643 265 623 266 604 L268 531 C268 511 264 492 254 486 Z"/>
+    </g>
+
+    <g ${attrs('calves')}>
+      <path d="M166 631 C177 625 186 632 188 647 L184 700 C179 714 169 719 160 711 C156 694 158 675 166 631 Z"/>
+      <path d="M254 631 C243 625 234 632 232 647 L236 700 C241 714 251 719 260 711 C264 694 262 675 254 631 Z"/>
+    </g>
+
+    <g ${attrs('ankles')}>
+      <ellipse cx="165" cy="710" rx="18" ry="12"/>
+      <ellipse cx="255" cy="710" rx="18" ry="12"/>
+    </g>
+  </svg>`;
+};
+
+v10107InitBody3D=function(){
+  const host=document.getElementById('body3DStage');
+  if(!host || !v10107ThreeAvailable()) return;
+  v10107DisposeBody3D();
+  const THREE=window.THREE;
+  const scene=new THREE.Scene();
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.8));
+  renderer.setClearColor(0x000000,0);
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.05;
+  host.prepend(renderer.domElement);
+  renderer.domElement.className='body3d-canvas';
+
+  const camera=new THREE.PerspectiveCamera(29,1,.1,50);
+  camera.position.set(0,.05,8.65);
+
+  scene.add(new THREE.HemisphereLight(0xffffff,0xb9c3d3,2.05));
+  const key=new THREE.DirectionalLight(0xffffff,3.0); key.position.set(3.4,5.4,5.8); scene.add(key);
+  const fill=new THREE.DirectionalLight(0xdde5ff,1.55); fill.position.set(-4,2.5,3); scene.add(fill);
+  const rim=new THREE.DirectionalLight(0xb8c4ff,1.35); rim.position.set(0,3,-5); scene.add(rim);
+
+  const body=new THREE.Group(); scene.add(body);
+  const shellMat=new THREE.MeshPhysicalMaterial({color:0xe8edf4,roughness:.56,metalness:0,clearcoat:.16,clearcoatRoughness:.7,transparent:true,opacity:.98});
+  const jointMat=new THREE.MeshPhysicalMaterial({color:0xf1f4f8,roughness:.58,metalness:0,clearcoat:.12,transparent:true,opacity:.98});
+
+  function addMesh(geometry,material,pos=[0,0,0],scale=[1,1,1],rot=[0,0,0],parent=body){ const m=new THREE.Mesh(geometry,material); m.position.set(...pos); m.scale.set(...scale); m.rotation.set(...rot); parent.add(m); return m; }
+  function capsuleGeom(radius,length){ if(THREE.CapsuleGeometry) return new THREE.CapsuleGeometry(radius,length,8,24); return new THREE.CylinderGeometry(radius,radius,length+radius*2,24,1,false); }
+  function addCapsule(material,pos,radius,length,scale=[1,1,1],rot=[0,0,0],parent=body){ return addMesh(capsuleGeom(radius,length),material,pos,scale,rot,parent); }
+  function lathe(points,segments=48){ return new THREE.LatheGeometry(points.map(([r,y])=>new THREE.Vector2(r,y)),segments); }
+
+  addMesh(new THREE.SphereGeometry(.39,40,28),jointMat,[0,2.63,0],[.78,1.0,.72]);
+  addMesh(new THREE.CylinderGeometry(.18,.21,.42,28),shellMat,[0,2.22,0]);
+  addMesh(lathe([[.40,-.98],[.47,-.78],[.52,-.48],[.59,-.05],[.66,.43],[.62,.72],[.50,.96]]),shellMat,[0,1.20,0],[1.0,1.0,.67]);
+  addMesh(lathe([[.47,-.43],[.54,-.25],[.58,.04],[.54,.31],[.46,.45]]),shellMat,[0,-.18,0],[1.0,1.0,.73]);
+  addCapsule(shellMat,[0,1.93,0],.23,1.08,[1,1,.84],[0,0,Math.PI/2]);
+  const armRot=.105;
+  addCapsule(shellMat,[-.79,1.25,0],.16,.76,[1,1,.95],[0,0,-armRot]);
+  addCapsule(shellMat,[ .79,1.25,0],.16,.76,[1,1,.95],[0,0, armRot]);
+  addCapsule(shellMat,[-.86,.35,.01],.14,.78,[1,1,.92],[0,0,-.045]);
+  addCapsule(shellMat,[ .86,.35,.01],.14,.78,[1,1,.92],[0,0, .045]);
+  addMesh(new THREE.SphereGeometry(.18,28,20),jointMat,[-.89,-.20,.05],[.80,1.18,.70]);
+  addMesh(new THREE.SphereGeometry(.18,28,20),jointMat,[ .89,-.20,.05],[.80,1.18,.70]);
+  addCapsule(shellMat,[-.31,-1.22,0],.225,.92,[1,1,.94],[0,0,-.025]);
+  addCapsule(shellMat,[ .31,-1.22,0],.225,.92,[1,1,.94],[0,0, .025]);
+  addCapsule(shellMat,[-.31,-2.30,.02],.175,.88,[1,1,.92],[0,0,.012]);
+  addCapsule(shellMat,[ .31,-2.30,.02],.175,.88,[1,1,.92],[0,0,-.012]);
+  addMesh(new THREE.SphereGeometry(.22,30,20),jointMat,[-.31,-3.00,.16],[.76,.48,1.42]);
+  addMesh(new THREE.SphereGeometry(.22,30,20),jointMat,[ .31,-3.00,.16],[.76,.48,1.42]);
+
+  const zoneMeshes=[];
+  const mode=state.progressBodyMode||'overall';
+  const selectedId=state.progressBodyZone||'';
+  function zoneMaterial(zoneId){
+    const zone=v10103ZoneData(zoneId,mode), style=v10107ColorForZone(zone), selected=selectedId===zoneId;
+    return new THREE.MeshStandardMaterial({color:style.color,roughness:.46,metalness:0,transparent:true,opacity:selected?Math.max(style.opacity,.62):style.opacity,depthWrite:false,emissive:selected?0x312e81:style.emissive,emissiveIntensity:selected?.28:.035,side:THREE.DoubleSide});
+  }
+  function tag(mesh,zoneId){ mesh.userData.zoneId=zoneId; zoneMeshes.push(mesh); return mesh; }
+  function zSphere(zoneId,pos,scale){ return tag(addMesh(new THREE.SphereGeometry(1,30,22),zoneMaterial(zoneId),pos,scale),zoneId); }
+  function zCapsule(zoneId,pos,radius,length,scale=[1,1,1],rot=[0,0,0]){ return tag(addCapsule(zoneMaterial(zoneId),pos,radius,length,scale,rot),zoneId); }
+  function zBox(zoneId,pos,size=[1,1,1],rot=[0,0,0]){ return tag(addMesh(new THREE.BoxGeometry(1,1,1),zoneMaterial(zoneId),pos,size,rot),zoneId); }
+
+  zSphere('shoulders',[-.68,1.84,.03],[.31,.26,.31]);
+  zSphere('shoulders',[ .68,1.84,.03],[.31,.26,.31]);
+  zCapsule('traps',[0,1.92,-.08],.16,.62,[1.35,.9,.45],[0,0,Math.PI/2]);
+  zSphere('traps',[-.19,1.73,-.08],[.18,.14,.10]);
+  zSphere('traps',[ .19,1.73,-.08],[.18,.14,.10]);
+
+  zSphere('chest',[-.28,1.45,.39],[.37,.34,.105]);
+  zSphere('chest',[ .28,1.45,.39],[.37,.34,.105]);
+  zSphere('back',[0,1.36,-.39],[.63,.72,.105]);
+
+  zCapsule('biceps',[-.77,1.24,.14],.12,.55,[.92,1,.62],[0,0,-armRot]);
+  zCapsule('biceps',[ .77,1.24,.14],.12,.55,[.92,1,.62],[0,0, armRot]);
+  zCapsule('triceps',[-.80,1.24,-.12],.12,.58,[.95,1,.66],[0,0,-armRot]);
+  zCapsule('triceps',[ .80,1.24,-.12],.12,.58,[.95,1,.66],[0,0, armRot]);
+
+  zCapsule('forearms',[-.86,.35,.025],.147,.78,[1,1,.95],[0,0,-.045]);
+  zCapsule('forearms',[ .86,.35,.025],.147,.78,[1,1,.95],[0,0, .045]);
+  zSphere('wrists',[-.89,-.20,.07],[.15,.22,.14]);
+  zSphere('wrists',[ .89,-.20,.07],[.15,.22,.14]);
+
+  zSphere('core',[0,.70,.405],[.45,.68,.095]);
+  zSphere('core',[0,.70,-.405],[.45,.68,.095]);
+  zSphere('hips',[0,-.22,.30],[.56,.38,.17]);
+  zSphere('hips',[0,-.22,-.30],[.56,.38,.17]);
+  zCapsule('quads',[-.31,-1.22,.16],.19,.90,[1,.98,.72],[0,0,-.025]);
+  zCapsule('quads',[ .31,-1.22,.16],.19,.90,[1,.98,.72],[0,0, .025]);
+  zCapsule('hamstrings',[-.31,-1.22,-.16],.19,.90,[1,.98,.72],[0,0,-.025]);
+  zCapsule('hamstrings',[ .31,-1.22,-.16],.19,.90,[1,.98,.72],[0,0, .025]);
+  zCapsule('calves',[-.31,-2.30,.03],.18,.86,[1,1,.94],[0,0,.012]);
+  zCapsule('calves',[ .31,-2.30,.03],.18,.86,[1,1,.94],[0,0,-.012]);
+  zSphere('ankles',[-.31,-2.88,.09],[.17,.20,.19]);
+  zSphere('ankles',[ .31,-2.88,.09],[.17,.20,.19]);
+
+  const shadow=new THREE.Mesh(new THREE.CircleGeometry(1.25,64),new THREE.MeshBasicMaterial({color:0x94a3b8,transparent:true,opacity:.09,depthWrite:false}));
+  shadow.rotation.x=-Math.PI/2; shadow.position.set(0,-3.18,0); scene.add(shadow);
+  if(!Number.isFinite(state.progressBody3DYaw)) state.progressBody3DYaw=(state.progressBodyView||'front')==='back'?Math.PI:0;
+  body.rotation.y=Number(state.progressBody3DYaw||0); body.rotation.x=Number(state.progressBody3DPitch||0);
+
+  const raycaster=new THREE.Raycaster(), pointer=new THREE.Vector2();
+  let downX=0,downY=0,lastX=0,lastY=0,dragging=false,moved=false;
+  function resize(){ if(!host.isConnected)return; const rect=host.getBoundingClientRect(); const w=Math.max(260,Math.round(rect.width)); const h=Math.max(430,Math.round(rect.height)); renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+  function pointerToNdc(ev){ const r=renderer.domElement.getBoundingClientRect(); pointer.x=((ev.clientX-r.left)/r.width)*2-1; pointer.y=-((ev.clientY-r.top)/r.height)*2+1; }
+  function pick(ev){ pointerToNdc(ev); raycaster.setFromCamera(pointer,camera); const hits=raycaster.intersectObjects(zoneMeshes,false); const hit=hits.find(h=>h.object?.userData?.zoneId); if(!hit)return; const zoneId=hit.object.userData.zoneId; state.progressBodyZone=zoneId; const yaw=((body.rotation.y%(Math.PI*2))+(Math.PI*2))%(Math.PI*2); const isBack=yaw>Math.PI/2 && yaw<Math.PI*1.5; state.progressBodyView=isBack?'back':'front'; render(); }
+
+  renderer.domElement.addEventListener('pointerdown',ev=>{ dragging=true; moved=false; downX=lastX=ev.clientX; downY=lastY=ev.clientY; renderer.domElement.setPointerCapture?.(ev.pointerId); });
+  renderer.domElement.addEventListener('pointermove',ev=>{ if(!dragging)return; const dx=ev.clientX-lastX, dy=ev.clientY-lastY; if(Math.hypot(ev.clientX-downX,ev.clientY-downY)>5)moved=true; body.rotation.y+=dx*.012; body.rotation.x=Math.max(-.24,Math.min(.24,body.rotation.x+dy*.0045)); lastX=ev.clientX; lastY=ev.clientY; state.progressBody3DYaw=body.rotation.y; state.progressBody3DPitch=body.rotation.x; });
+  const endPointer=ev=>{ if(!dragging)return; dragging=false; renderer.domElement.releasePointerCapture?.(ev.pointerId); if(!moved)pick(ev); };
+  renderer.domElement.addEventListener('pointerup',endPointer); renderer.domElement.addEventListener('pointercancel',()=>{dragging=false;});
+  renderer.domElement.addEventListener('wheel',ev=>{ ev.preventDefault(); camera.position.z=Math.max(7.2,Math.min(10.2,camera.position.z+ev.deltaY*.003)); },{passive:false});
+  const resizeObserver=new ResizeObserver(resize); resizeObserver.observe(host); resize();
+  const inst={renderer,scene,camera,body,resizeObserver,stopped:false}; v10107Body3DInstance=inst;
+  function loop(){ if(inst.stopped)return; if(!host.isConnected){v10107DisposeBody3D();return;} renderer.render(scene,camera); requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+};
+

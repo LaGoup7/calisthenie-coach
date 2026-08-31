@@ -101,3 +101,10 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Le renderer V10.107 3D est maintenant réellement autoritaire.
 - Le sélecteur 2D / 3D doit désormais être visible.
 - Le mode 3D reste le mode par défaut, avec fallback 2D si Three.js/WebGL est indisponible.
+
+
+## V10.109
+- Remplacement de la zone générique « Bras » par deux zones dédiées : Biceps et Triceps.
+- Ajout d’une zone Trapèzes distincte dans la vue d’ensemble du corps.
+- Le body map 2D premium et le body map 3D utilisent maintenant ces nouvelles zones.
+- Les cartes de détail, priorités et points forts utilisent les mêmes nouvelles zones.
