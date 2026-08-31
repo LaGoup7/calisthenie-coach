@@ -821,103 +821,13 @@ const SKILL_TREES = [
 ];
 
 const RANKS = [
-  {id:"bronze",name:"Bronze",title:"Fondations",xpMin:0,requireCount:0,minSkillCount:0,description:"Apprendre les mouvements de base, construire la régularité et enregistrer ses premières références.",objectives:[]},
-  {id:"silver",name:"Argent",title:"Contrôle",xpMin:1200,requireCount:4,minSkillCount:0,description:"Un socle fiable : régularité, tirage, poussée et contrôle du poids du corps.",objectives:[
-    {type:"sessions",value:12,label:"12 séances terminées",mandatory:true},
-    {type:"test",id:"pullups",value:5,label:"5 tractions strictes",unit:"reps"},
-    {type:"test",id:"dips",value:8,label:"8 dips stricts",unit:"reps"},
-    {type:"test",id:"dead_hang",value:45,label:"Dead hang 45 sec",unit:"sec"},
-    {type:"test",id:"wall_handstand",value:45,label:"Handstand au mur 45 sec",unit:"sec"},
-    {type:"recovery",value:2,label:"2 jours de repos planifiés respectés",unit:"j"}
-  ]},
-  {id:"gold",name:"Or",title:"Force de base",xpMin:3500,requireCount:5,minSkillCount:0,description:"La force de base devient solide et permet d'aborder les premières progressions techniques.",objectives:[
-    {type:"sessions",value:30,label:"30 séances terminées",mandatory:true},
-    {type:"weeks",value:3,label:"3 semaines régulières (5+ jours)",unit:"sem"},
-    {type:"test",id:"pullups",value:8,label:"8 tractions strictes",unit:"reps"},
-    {type:"test",id:"dips",value:12,label:"12 dips stricts",unit:"reps"},
-    {type:"test",id:"dead_hang",value:60,label:"Dead hang 60 sec",unit:"sec"},
-    {type:"skill",id:"tuck-20",label:"Tuck L-sit 20 sec"},
-    {type:"test",id:"cardio12",value:1900,label:"1 900 m en 12 min",unit:"m"}
-  ]},
-  {id:"platinum",name:"Platine",title:"Intermédiaire confirmé",xpMin:7000,description:"Le niveau intermédiaire est confirmé dans plusieurs dimensions : expérience, force, skill et capacité à gérer l'entraînement.",requiredCategoryCount:4,categoryRules:[
-    {id:"experience",label:"Expérience",icon:"◷",required:2,mandatory:true},
-    {id:"force",label:"Force",icon:"↗",required:2,mandatory:true},
-    {id:"skills",label:"Skills",icon:"◆",required:1,mandatory:true},
-    {id:"condition",label:"Condition",icon:"⌁",required:1,mandatory:false},
-    {id:"recovery",label:"Récupération",icon:"☾",required:1,mandatory:false}
-  ],objectives:[
-    {type:"sessions",value:60,label:"60 séances terminées",category:"experience"},
-    {type:"weeks",value:6,label:"6 semaines régulières",unit:"sem",category:"experience"},
-    {type:"test",id:"pullups",value:12,label:"12 tractions strictes",unit:"reps",category:"force"},
-    {type:"test",id:"dips",value:15,label:"15 dips stricts",unit:"reps",category:"force"},
-    {type:"test",id:"dead_hang",value:75,label:"Dead hang 75 sec",unit:"sec",category:"force"},
-    {type:"skill",id:"hs-free-5",label:"Handstand libre 5 sec",category:"skills"},
-    {type:"skill",id:"lsit-10",label:"L-sit 10 sec",category:"skills"},
-    {type:"skill",id:"pull-chest",label:"Chest-to-bar propre",category:"skills"},
-    {type:"skill",id:"pistol-assisted",label:"Pistol squat assisté propre",category:"skills"},
-    {type:"test",id:"cardio12",value:2100,label:"2 100 m en 12 min",unit:"m",category:"condition"},
-    {type:"recovery",value:8,label:"8 repos planifiés respectés",unit:"j",category:"recovery"}
-  ]},
-  {id:"diamond",name:"Diamant",title:"Athlète complet",xpMin:12000,description:"Le rang complet : les cinq dimensions doivent être présentes, avec un vrai choix de spécialisation dans les skills.",requiredCategoryCount:5,categoryRules:[
-    {id:"experience",label:"Expérience",icon:"◷",required:2,mandatory:true},
-    {id:"force",label:"Force",icon:"↗",required:2,mandatory:true},
-    {id:"skills",label:"Skills",icon:"◆",required:2,mandatory:true},
-    {id:"condition",label:"Condition",icon:"⌁",required:1,mandatory:true},
-    {id:"recovery",label:"Récupération",icon:"☾",required:1,mandatory:true}
-  ],objectives:[
-    {type:"sessions",value:100,label:"100 séances terminées",category:"experience"},
-    {type:"weeks",value:10,label:"10 semaines régulières",unit:"sem",category:"experience"},
-    {type:"test",id:"pullups",value:15,label:"15 tractions strictes",unit:"reps",category:"force"},
-    {type:"test",id:"dips",value:20,label:"20 dips stricts",unit:"reps",category:"force"},
-    {type:"test",id:"dead_hang",value:90,label:"Dead hang 90 sec",unit:"sec",category:"force"},
-    {type:"skill",id:"hs-free-20",label:"Handstand libre 20 sec",category:"skills"},
-    {type:"skill",id:"lsit-20",label:"L-sit 20 sec",category:"skills"},
-    {type:"skill",id:"muscle-up",label:"1 muscle-up strict",category:"skills"},
-    {type:"skill",id:"lever-adv",label:"Advanced tuck front lever 10 sec",category:"skills"},
-    {type:"skill",id:"pistol",label:"Pistol squat par jambe",category:"skills"},
-    {type:"test",id:"cardio12",value:2300,label:"2 300 m en 12 min",unit:"m",category:"condition"},
-    {type:"recovery",value:14,label:"14 repos planifiés respectés",unit:"j",category:"recovery"}
-  ]},
-  {id:"master",name:"Maître",title:"Skills avancés",xpMin:19000,description:"Une base athlétique solide et au moins deux compétences avancées, sans imposer le même profil à tout le monde.",requiredCategoryCount:5,categoryRules:[
-    {id:"experience",label:"Expérience",icon:"◷",required:2,mandatory:true},
-    {id:"force",label:"Force",icon:"↗",required:2,mandatory:true},
-    {id:"skills",label:"Skills",icon:"◆",required:2,mandatory:true},
-    {id:"condition",label:"Condition",icon:"⌁",required:1,mandatory:true},
-    {id:"recovery",label:"Récupération",icon:"☾",required:1,mandatory:true}
-  ],objectives:[
-    {type:"sessions",value:160,label:"160 séances terminées",category:"experience"},
-    {type:"weeks",value:16,label:"16 semaines régulières",unit:"sem",category:"experience"},
-    {type:"test",id:"pullups",value:18,label:"18 tractions strictes",unit:"reps",category:"force"},
-    {type:"test",id:"dips",value:25,label:"25 dips stricts",unit:"reps",category:"force"},
-    {type:"skill",id:"muscle-up-3",label:"3 muscle-ups stricts",category:"skills"},
-    {type:"skill",id:"hspu-wall",label:"Handstand push-up au mur",category:"skills"},
-    {type:"skill",id:"lever-oneleg",label:"One-leg front lever 5 sec",category:"skills"},
-    {type:"skill",id:"flag-tuck",label:"Tuck human flag 5 sec",category:"skills"},
-    {type:"skill",id:"pistol",label:"Pistol squat par jambe",category:"skills"},
-    {type:"test",id:"cardio12",value:2500,label:"2 500 m en 12 min",unit:"m",category:"condition"},
-    {type:"recovery",value:20,label:"20 repos planifiés respectés",unit:"j",category:"recovery"}
-  ]},
-  {id:"legend",name:"Légende",title:"Maîtrise",xpMin:28000,description:"Un rang de long terme : expérience, force, condition, récupération et maîtrise de plusieurs familles de skills.",requiredCategoryCount:5,categoryRules:[
-    {id:"experience",label:"Expérience",icon:"◷",required:2,mandatory:true},
-    {id:"force",label:"Force",icon:"↗",required:2,mandatory:true},
-    {id:"skills",label:"Skills",icon:"★",required:3,mandatory:true},
-    {id:"condition",label:"Condition",icon:"⌁",required:1,mandatory:true},
-    {id:"recovery",label:"Récupération",icon:"☾",required:1,mandatory:true}
-  ],objectives:[
-    {type:"sessions",value:250,label:"250 séances terminées",category:"experience"},
-    {type:"weeks",value:25,label:"25 semaines régulières",unit:"sem",category:"experience"},
-    {type:"test",id:"pullups",value:20,label:"20 tractions strictes",unit:"reps",category:"force"},
-    {type:"test",id:"dips",value:30,label:"30 dips stricts",unit:"reps",category:"force"},
-    {type:"test",id:"dead_hang",value:120,label:"Dead hang 120 sec",unit:"sec",category:"force"},
-    {type:"skill",id:"hs-free-30",label:"Handstand libre 30 sec",category:"skills"},
-    {type:"skill",id:"hspu-free",label:"Handstand push-up libre",category:"skills"},
-    {type:"skill",id:"muscle-up-3",label:"3 muscle-ups stricts",category:"skills"},
-    {type:"skill",id:"lever-full",label:"Front lever 5 sec",category:"skills"},
-    {type:"skill",id:"flag-full",label:"Human flag 5 sec",category:"skills"},
-    {type:"skill",id:"pistol-5",label:"5 pistol squats par jambe",category:"skills"},
-    {type:"test",id:"cardio12",value:2700,label:"2 700 m en 12 min",unit:"m",category:"condition"},
-    {type:"recovery",value:30,label:"30 repos planifiés respectés",unit:"j",category:"recovery"}
-  ]}
+  {id:"bronze",name:"Bronze",title:"Fondations",description:"Premières références techniques et physiques."},
+  {id:"silver",name:"Argent",title:"Contrôle",description:"Bases de force, poussée et grip réellement démontrées."},
+  {id:"gold",name:"Or",title:"Force de base",description:"Socle solide sur plusieurs capacités et premières compétences techniques."},
+  {id:"platinum",name:"Platine",title:"Intermédiaire confirmé",description:"Niveau intermédiaire démontré dans l’ensemble du profil KINETIK."},
+  {id:"diamond",name:"Diamant",title:"Athlète complet",description:"Profil complet avec performances avancées et skills validés."},
+  {id:"master",name:"Maître",title:"Skills avancés",description:"Capacités élevées et maîtrise de plusieurs compétences avancées."},
+  {id:"legend",name:"Légende",title:"Maîtrise",description:"Standards experts simultanés, sans raccourci lié au temps passé dans l’application."}
 ];
 
 const state = {
@@ -1236,15 +1146,12 @@ function dailyCycleStatus(value){
   if(plannedSessions.length){const session=plannedSessions[0],status=session.sessionLength==='short'?'done-express':'done';return {key,status,cycle,w,session};}
   return {key,status:key===today?'planned':'missed',cycle,w};
 }
-function respectedRestDays(){
-  const p=getPrefs();if(!p.recoveryXPStart){p.recoveryXPStart=localDateKey();setPrefs(p);}const start=new Date(p.recoveryXPStart+'T12:00:00'),end=new Date();end.setHours(0,0,0,0);let n=0;
-  for(let d=new Date(start);d<end;d.setDate(d.getDate()+1)){if(dailyCycleStatus(d).status==='rest-ok')n++;if(n>5000)break;}return n;
-}
+/* respectedRestDays retiré en v10.86 : le rang ne dépend plus d’un compteur d’ancienneté. */
 function renderCycleHeatmap(weeks=16){
   const today=new Date(),end=mondayDate(today);end.setDate(end.getDate()+6);const start=new Date(end);start.setDate(start.getDate()-(weeks*7-1));
   const cells=[];const counts={done:0,'done-express':0,'rest-ok':0,missed:0,'rest-broken':0};
   for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){const st=dailyCycleStatus(new Date(d));if(counts[st.status]!=null)counts[st.status]++;const title=`${st.key} · ${st.cycle.name} · ${st.status==='done'?'séance complète':st.status==='done-express'?'séance express':st.status==='rest-ok'?'repos respecté':st.status==='rest-planned'?'repos prévu':st.status==='rest-broken'?'repos interrompu':st.status==='missed'?'séance manquée':st.status==='planned'?'séance prévue':st.status==='untracked'?'avant suivi':'à venir'}`;cells.push(`<i class="cycle-heat-cell ${st.status}" title="${esc(title)}" aria-label="${esc(title)}"></i>`);}
-  return `<section class="card cycle-heat-card"><div class="section-head"><div><div class="kicker">Régularité · ${weeks} semaines</div><h2>Historique du cycle</h2></div><span class="pill">+10 XP / repos respecté</span></div><div class="cycle-heat-summary"><span><strong>${counts.done+counts['done-express']}</strong> séances terminées</span><span><strong>${counts['rest-ok']}</strong> repos respectés</span><span><strong>${counts.missed}</strong> jours manqués</span></div><div class="cycle-heat-wrap"><div class="cycle-heat-days"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="cycle-heat-grid">${cells.join('')}</div></div><div class="cycle-heat-legend"><span><i class="done"></i>Séance complète</span><span><i class="done-express"></i>Séance express</span><span><i class="rest-ok"></i>Repos respecté</span><span><i class="missed"></i>Manqué</span><span><i class="rest-broken"></i>Repos interrompu</span></div><p class="muted small">Un repos est validé le lendemain tant qu’aucun renforcement ou micro-série de force n’est enregistré. Étirements, mobilité, marche et cardio restent compatibles avec la récupération.</p></section>`;
+  return `<section class="card cycle-heat-card"><div class="section-head"><div><div class="kicker">Régularité · ${weeks} semaines</div><h2>Historique du cycle</h2></div><span class="pill">régularité</span></div><div class="cycle-heat-summary"><span><strong>${counts.done+counts['done-express']}</strong> séances terminées</span><span><strong>${counts['rest-ok']}</strong> repos respectés</span><span><strong>${counts.missed}</strong> jours manqués</span></div><div class="cycle-heat-wrap"><div class="cycle-heat-days"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="cycle-heat-grid">${cells.join('')}</div></div><div class="cycle-heat-legend"><span><i class="done"></i>Séance complète</span><span><i class="done-express"></i>Séance express</span><span><i class="rest-ok"></i>Repos respecté</span><span><i class="missed"></i>Manqué</span><span><i class="rest-broken"></i>Repos interrompu</span></div><p class="muted small">Un repos est validé le lendemain tant qu’aucun renforcement ou micro-série de force n’est enregistré. Étirements, mobilité, marche et cardio restent compatibles avec la récupération.</p></section>`;
 }
 
 const QUICK_PRESETS = [
@@ -1759,7 +1666,7 @@ function weeklyVolume(){
   const start=mondayDate(new Date()).getTime(),actual={},actualBreakdown=emptyVolumeBreakdown(),cfg=getTrainingConfig();
   // Séances guidées, Express et personnelles : chaque entrée enregistrée correspond à une série réellement faite.
   getHistory().filter(s=>new Date(s.date).getTime()>=start).forEach(s=>(s.entries||[]).forEach(entry=>{if(entry.type==='timer')return;const info=exerciseInfo(entry.exercise);if(info){volumeAdd(actual,info.volume,1);volumeBreakdownAdd(actualBreakdown,info.volume,1,cfg);}}));
-  // Les micro-séries Quick Log font partie de la charge réelle, même si elles restent hors XP / PR / progression automatique.
+  // Les micro-séries Quick Log font partie de la charge réelle, même si elles restent hors PR / progression automatique.
   getQuickLogs().filter(x=>new Date(x.date).getTime()>=start).forEach(entry=>{if(entry.type==='timer')return;const info=exerciseInfo(entry.exercise);if(info){volumeAdd(actual,info.volume,1);volumeBreakdownAdd(actualBreakdown,info.volume,1,cfg);}});
   const planned={},plannedBreakdown=emptyVolumeBreakdown();[0,1,2,3,4,5,6].filter(day=>(workoutTemplateForDay(day).exercises||[]).length).forEach(day=>{const w=preparedWorkout(day,null,'full'),v=volumeForWorkout(w),b=volumeBreakdownForWorkout(w);Object.entries(v).forEach(([g,n])=>planned[g]=(planned[g]||0)+n);VOLUME_GROUPS.forEach(g=>{for(const k of ['primary','secondary','technical','total'])plannedBreakdown[g][k]+=b[g]?.[k]||0;});});
   return {actual,planned,actualBreakdown,plannedBreakdown};
@@ -1805,7 +1712,7 @@ function renderDailyVolumeCard(){
     <div class="daily-volume-hero"><div><strong>${quickReps}</strong><span>reps libres</span></div><div><strong>${quickToday.length}</strong><span>micro-séries</span></div></div>
     ${relevant.length?`<div class="daily-volume-list">${relevant.map(r=>{const unit=quickUnit(r.type),total=r.quick+r.guided;return `<div class="daily-volume-row"><div><strong>${r.family}</strong><small>${r.quick?`libre ${r.quick} ${unit}`:''}${r.quick&&r.guided?' · ':''}${r.guided?`séance ${r.guided} ${unit}`:''}</small></div><b>${total} ${unit}</b></div>`;}).join('')}</div>`:'<p class="muted small">Aucun volume enregistré aujourd’hui. Utilise le bouton + pour noter tes séries faites au fil de la journée.</p>'}
     ${warning?`<div class="volume-warning">⚠ ${warning}</div>`:''}
-    <p class="muted small quick-policy">Le volume libre est suivi pour ta charge réelle, mais ne donne pas d’XP et ne déclenche pas automatiquement une progression de niveau.</p>
+    <p class="muted small quick-policy">Le volume libre est suivi pour ta charge réelle, mais est suivi séparément et ne déclenche pas automatiquement une progression de niveau.</p>
   </section>`;
 }
 function recentQuickActions(){
@@ -1830,7 +1737,7 @@ function renderQuickVolumePanel(){
   const q=quickSummary(7);
   return `<section class="card"><div class="section-head"><div><div class="kicker">Hors séances · 7 jours</div><h2>Volume libre</h2></div><span class="pill">${q.sets} micro-séries</span></div>
     ${q.rows.length?`<div class="quick-week-grid">${q.rows.slice(0,10).map(r=>`<div class="quick-week-row"><span>${r.family}<small>${r.sets} série${r.sets>1?'s':''}</small></span><strong>${r.value} ${r.unit}</strong></div>`).join('')}</div>`:'<div class="empty">Aucune série libre enregistrée sur les 7 derniers jours.</div>'}
-    <p class="muted small">Ces micro-séries restent séparées des séries programmées : elles comptent dans ton activité réelle, mais pas dans les PR, l’XP ou les promotions.</p></section>`;
+    <p class="muted small">Ces micro-séries restent séparées des séries programmées : elles comptent dans ton activité réelle, mais pas dans les PR ou les promotions.</p></section>`;
 }
 function quickExerciseThumb(name){
   const t=tutorialFor(name);
@@ -2698,7 +2605,7 @@ function renderActivityEditor(){
 function renderTodayUsefulActions(){
   const x=progressWeekStats(),rank=getRankState(),next=rank.next;
   const count=(x.recs?.length||0)+(x.due?.overdue?1:0)+(next?1:0);
-  return `<section class="card today-actions-card"><div class="section-head"><div><div class="kicker">À surveiller</div><h2>Prochaines actions utiles</h2></div><span class="pill">${count}</span></div><div class="progress-watch-list">${x.recs?.length?`<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">◷</span><div><strong>Tests périodiques</strong><small>${x.due.label}</small></div><b>Ouvrir →</b></button>${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)} · ${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><b>Rangs →</b></button>`:''}</div></section>`;
+  return `<section class="card today-actions-card"><div class="section-head"><div><div class="kicker">À surveiller</div><h2>Prochaines actions utiles</h2></div><span class="pill">${count}</span></div><div class="progress-watch-list">${x.recs?.length?`<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">◷</span><div><strong>Tests périodiques</strong><small>${x.due.label}</small></div><b>Ouvrir →</b></button>${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)}</small></div><b>Rangs →</b></button>`:''}</div></section>`;
 }
 
 function equipmentVisualIcon(name){
@@ -3277,13 +3184,7 @@ function findSkillLevel(id){
   return null;
 }
 function skillDoneById(id){const level=findSkillLevel(id);return level?skillDone(level):false;}
-function sessionXP(session){
-  const score=clamp(Number(session?.score ?? 80),0,100);
-  let xp=30+Math.round(score*.20);
-  const rpe=Number(session?.rpe||0);
-  if(rpe>=5&&rpe<=8&&!session?.jointDiscomfort)xp+=5;
-  return clamp(xp,25,55);
-}
+/* ancien calcul de récompense retiré en v10.86. */
 function mondayWeekKey(iso){
   const d=new Date(iso), copy=new Date(d.getFullYear(),d.getMonth(),d.getDate());
   const offset=(copy.getDay()+6)%7; copy.setDate(copy.getDate()-offset);
@@ -3429,7 +3330,7 @@ function trainingYearsEvidence(){
 }
 const KINETIK_RANK_RULES={
   // Les rangs sont des niveaux de capacité démontrée.
-  // Aucune ancienneté, XP, durée d'utilisation ou nombre de séances n'est requis.
+  // Aucune ancienneté, durée d’utilisation ou nombre de séances n’est requis.
   bronze:{
     avg:0,caps:{},skillPoints:0,mastery:0,majorMastery:0,proofs:[]
   },
@@ -3529,14 +3430,7 @@ function rankProofValue(proof){
   if(proof.kind==='skill')return skillDoneSafe(proof.id)?1:0;
   return 0;
 }
-function xpSummary(){
-  const history=getHistory(),training=history.reduce((sum,s)=>sum+sessionXP(s),0);
-  const consistentWeeks=consistentWeeksCount(),consistency=consistentWeeks*50;
-  const skillPoints=technicalSkillPoints(),skills=skillPoints*15;
-  const uniqueTests=new Set(getTests().map(t=>t.testId)).size,tests=uniqueTests*10;
-  const recoveryDays=respectedRestDays();
-  return {total:training+consistency+skills+tests,training,consistency,skills,tests,recovery:0,recoveryDays,consistentWeeks,completedSkills:SKILL_TREES.flatMap(t=>t.levels).filter(skillDone).length,uniqueTests,skillPoints};
-}
+/* ancien résumé ludique retiré en v10.86. */
 function rankRuleFor(rank){return KINETIK_RANK_RULES[rank?.id]||KINETIK_RANK_RULES.bronze;}
 function rankGateRows(rank){
   const rule=rankRuleFor(rank),caps=capabilityScores(),capMap=Object.fromEntries(caps.map(x=>[x.id,x])),skillPoints=technicalSkillPoints(),mastery=masterySkillCount(),majorMastery=majorMasterySkillCount();
@@ -3579,14 +3473,14 @@ function rankDivision(readiness,nextExists=true){
   return 'III';
 }
 function getRankState(){
-  const xp=xpSummary(); let index=0;
+  let index=0;
   for(let i=1;i<RANKS.length;i++){
     const ev=evaluateRank(RANKS[i]);
     if(ev.goalsMet)index=i;else break;
   }
   const current=RANKS[index],next=RANKS[index+1]||null,nextEval=next?evaluateRank(next):null;
   const readiness=next?rankReadinessFor(next):1,division=rankDivision(readiness,!!next);
-  return {xp,current,index,next,nextEval,xpProgress:1,goalProgress:readiness,readiness,division,displayName:`${current.name} ${division}`};
+  return {current,index,next,nextEval,goalProgress:readiness,readiness,division,displayName:`${current.name} ${division}`};
 }
 function objectiveValueText(item){
   if(item.obj.type==='skill')return item.done?'Validé':'À valider';
@@ -3608,33 +3502,17 @@ function renderRankObjective(item,rank=null){
   return `<div class="rank-objective ${item.done?'done':''}"><div class="rank-check">${item.done?'✓':'○'}</div><div class="grow"><strong>${item.obj.label}</strong><small>${objectiveValueText(item)}</small></div>${tag}</div>`;
 }
 function renderRankExplorer(){
-  const rs=getRankState(),selectedId=state.selectedRankId||rs.current.id,selectedIndex=rankIndexById(selectedId),rank=RANKS[selectedIndex],ev=evaluateRank(rank),unlocked=selectedIndex<=rs.index;
-  const xpPct=rank.xpMin===0?100:clamp(rs.xp.total/rank.xpMin,0,1)*100;
-  const advanced=!!ev.categoryRules.length;
-  return `<section class="rank-explorer">
-    <div class="rank-ladder" role="list">${RANKS.map((r,i)=>{const status=rankStateLabel(i,rs.index);return `<button class="rank-ladder-card rank-${r.id} ${selectedId===r.id?'selected':''} ${i<rs.index?'done':i===rs.index?'current':'future'}" data-rank-select="${r.id}"><span class="rank-ladder-emblem">${i<rs.index?'✓':i+1}</span><strong>${r.name}</strong><small>${r.title}</small><i>${status}</i></button>`}).join('')}</div>
-    <section class="card rank-detail rank-${rank.id}"><div class="rank-detail-head"><div class="rank-emblem rank-emblem-large">${selectedIndex===6?'★':selectedIndex+1}</div><div class="grow"><div class="kicker">${unlocked?'Progression personnelle':'Objectifs visibles à l’avance'}</div><div class="rank-name">${rank.name}</div><h2>${rank.title}</h2><p>${rank.description}</p></div><span class="rank-status-pill">${rankStateLabel(selectedIndex,rs.index)}</span></div>
-      ${selectedIndex===0?`<div class="rank-foundation-note"><strong>Point de départ</strong><span>Bronze est le rang d'entrée. Les premières séances construisent l'XP et les références nécessaires pour Argent.</span></div>`:`<div class="rank-requirement-grid"><div><span>XP requis</span><strong>${rs.xp.total.toLocaleString('fr-FR')} / ${rank.xpMin.toLocaleString('fr-FR')}</strong><div class="rank-progress"><span style="width:${xpPct}%"></span></div></div>${advanced?`<div><span>Catégories</span><strong>${ev.categoryCompleted} / ${ev.categoryRequired} requises</strong><small>${ev.categoryRules.filter(x=>x.mandatory).length} catégories obligatoires</small></div><div><span>Objectifs</span><strong>${ev.completed} / ${ev.items.length} validés</strong><small>choix à l'intérieur des catégories</small></div>`:`<div><span>Missions</span><strong>${ev.completed} / ${ev.required} requises</strong><small>${ev.items.length} disponibles</small></div>${rank.minSkillCount?`<div><span>Skills minimum</span><strong>${ev.skillCompleted} / ${rank.minSkillCount}</strong><small>parmi ${ev.skillTotal} missions skill</small></div>`:''}`}</div>`}
-      ${advanced?`<div class="section-head rank-categories-head"><div><div class="kicker">Portes de progression</div><h2>Catégories du rang</h2></div><span class="pill">${ev.categoryCompleted}/${ev.categoryRequired}</span></div>${renderRankCategories(rank,ev)}`:''}
-      <div class="section-head rank-missions-head"><div><div class="kicker">Critères du rang</div><h2>${selectedIndex<rs.index?'Objectifs validés':selectedIndex===rs.index?'Ce que tu consolides':'Tu peux déjà préparer ce rang'}</h2></div><span class="pill">${ev.completed}/${ev.items.length}</span></div>
-      ${ev.items.length?`<div class="rank-objectives rank-objectives-detailed">${ev.items.map(item=>renderRankObjective(item,rank)).join('')}</div>`:''}
-      ${advanced?`<p class="rank-rule-note"><strong>Règle à partir de Platine :</strong> les catégories marquées requises doivent être validées. Platine laisse encore un choix entre Condition et Récupération ; à partir de Diamant, les cinq dimensions deviennent obligatoires. À l'intérieur de Force et Skills, plusieurs chemins restent possibles.</p>`:rank.minSkillCount?`<p class="rank-rule-note"><strong>Règle de spécialisation :</strong> ${rank.name} demande au moins ${rank.minSkillCount} mission${rank.minSkillCount>1?'s':''} de type skill. Tu n'es pas obligé de maîtriser toutes les branches.</p>`:''}
-    </section>
-  </section>`;
+  const rs=getRankState(),selectedId=state.selectedRankId||rs.current.id,selectedIndex=rankIndexById(selectedId),rank=RANKS[selectedIndex],ev=evaluateRank(rank);
+  return `<section class="rank-explorer"><div class="rank-ladder" role="list">${RANKS.map((r,i)=>`<button class="rank-ladder-card rank-${r.id} ${selectedId===r.id?'selected':''} ${i<rs.index?'done':i===rs.index?'current':'future'}" data-rank-select="${r.id}"><span class="rank-ladder-emblem">${i<rs.index?'✓':i+1}</span><strong>${r.name}</strong><small>${r.title}</small><i>${rankStateLabel(i,rs.index)}</i></button>`).join('')}</div><section class="card rank-detail rank-${rank.id}"><div class="rank-detail-head"><div class="rank-emblem rank-emblem-large">${selectedIndex===6?'★':selectedIndex+1}</div><div class="grow"><div class="kicker">Barèmes de performance</div><div class="rank-name">${rank.name}</div><h2>${rank.title}</h2><p>${rank.description}</p></div><span class="rank-status-pill">${rankStateLabel(selectedIndex,rs.index)}</span></div><div class="section-head rank-missions-head"><div><div class="kicker">Exigences</div><h2>Performances à démontrer</h2></div><span class="pill">${ev.completed}/${ev.required}</span></div><div class="rank-v2-content">${(ev.gates||[]).map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join('')}</div><p class="rank-rule-note">Le rang dépend uniquement des capacités et performances validées.</p></section></section>`;
 }
 function renderRankMini(){
-  const r=getRankState(),next=r.next;
-  return `<section class="card rank-card rank-${r.current.id} rank-mini"><div class="rank-head"><div class="rank-emblem">${r.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><div class="rank-name">${r.current.name}</div><small class="rank-title-mini">${r.current.title}</small></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div>${next?`<div class="rank-progress-label"><span>Vers ${next.name}</span><strong>${Math.round(r.xpProgress*100)}% XP</strong></div><div class="rank-progress"><span style="width:${r.xpProgress*100}%"></span></div><div class="rank-nextline">${rankProgressText(next,r.nextEval)} validées</div>`:`<div class="rank-legend-line">Rang maximal atteint · Légende</div>`}</section>`;
+  const r=getRankState(),next=r.next,pct=Math.round(r.readiness*100);
+  return `<section class="card rank-card rank-${r.current.id} rank-mini"><div class="rank-head"><div class="rank-emblem">${r.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><div class="rank-name">${r.displayName}</div><small class="rank-title-mini">${r.current.title}</small></div></div>${next?`<div class="rank-progress-label"><span>Exigences vers ${next.name}</span><strong>${pct}%</strong></div><div class="rank-progress"><span style="width:${pct}%"></span></div><div class="rank-nextline">${r.nextEval.completed}/${r.nextEval.required} exigences validées</div>`:`<div class="rank-legend-line">Rang maximal atteint · Légende</div>`}</section>`;
 }
 function renderRankPanel(){
-  const r=getRankState(),next=r.next;
-  const notice=state.rankUpNotice?`<section class="card rank-up-banner rank-${r.current.id}"><div><div class="kicker">Promotion</div><h2>Rang ${state.rankUpNotice} débloqué !</h2><p>XP, régularité et missions de progression ont validé ce palier.</p></div><button class="icon-btn" id="dismissRankUp">×</button></section>`:'';
-  if(!next)return `${notice}<section class="card rank-card rank-legend"><div class="rank-head"><div class="rank-emblem">★</div><div class="grow"><div class="kicker">Rang maximal</div><div class="rank-name">Légende</div><strong class="rank-subtitle">${r.current.title}</strong><p class="muted">${r.current.description}</p></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div></section>`;
-  return `${notice}<section class="card rank-card rank-${r.current.id}"><div class="rank-head"><div class="rank-emblem">${r.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><div class="rank-name">${r.current.name}</div><strong class="rank-subtitle">${r.current.title}</strong><p class="muted">Prochain palier : <strong>${next.name} · ${next.title}</strong></p></div><div class="rank-xp"><strong>${r.xp.total.toLocaleString('fr-FR')}</strong><span>XP</span></div></div>
-    <div class="rank-block"><div class="rank-progress-label"><span>XP vers ${next.name}</span><strong>${r.xp.total.toLocaleString('fr-FR')} / ${next.xpMin.toLocaleString('fr-FR')}</strong></div><div class="rank-progress"><span style="width:${r.xpProgress*100}%"></span></div></div>
-    <div class="rank-next-summary"><span><strong>${r.nextEval.progressCompleted}/${r.nextEval.progressRequired}</strong> ${rankProgressUnit(next)}</span>${next.minSkillCount?`<span><strong>${r.nextEval.skillCompleted}/${next.minSkillCount}</strong> skills min.</span>`:''}<button data-view="skills">Voir tous les rangs →</button></div>
-    <div class="xp-breakdown"><span>Entraînement <strong>${r.xp.training}</strong></span><span>Régularité <strong>${r.xp.consistency}</strong></span><span>Skills <strong>${r.xp.skills}</strong></span><span>Tests <strong>${r.xp.tests}</strong></span><span>Récupération <strong>${r.xp.recovery||0}</strong></span></div>
-    <p class="muted small">L'XP récompense l'expérience. Bronze → Or utilise des missions ; à partir de Platine, la promotion exige des catégories physiques cohérentes et laisse du choix à l'intérieur de chaque catégorie.</p></section>`;
+  const r=getRankState(),next=r.next,pct=Math.round(r.readiness*100);
+  const notice=state.rankUpNotice?`<section class="card rank-up-banner rank-${r.current.id}"><div><div class="kicker">Promotion</div><h2>Rang ${state.rankUpNotice} validé</h2><p>Les barèmes de performance requis sont maintenant remplis.</p></div><button class="icon-btn" id="dismissRankUp">×</button></section>`:'';
+  return `${notice}<section class="card rank-card rank-${r.current.id}"><div class="rank-head"><div class="rank-emblem">${r.index+1}</div><div class="grow"><div class="kicker">Rang actuel</div><div class="rank-name">${r.displayName}</div><strong class="rank-subtitle">${r.current.title}</strong><p class="muted">${next?`Prochain palier : ${next.name} · ${next.title}`:'Rang maximal atteint'}</p></div></div>${next?`<div class="rank-block"><div class="rank-progress-label"><span>Exigences vers ${next.name}</span><strong>${pct}%</strong></div><div class="rank-progress"><span style="width:${pct}%"></span></div></div><div class="rank-next-summary"><span><strong>${r.nextEval.completed}/${r.nextEval.required}</strong> exigences validées</span><button data-view="skills">Voir les barèmes →</button></div>`:''}<p class="muted small">Aucun temps d’utilisation, nombre de séances ou compteur ludique n’intervient dans la promotion.</p></section>`;
 }
 
 function exerciseProgressRows() {
@@ -3672,7 +3550,7 @@ function renderProgressOverview(){
     <section class="card progress-watch-card"><div class="section-head"><div><div class="kicker">À surveiller</div><h2>Ce qui mérite ton attention</h2></div><span class="pill">${x.recs.length+(x.due.overdue?1:0)}</span></div><div class="progress-watch-list">
       ${x.recs.length?`<button class="progress-watch-item" data-progress-tab="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}
       <button class="progress-watch-item" data-progress-tab="performance"><span class="progress-watch-icon">◷</span><div><strong>Tests périodiques</strong><small>${x.due.label}</small></div><b>Voir →</b></button>
-      ${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)} · ${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><b>Rangs →</b></button>`:''}
+      ${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)}</small></div><b>Rangs →</b></button>`:''}
     </div></section>
     ${renderCycleMini()}
     <section class="card progress-overview-trends"><div class="section-head"><div><div class="kicker">Tendance rapide</div><h2>Dernières performances</h2></div><button class="progress-text-link" data-progress-tab="performance">Analyse complète →</button></div>${exerciseProgressRows()||'<div class="empty">Termine quelques séances pour voir les tendances.</div>'}</section>${renderMobilityProgressSummary()}`;
@@ -3693,7 +3571,7 @@ function renderProgressVolume(){
 function renderProgressHistory(){
   const x=progressWeekStats(),h=x.h;
   return `<section class="progress-history-stats"><article><strong>${h.length}</strong><span>séances totales</span></article><article><strong>${x.recent.length}</strong><span>sur 7 jours</span></article><article><strong>${x.mins}</strong><span>minutes / 7 j</span></article><article><strong>${bestMetric(h,'Dead hang')||'—'}</strong><span>best dead hang s</span></article></section>
-    <section class="card"><div class="section-head"><div><div class="kicker">Journal</div><h2>Historique des séances</h2></div><span class="pill">${h.length}</span></div>${h.length?h.slice(0,40).map(x=>`<button class="history-item history-button" data-history="${x.id}"><div class="history-top"><div><div class="history-title">${x.name}</div><div class="small muted">${formatDate(x.date)} · ${x.durationMinutes} min · effort ${x.rpe||'—'}/10 · +${sessionXP(x)} XP</div></div><span class="pill ${x.jointDiscomfort?'badge-warn':'badge-success'}">${x.score}%</span></div>${summaryLine(x)}</button>`).join(''):'<div class="empty">Ta première séance terminée apparaîtra ici.</div>'}</section>
+    <section class="card"><div class="section-head"><div><div class="kicker">Journal</div><h2>Historique des séances</h2></div><span class="pill">${h.length}</span></div>${h.length?h.slice(0,40).map(x=>`<button class="history-item history-button" data-history="${x.id}"><div class="history-top"><div><div class="history-title">${x.name}</div><div class="small muted">${formatDate(x.date)} · ${x.durationMinutes} min · effort ${x.rpe||'—'}/10</div></div><span class="pill ${x.jointDiscomfort?'badge-warn':'badge-success'}">${x.score}%</span></div>${summaryLine(x)}</button>`).join(''):'<div class="empty">Ta première séance terminée apparaîtra ici.</div>'}</section>
     ${state.selectedHistoryId?renderHistoryDetail(state.selectedHistoryId):''}`;
 }
 function renderProgress() {
@@ -3704,7 +3582,7 @@ function renderProgress() {
 }
 
 function summaryLine(x){const pull=(x.entries||[]).filter(e=>e.exercise.includes('Tractions')).map(e=>e.value).filter(v=>v!==undefined);const hang=(x.entries||[]).filter(e=>e.exercise==='Dead hang').map(e=>e.value).filter(v=>v!==undefined);const bits=[];if(pull.length)bits.push(`tractions ${pull.join('/')}`);if(hang.length)bits.push(`hang ${hang.join('/')} s`);if(x.note)bits.push(esc(x.note));return bits.length?`<div class="small muted summary">${bits.join(' · ')}</div>`:'';}
-function renderHistoryDetail(id){const s=getHistory().find(x=>String(x.id)===String(id));if(!s)return'';return `<section class="card detail-card"><div class="section-head"><div><h2>Détail · ${s.name}</h2><div class="small muted">+${sessionXP(s)} XP gagné${s.cycle?' · cycle S'+s.cycle.week:''}${s.readiness?' · '+readinessPlan(s.readiness).label:''}</div></div><button class="icon-btn" id="closeHistory">×</button></div>${s.prs?.length?`<div class="history-prs">🏆 ${s.prs.map(p=>`${p.exercise} ${recordValueText(p)}`).join(' · ')}</div>`:''}${(s.entries||[]).map(e=>`<div class="detail-row"><span>${e.exercise} · S${e.set}${e.substitutedFrom?' · remplace '+e.substitutedFrom:''}</span><strong>${e.value}${e.type.startsWith('hold')?' s':' reps'}${e.band?' · '+e.band:''}${e.loadKg?' · sac '+e.loadKg+' kg':''}</strong></div>`).join('')}</section>`;}
+function renderHistoryDetail(id){const s=getHistory().find(x=>String(x.id)===String(id));if(!s)return'';return `<section class="card detail-card"><div class="section-head"><div><h2>Détail · ${s.name}</h2><div class="small muted">${s.cycle?' · cycle S'+s.cycle.week:''}${s.readiness?' · '+readinessPlan(s.readiness).label:''}</div></div><button class="icon-btn" id="closeHistory">×</button></div>${s.prs?.length?`<div class="history-prs">🏆 ${s.prs.map(p=>`${p.exercise} ${recordValueText(p)}`).join(' · ')}</div>`:''}${(s.entries||[]).map(e=>`<div class="detail-row"><span>${e.exercise} · S${e.set}${e.substitutedFrom?' · remplace '+e.substitutedFrom:''}</span><strong>${e.value}${e.type.startsWith('hold')?' s':' reps'}${e.band?' · '+e.band:''}${e.loadKg?' · sac '+e.loadKg+' kg':''}</strong></div>`).join('')}</section>`;}
 
 function testDueSummary(){
   const tests=getTests(); if(!tests.length)return{overdue:true,label:"Premier bilan"};
@@ -3766,7 +3644,7 @@ function recentSkillAchievements(limit=5){
 }
 function renderRankSystemV2(){
   const rs=getRankState();
-  return `<div class="rank-v2-list">${RANKS.map((r,i)=>{const ev=evaluateRank(r),gates=ev.gates||[],stateLabel=i<rs.index?'Validé':i===rs.index?'Rang actuel':'À atteindre';return `<details class="rank-v2-row" ${i===rs.index||i===rs.index+1?'open':''}><summary><div><strong>${r.name}</strong><span>${r.title}</span></div><b>${stateLabel}</b></summary><div class="rank-v2-content">${gates.length?gates.map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join(''):'<p>Point de départ du système KINETIK.</p>'}</div></details>`}).join('')}</div><p class="rank-scale-note">Les rangs sont déterminés uniquement par les capacités démontrées. Ni l'âge du compte, ni le nombre de séances, ni l'XP, ni les années de pratique ne bloquent une promotion. Un athlète expérimenté qui rejoint KINETIK peut donc atteindre rapidement son vrai rang en validant les barèmes stricts.</p>`;
+  return `<div class="rank-v2-list">${RANKS.map((r,i)=>{const ev=evaluateRank(r),gates=ev.gates||[],stateLabel=i<rs.index?'Validé':i===rs.index?'Rang actuel':'À atteindre';return `<details class="rank-v2-row" ${i===rs.index||i===rs.index+1?'open':''}><summary><div><strong>${r.name}</strong><span>${r.title}</span></div><b>${stateLabel}</b></summary><div class="rank-v2-content">${gates.length?gates.map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join(''):'<p>Point de départ du système KINETIK.</p>'}</div></details>`}).join('')}</div><p class="rank-scale-note">Les rangs sont déterminés uniquement par les capacités démontrées. Ni l’âge du compte, ni le nombre de séances, ni les années de pratique ne bloquent une promotion. Un athlète expérimenté qui rejoint KINETIK peut donc atteindre rapidement son vrai rang en validant les barèmes stricts.</p>`;
 }
 function renderSkills(){
   const manual=getManualSkills(),rank=getRankState(),caps=capabilityScores(),focus=primarySkillTree(),fp=skillTreeProgress(focus),performances=skillPerformanceRows(),achievements=recentSkillAchievements(),allLevels=SKILL_TREES.flatMap(t=>t.levels),doneCount=allLevels.filter(skillDone).length;
@@ -4654,8 +4532,8 @@ renderProgressOverview=function(){
   const records=currentRecords().slice(0,4);
   return `<section class="progress-command-center rank-${rank.current.id}">
     <div class="progress-command-main">
-      <div class="progress-command-copy"><div class="kicker">Ton niveau maintenant</div><h1>${rank.current.name}</h1><p>${rank.current.title} · ${rank.xp.total.toLocaleString('fr-FR')} XP</p></div>
-      <div class="progress-command-rank"><span>${next?`Vers ${next.name}`:'Rang maximal'}</span><strong>${next?Math.round(rank.xpProgress*100):100}%</strong><div class="progress-command-track"><i style="width:${next?rank.xpProgress*100:100}%"></i></div><small>${next?rankProgressText(next,rank.nextEval)+' validées':'Légende atteinte'}</small></div>
+      <div class="progress-command-copy"><div class="kicker">Ton niveau maintenant</div><h1>${rank.current.name}</h1><p>${rank.current.title}</p></div>
+      <div class="progress-command-rank"><span>${next?`Vers ${next.name}`:'Rang maximal'}</span><strong>${next?Math.round(rank.readiness*100):100}%</strong><div class="progress-command-track"><i style="width:${next?rank.readiness*100:100}%"></i></div><small>${next?rankProgressText(next,rank.nextEval)+' validées':'Légende atteinte'}</small></div>
     </div>
     <div class="progress-command-stats">
       <article><span>Séances</span><strong>${x.cycle.done}/${x.cycle.planned}</strong><small>${Math.min(100,sessionPct)} % cette semaine</small></article>
@@ -4669,7 +4547,7 @@ renderProgressOverview=function(){
     <section class="card progress-records-compact"><div class="section-head"><div><div class="kicker">Records personnels</div><h2>Meilleures performances</h2></div><button class="progress-text-link" data-progress-tab="performance">Tous →</button></div>${records.length?`<div class="progress-record-strip">${records.map(r=>`<div><span>${esc(r.exercise)}</span><strong>${recordValueText(r)}</strong><small>${formatShortDate(r.date)}</small></div>`).join('')}</div>`:'<div class="empty">Tes premiers records apparaîtront ici.</div>'}</section>
   </section>
   ${renderAdaptiveReport()}${renderSmartReminderCard()}
-  <section class="card progress-watch-card"><div class="section-head"><div><div class="kicker">À surveiller</div><h2>Prochaines actions utiles</h2></div><span class="pill">${x.recs.length+(x.due.overdue?1:0)}</span></div><div class="progress-watch-list">${x.recs.length?`<button class="progress-watch-item" data-progress-tab="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}<button class="progress-watch-item" data-progress-tab="performance"><span class="progress-watch-icon">◷</span><div><strong>Tests périodiques</strong><small>${x.due.label}</small></div><b>Voir →</b></button>${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)} · ${rank.xp.total.toLocaleString('fr-FR')} XP</small></div><b>Rangs →</b></button>`:''}</div></section>
+  <section class="card progress-watch-card"><div class="section-head"><div><div class="kicker">À surveiller</div><h2>Prochaines actions utiles</h2></div><span class="pill">${x.recs.length+(x.due.overdue?1:0)}</span></div><div class="progress-watch-list">${x.recs.length?`<button class="progress-watch-item" data-progress-tab="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}<button class="progress-watch-item" data-progress-tab="performance"><span class="progress-watch-icon">◷</span><div><strong>Tests périodiques</strong><small>${x.due.label}</small></div><b>Voir →</b></button>${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)}</small></div><b>Rangs →</b></button>`:''}</div></section>
   ${renderCycleMini()}`;
 };
 renderProgressPerformance=function(){const tests=getTests(),due=testDueSummary();return `${renderProgressionRecommendations()}${renderRecordsPanel()}${renderExerciseTracker()}<section class="card"><div class="section-head"><div><div class="kicker">Progression intelligente</div><h2>Tendances par exercice</h2></div><span class="pill">5 dernières</span></div>${exerciseProgressRows()||'<div class="empty">Termine quelques séances pour voir les tendances.</div>'}</section><section class="card standardized-tests"><div class="section-head"><div><div class="kicker">Batterie standardisée · fin de bloc</div><h2>Tests périodiques</h2></div><span class="pill ${due.overdue?'badge-warn':'badge-success'}">${due.label}</span></div><p class="muted small">Refais les mêmes tests dans des conditions comparables, idéalement pendant la semaine Deload + tests. La qualité prime sur l’échec absolu.</p><div class="test-grid">${TEST_DEFS.map(t=>{const best=bestTestValue(t.id),last=tests.filter(x=>x.testId===t.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];return `<button class="test-tile edit-test" data-test="${t.id}"><span>${t.name}</span><strong>${best?best+' '+t.unit:'—'}</strong><small>${last?'Dernier '+formatShortDate(last.date):'À mesurer'}</small></button>`}).join('')}</div></section><section class="card progress-rank-link rank-${getRankState().current.id}"><div><div class="kicker">Gamification</div><h2>${getRankState().current.name} · ${getRankState().current.title}</h2><p>Rangs et Skill Tree restent regroupés dans Skills.</p></div><button class="btn btn-secondary compact" data-view="skills">Voir Skills & Rangs</button></section>${state.exerciseDetailName?renderExerciseProgressDetail(state.exerciseDetailName):''}`;};
@@ -4754,8 +4632,7 @@ function renderAthleteTimeline(){const rows=athleteTimelineEvents();if(!rows.len
 
 renderTodayUsefulActions=function(){const x=progressWeekStats(),rank=getRankState(),next=rank.next,count=(x.recs?.length||0)+(x.due?.overdue?1:0)+(next?1:0);return `<section class="card today-actions-card"><div class="section-head"><div><div class="kicker">À surveiller</div><h2>Prochaines actions utiles</h2></div><span class="pill">${count}</span></div><div class="progress-watch-list">${x.recs?.length?`<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">◷</span><div><strong>Tests périodiques</strong><small>${x.due.label}</small></div><b>Ouvrir →</b></button>${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.displayName} → ${next.name}</strong><small>${Math.round(rank.readiness*100)}% des exigences du prochain rang</small></div><b>Rangs →</b></button>`:''}</div></section>`;};
 
-const _renderProgressOverviewV1040=renderProgressOverview;
-renderProgressOverview=function(){let html=_renderProgressOverviewV1040();const rank=getRankState(),next=rank.next,readiness=Math.round(rank.readiness*100);html=html.replace(`<h1>${rank.current.name}</h1><p>${rank.current.title} · ${rank.xp.total.toLocaleString('fr-FR')} XP</p>`,`<h1>${rank.displayName}</h1><p>${rank.current.title} · rang basé sur les performances validées</p>`).replace(`<strong>${next?Math.round(rank.xpProgress*100):100}%</strong>`,`<strong>${next?readiness:100}%</strong>`).replace(`style="width:${next?rank.xpProgress*100:100}%"`,`style="width:${next?readiness:100}%"`).replace(`${renderAdaptiveReport()}${renderSmartReminderCard()}`,`${renderAdaptiveReport()}${renderMobilityProgressSummary()}${renderAthleteTimeline()}${renderSmartReminderCard()}`);return html.replace(new RegExp(` · ${rank.xp.total.toLocaleString('fr-FR')} XP`,'g'),'');};
+/* ancien patch de progression basé sur un compteur retiré en v10.86 */
 
 const _renderProgressPerformanceV1040=renderProgressPerformance;
 renderProgressPerformance=function(){const rs=getRankState();let html=_renderProgressPerformanceV1040();html=html.replace('Gamification','Niveau KINETIK').replace(`${rs.current.name} · ${rs.current.title}`,`${rs.displayName} · ${rs.current.title}`).replace('Rangs et Skill Tree restent regroupés dans Skills.','Le rang dépend des barèmes validés, pas de l’ancienneté dans l’application.').replace('Voir Skills & Rangs','Voir Capacités');return html;};
@@ -6229,7 +6106,7 @@ renderWeek=function(){
 
 /* ========================================================================== */
 /* V10.78 · Planning consistency cleanup                                      */
-/* Heatmap = regularity only. No XP/rank implication.                         */
+/* Heatmap = regularity only. No rank implication.                         */
 /* ========================================================================== */
 const _renderCycleHeatmapV1078=renderCycleHeatmap;
 renderCycleHeatmap=function(weeks=16){
@@ -6981,6 +6858,16 @@ renderAssessmentProtocolRow=function(p){
     .replace('Non évalué','Pas encore confirmé')
     .replace('Évaluer →','Confirmer →');
 };
+
+
+/* ========================================================================== */
+/* V10.86 · Étape 5 — Suppression du système d’ancienneté                     */
+/* Rangs = performances validées uniquement.                                  */
+/* ========================================================================== */
+function v1086RankIntegrity(){
+  const r=getRankState();
+  return {rank:r.displayName,readiness:r.readiness,criteria:r.nextEval?.gates||[],performanceOnly:true};
+}
 
 applyAppTheme();
 
