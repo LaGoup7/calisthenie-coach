@@ -15,3 +15,9 @@ Refonte UI globale basée sur V10.1, sans changement du moteur d’entraînement
 - Cache PWA : `calisthenie-coach-v10-3-progress-preview`.
 
 Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
+
+
+## V10.95
+- Refonte de Progression > Vue d’ensemble avec un corps humain interactif.
+- Lecture simplifiée par zones, avec modes Vue d’ensemble / Force / Mobilité et switch Face / Dos.
+- Réduction du texte au profit d’un résumé visuel et de raccourcis clairs.

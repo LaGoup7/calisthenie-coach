@@ -4575,6 +4575,274 @@ bindEvents=function(){
   const remEnabled=document.getElementById('remindersEnabled');if(remEnabled)remEnabled.onchange=()=>{const p=getReminderPrefs();p.enabled=remEnabled.checked;setReminderPrefs(p);render();};
   document.querySelectorAll('.reminder-toggle').forEach(el=>el.onchange=()=>{const p=getReminderPrefs();p[el.dataset.reminder]=el.checked;setReminderPrefs(p);render();});
   const theme=document.getElementById('appTheme');if(theme)theme.onchange=()=>{const p=getPrefs();p.appTheme=theme.value;setPrefs(p);
+
+
+/* ========================================================================== */
+/* V10.95 · Vue d’ensemble visuelle — corps humain, moins de texte            */
+/* Progression > Vue d’ensemble : lecture immédiate par zones du corps.       */
+/* ========================================================================== */
+function v1095Avg(){
+  const vals=[...arguments].map(v=>Number(v)).filter(v=>Number.isFinite(v)&&v>=0);
+  return vals.length?Math.round(vals.reduce((s,v)=>s+v,0)/vals.length):null;
+}
+function v1095CapabilityScore(id){const row=capabilityScores().find(x=>x.id===id);return row?.assessed?Number(row.score):null;}
+function v1095MobilityScore(id){const row=mobilityProfiles().find(x=>x.id===id);return row?.assessed?Number(row.score):null;}
+function v1095LegsScore(){const tree=SKILL_TREES.find(t=>t.id==='legs');if(!tree)return null;const p=skillTreeProgress(tree);return p&&p.pct>0?Math.round(p.pct):null;}
+function v1095BodyTone(score){
+  if(score==null)return {id:'none',label:'À évaluer',short:'—'};
+  if(score<35)return {id:'low',label:'Fragile',short:'Faible'};
+  if(score<55)return {id:'watch',label:'À travailler',short:'Moyen'};
+  if(score<70)return {id:'ok',label:'Correct',short:'Correct'};
+  if(score<85)return {id:'good',label:'Solide',short:'Bon'};
+  return {id:'great',label:'Avancé',short:'Fort'};
+}
+function v1095GoalText(){const p=getAthleteProfile();return p?.primaryGoal||'Progression générale';}
+function v1095BodyZones(mode='overall',view='front'){
+  const pull=v1095CapabilityScore('pull'),push=v1095CapabilityScore('push'),core=v1095CapabilityScore('core'),grip=v1095CapabilityScore('grip'),balance=v1095CapabilityScore('balance'),explosive=v1095CapabilityScore('explosive');
+  const mShoulders=v1095MobilityScore('shoulders'),mThorax=v1095MobilityScore('thorax'),mWrists=v1095MobilityScore('wrists'),mHips=v1095MobilityScore('hips'),mPosterior=v1095MobilityScore('posterior'),mAnkles=v1095MobilityScore('ankles');
+  const legs=v1095LegsScore();
+  const data={
+    overall:{
+      shoulders:{score:v1095Avg(push,balance,mShoulders),label:'Épaules',desc:'Poussée, stabilité et mobilité des épaules.',action:'skills'},
+      chest:{score:v1095Avg(push,balance),label:'Pectoraux',desc:'Lecture surtout basée sur la poussée.',action:'skills'},
+      back:{score:v1095Avg(pull,explosive,mThorax),label:'Dos',desc:'Tractions, tirage haut et ouverture thoracique.',action:'skills'},
+      arms:{score:v1095Avg(pull,push),label:'Bras',desc:'Synthèse tirage + poussée.',action:'skills'},
+      forearms:{score:v1095Avg(grip),label:'Avant-bras',desc:'Grip et tenue à la barre.',action:'skills'},
+      wrists:{score:v1095Avg(grip,mWrists,balance),label:'Poignets',desc:'Grip, stabilité et extension utile.',action:'flexibility'},
+      core:{score:v1095Avg(core,balance),label:'Core / abdos',desc:'Gainage, compression et contrôle.',action:'skills'},
+      hips:{score:v1095Avg(legs,mHips,core),label:'Hanches',desc:'Force unilatérale et mobilité de hanche.',action:'flexibility'},
+      quads:{score:v1095Avg(legs,mHips),label:'Quadriceps',desc:'Jambes unilatérales et squat.',action:'skills'},
+      hamstrings:{score:v1095Avg(legs,mPosterior),label:'Ischios',desc:'Chaîne postérieure et contrôle des jambes.',action:'flexibility'},
+      calves:{score:v1095Avg(legs,mAnkles),label:'Mollets',desc:'Appui et contrôle du bas de jambe.',action:'skills'},
+      ankles:{score:v1095Avg(mAnkles,legs),label:'Chevilles',desc:'Mobilité utile au squat et à la course.',action:'flexibility'}
+    },
+    strength:{
+      shoulders:{score:v1095Avg(push,balance),label:'Épaules',desc:'Poussée verticale et stabilité inversée.',action:'skills'},
+      chest:{score:v1095Avg(push),label:'Pectoraux',desc:'Basé sur les dips et variantes de poussée.',action:'skills'},
+      back:{score:v1095Avg(pull,explosive),label:'Dos',desc:'Basé sur le tirage et l’explosivité.',action:'skills'},
+      arms:{score:v1095Avg(pull,push),label:'Bras',desc:'Synthèse tirage + poussée.',action:'skills'},
+      forearms:{score:v1095Avg(grip),label:'Avant-bras',desc:'Grip et suspension.',action:'skills'},
+      wrists:{score:v1095Avg(grip,balance),label:'Poignets',desc:'Stabilité utile au handstand et au grip.',action:'skills'},
+      core:{score:v1095Avg(core,balance),label:'Core / abdos',desc:'Compression et maintien.',action:'skills'},
+      hips:{score:v1095Avg(legs,core),label:'Hanches',desc:'Contrôle du bassin et jambes.',action:'skills'},
+      quads:{score:v1095Avg(legs),label:'Quadriceps',desc:'Lecture via les skills jambes.',action:'skills'},
+      hamstrings:{score:v1095Avg(legs),label:'Ischios',desc:'Lecture via les skills jambes.',action:'skills'},
+      calves:{score:v1095Avg(legs),label:'Mollets',desc:'Lecture globale des jambes.',action:'skills'},
+      ankles:{score:null,label:'Chevilles',desc:'Pas de score force dédié pour le moment.',action:'flexibility'}
+    },
+    mobility:{
+      shoulders:{score:v1095Avg(mShoulders),label:'Épaules',desc:'Flexion et confort au-dessus de la tête.',action:'flexibility'},
+      chest:{score:v1095Avg(mThorax),label:'Thorax',desc:'Ouverture du haut du tronc.',action:'flexibility'},
+      back:{score:v1095Avg(mThorax),label:'Thorax / dos',desc:'Rotation thoracique et ouverture.',action:'flexibility'},
+      arms:{score:null,label:'Bras',desc:'Les bras n’ont pas de test mobilité direct.',action:'flexibility'},
+      forearms:{score:null,label:'Avant-bras',desc:'Les avant-bras n’ont pas de test mobilité direct.',action:'flexibility'},
+      wrists:{score:v1095Avg(mWrists),label:'Poignets',desc:'Extension utile pour appuis et handstand.',action:'flexibility'},
+      core:{score:v1095Avg(mThorax,mHips),label:'Tronc',desc:'Mobilité du tronc et des hanches.',action:'flexibility'},
+      hips:{score:v1095Avg(mHips),label:'Hanches',desc:'Rotation interne et squat profond.',action:'flexibility'},
+      quads:{score:v1095Avg(mHips),label:'Quadriceps / hanches',desc:'Lecture indirecte via squat profond.',action:'flexibility'},
+      hamstrings:{score:v1095Avg(mPosterior),label:'Chaîne postérieure',desc:'Flexion avant et ischios.',action:'flexibility'},
+      calves:{score:v1095Avg(mAnkles),label:'Bas de jambe',desc:'Lecture indirecte via chevilles.',action:'flexibility'},
+      ankles:{score:v1095Avg(mAnkles),label:'Chevilles',desc:'Knee-to-wall gauche et droite.',action:'flexibility'}
+    }
+  };
+  const base=(data[mode]||data.overall);
+  const ids=view==='back'
+    ?['shoulders','back','arms','forearms','wrists','core','hips','hamstrings','calves','ankles']
+    :['shoulders','chest','arms','forearms','wrists','core','hips','quads','calves','ankles'];
+  return ids.map(id=>({id,...base[id],tone:v1095BodyTone(base[id]?.score)}));
+}
+function v1095BodyZoneLookup(mode='overall'){
+  const front=v1095BodyZones(mode,'front'),back=v1095BodyZones(mode,'back');
+  const map={};
+  [...front,...back].forEach(z=>{if(!map[z.id]||((z.score??-1)>(map[z.id].score??-1)))map[z.id]=z;});
+  return map;
+}
+function v1095PriorityZones(mode='overall',limit=3){
+  return Object.values(v1095BodyZoneLookup(mode)).filter(z=>z.score!=null).sort((a,b)=>a.score-b.score).slice(0,limit);
+}
+function v1095StrongZones(mode='overall',limit=3){
+  return Object.values(v1095BodyZoneLookup(mode)).filter(z=>z.score!=null).sort((a,b)=>b.score-a.score).slice(0,limit);
+}
+function v1095SelectedBodyZone(mode='overall',view='front'){
+  const zones=v1095BodyZones(mode,view),lookup=v1095BodyZoneLookup(mode),wanted=state.progressBodyZone;
+  if(wanted&&lookup[wanted])return lookup[wanted];
+  const priority=v1095PriorityZones(mode,1)[0];
+  return priority||zones.find(z=>z.score!=null)||zones[0];
+}
+function v1095BalanceText(){
+  const caps=capabilityScores();
+  const pull=caps.find(x=>x.id==='pull')?.score??null,push=caps.find(x=>x.id==='push')?.score??null,legs=v1095LegsScore();
+  const vals=[['Haut du corps',v1095Avg(pull,push)],['Jambes',legs]];
+  if(vals[0][1]==null&&vals[1][1]==null)return 'Profil encore à construire';
+  if(vals[0][1]!=null&&vals[1][1]!=null){
+    const diff=vals[0][1]-vals[1][1];
+    if(Math.abs(diff)<=8)return 'Équilibre global correct';
+    return diff>0?'Haut du corps dominant':'Bas du corps dominant';
+  }
+  return vals[0][1]!=null?'Lecture surtout haut du corps':'Lecture surtout bas du corps';
+}
+function v1095OverviewSummary(){
+  const zones=Object.values(v1095BodyZoneLookup('overall'));
+  const assessed=zones.filter(z=>z.score!=null), strong=v1095StrongZones('overall',1)[0], weak=v1095PriorityZones('overall',1)[0];
+  const mobilityAssessed=mobilityProfiles().filter(x=>x.assessed).length;
+  const capsAssessed=capabilityScores().filter(x=>x.assessed).length;
+  const global=assessed.length?Math.round(assessed.reduce((s,z)=>s+z.score,0)/assessed.length):null;
+  return {
+    global,
+    globalLabel:global==null?'À construire':v1095BodyTone(global).label,
+    strong,
+    weak,
+    coverage:`${assessed.length}/${zones.length} zones`,
+    evidence:`${capsAssessed} capacités · ${mobilityAssessed} zones mobilité`,
+    balance:v1095BalanceText()
+  };
+}
+function v1095ActionButton(action='skills'){
+  if(action==='flexibility')return 'data-view="flexibility"';
+  if(action==='performance')return 'data-progress-tab="performance"';
+  if(action==='measurements')return 'data-view="measurements"';
+  return 'data-view="skills"';
+}
+function v1095BodyMapSVG(view='front',mode='overall',selectedId=''){
+  const zones=v1095BodyZones(mode,view);
+  const find=id=>zones.find(z=>z.id===id)||{id,label:id,tone:{id:'none'},score:null};
+  const zoneAttrs=id=>`class="bodymap-zone tone-${find(id).tone.id}${selectedId===id?' selected':''}" data-body-zone="${id}" role="button" tabindex="0" aria-label="${esc(find(id).label)}${find(id).score!=null?` ${find(id).score} sur 100`:''}"`;
+  const front=view==='front';
+  return `<svg class="bodymap-figure" viewBox="0 0 240 420" role="img" aria-label="Corps humain ${front?'vue de face':'vue de dos'}">
+    <text x="120" y="16" text-anchor="middle" class="bodymap-caption">${front?'Vue face':'Vue dos'}</text>
+    <circle cx="120" cy="44" r="24" class="bodymap-base"/>
+    <rect x="90" y="72" width="60" height="28" rx="14" class="bodymap-base"/>
+    <g ${zoneAttrs('shoulders')}><rect x="62" y="84" width="116" height="20" rx="10"/></g>
+    ${front
+      ?`<g ${zoneAttrs('chest')}><rect x="84" y="104" width="72" height="58" rx="26"/></g>`
+      :`<g ${zoneAttrs('back')}><rect x="82" y="102" width="76" height="84" rx="28"/></g>`}
+    <g ${zoneAttrs('arms')}><rect x="40" y="102" width="22" height="80" rx="11"/><rect x="178" y="102" width="22" height="80" rx="11"/></g>
+    <g ${zoneAttrs('forearms')}><rect x="42" y="182" width="20" height="78" rx="10"/><rect x="178" y="182" width="20" height="78" rx="10"/></g>
+    <g ${zoneAttrs('wrists')}><circle cx="52" cy="272" r="10"/><circle cx="188" cy="272" r="10"/></g>
+    <g ${zoneAttrs('core')}><rect x="92" y="166" width="56" height="72" rx="22"/></g>
+    <g ${zoneAttrs('hips')}><rect x="88" y="238" width="64" height="34" rx="14"/></g>
+    ${front
+      ?`<g ${zoneAttrs('quads')}><rect x="90" y="272" width="24" height="76" rx="12"/><rect x="126" y="272" width="24" height="76" rx="12"/></g>`
+      :`<g ${zoneAttrs('hamstrings')}><rect x="90" y="272" width="24" height="76" rx="12"/><rect x="126" y="272" width="24" height="76" rx="12"/></g>`}
+    <g ${zoneAttrs('calves')}><rect x="92" y="346" width="20" height="48" rx="10"/><rect x="128" y="346" width="20" height="48" rx="10"/></g>
+    <g ${zoneAttrs('ankles')}><circle cx="102" cy="404" r="8"/><circle cx="138" cy="404" r="8"/></g>
+  </svg>`;
+}
+function v1095ZoneChip(z){
+  return `<button class="body-overview-chip tone-${z.tone.id}" data-body-zone="${z.id}"><span>${esc(z.label)}</span><strong>${z.score!=null?z.score+'/100':z.tone.label}</strong></button>`;
+}
+function v1095ZoneDetailCard(mode='overall',view='front'){
+  const zone=v1095SelectedBodyZone(mode,view);
+  if(!zone)return '';
+  const actionLabel=zone.action==='flexibility'?'Voir mobilité':zone.action==='measurements'?'Voir mesures':'Voir capacités';
+  return `<article class="body-zone-detail card">
+    <div class="body-zone-detail-head">
+      <div><div class="kicker">Zone sélectionnée</div><h3>${esc(zone.label)}</h3></div>
+      <div class="body-zone-score tone-${zone.tone.id}">${zone.score!=null?`${zone.score}<small>/100</small>`:zone.tone.label}</div>
+    </div>
+    <div class="body-zone-state"><span>Statut</span><strong>${zone.tone.label}</strong></div>
+    <p>${esc(zone.desc||'')}</p>
+    <div class="body-zone-mini-actions">
+      <button class="btn btn-secondary compact" data-body-zone-cycle="prev">← Zone</button>
+      <button class="btn btn-secondary compact" data-body-zone-cycle="next">Zone →</button>
+      <button class="btn btn-outline compact" ${v1095ActionButton(zone.action)}>${actionLabel} →</button>
+    </div>
+  </article>`;
+}
+function v1095CycleBodyZone(dir=1,mode='overall',view='front'){
+  const zones=v1095BodyZones(mode,view); if(!zones.length)return;
+  const id=v1095SelectedBodyZone(mode,view)?.id; let idx=zones.findIndex(z=>z.id===id);
+  if(idx<0)idx=0;
+  idx=(idx+dir+zones.length)%zones.length;
+  state.progressBodyZone=zones[idx].id;
+}
+renderProgressOverview=function(){
+  const mode=state.progressBodyMode||'overall';
+  const view=state.progressBodyView||'front';
+  const summary=v1095OverviewSummary();
+  const selected=v1095SelectedBodyZone(mode,view);
+  state.progressBodyZone=selected?.id||state.progressBodyZone;
+  const priority=v1095PriorityZones(mode,3),strong=v1095StrongZones(mode,3);
+  const modeLabel=mode==='strength'?'Force':mode==='mobility'?'Mobilité':'Vue d’ensemble';
+  return `
+    <section class="card body-overview-hero">
+      <div class="section-head">
+        <div><div class="kicker">Vue d’ensemble</div><h2>Ton corps en un coup d’œil</h2></div>
+        <span class="pill">Objectif · ${esc(v1095GoalText())}</span>
+      </div>
+      <div class="body-overview-stats">
+        <article><span>Niveau global</span><strong>${summary.global!=null?summary.global+'/100':'—'}</strong><small>${esc(summary.globalLabel)}</small></article>
+        <article><span>Plus solide</span><strong>${esc(summary.strong?.label||'—')}</strong><small>${summary.strong?.score!=null?summary.strong.score+'/100':'À construire'}</small></article>
+        <article><span>Zone prioritaire</span><strong>${esc(summary.weak?.label||'—')}</strong><small>${summary.weak?.score!=null?summary.weak.score+'/100':'À évaluer'}</small></article>
+        <article><span>Équilibre</span><strong>${esc(summary.balance)}</strong><small>${esc(summary.coverage)} · ${esc(summary.evidence)}</small></article>
+      </div>
+    </section>
+
+    <section class="card body-overview-card">
+      <div class="body-overview-toolbar">
+        <div class="body-overview-toggle" role="tablist" aria-label="Mode de lecture">
+          <button class="${mode==='overall'?'active':''}" data-body-mode="overall">Vue d’ensemble</button>
+          <button class="${mode==='strength'?'active':''}" data-body-mode="strength">Force</button>
+          <button class="${mode==='mobility'?'active':''}" data-body-mode="mobility">Mobilité</button>
+        </div>
+        <div class="body-overview-toggle" role="tablist" aria-label="Vue du corps">
+          <button class="${view==='front'?'active':''}" data-body-view="front">Face</button>
+          <button class="${view==='back'?'active':''}" data-body-view="back">Dos</button>
+        </div>
+      </div>
+      <div class="body-overview-model-wrap">
+        <div class="body-overview-model">${v1095BodyMapSVG(view,mode,selected?.id||'')}</div>
+        <div class="body-overview-side">
+          ${v1095ZoneDetailCard(mode,view)}
+          <div class="body-overview-legend">
+            <span><i class="tone-none"></i>À évaluer</span>
+            <span><i class="tone-low"></i>Fragile</span>
+            <span><i class="tone-watch"></i>À travailler</span>
+            <span><i class="tone-ok"></i>Correct</span>
+            <span><i class="tone-good"></i>Solide</span>
+            <span><i class="tone-great"></i>Avancé</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="body-overview-grid">
+      <article class="card body-overview-list-card">
+        <div class="section-head"><div><div class="kicker">À travailler</div><h3>Les zones les moins avancées</h3></div><span class="pill">${modeLabel}</span></div>
+        <div class="body-overview-chip-list">
+          ${priority.length?priority.map(v1095ZoneChip).join(''):'<div class="empty">Pas assez de données pour identifier une priorité.</div>'}
+        </div>
+      </article>
+      <article class="card body-overview-list-card">
+        <div class="section-head"><div><div class="kicker">Points forts</div><h3>Ce qui soutient ton objectif</h3></div><span class="pill">${modeLabel}</span></div>
+        <div class="body-overview-chip-list">
+          ${strong.length?strong.map(v1095ZoneChip).join(''):'<div class="empty">Tes points forts apparaîtront ici avec plus de données.</div>'}
+        </div>
+      </article>
+    </section>
+
+    <section class="card body-overview-actions">
+      <div class="section-head"><div><div class="kicker">Actions rapides</div><h3>Aller au bon endroit</h3></div></div>
+      <div class="body-overview-action-grid">
+        <button data-progress-tab="performance"><span>Performances</span><strong>Voir les records et tendances</strong><b>→</b></button>
+        <button data-view="skills"><span>Capacités</span><strong>Voir le profil détaillé</strong><b>→</b></button>
+        <button data-view="flexibility"><span>Mobilité</span><strong>Voir les zones à travailler</strong><b>→</b></button>
+        <button data-view="assessment"><span>Évaluation</span><strong>Confirmer les repères utiles</strong><b>→</b></button>
+      </div>
+    </section>`;
+};
+const _bindEventsV1095=bindEvents;
+bindEvents=function(){
+  _bindEventsV1095();
+  document.querySelectorAll('[data-body-mode]').forEach(b=>b.onclick=()=>{state.progressBodyMode=b.dataset.bodyMode||'overall';state.progressBodyZone=null;render();});
+  document.querySelectorAll('[data-body-view]').forEach(b=>b.onclick=()=>{state.progressBodyView=b.dataset.bodyView||'front';state.progressBodyZone=null;render();});
+  document.querySelectorAll('[data-body-zone]').forEach(b=>{
+    b.onclick=()=>{state.progressBodyZone=b.dataset.bodyZone||null;render();};
+    b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();state.progressBodyZone=b.dataset.bodyZone||null;render();}};
+  });
+  document.querySelectorAll('[data-body-zone-cycle]').forEach(b=>b.onclick=()=>{const dir=b.dataset.bodyZoneCycle==='prev'?-1:1;v1095CycleBodyZone(dir,state.progressBodyMode||'overall',state.progressBodyView||'front');render();});
+};
+
 applyAppTheme();render();};
 };
 
