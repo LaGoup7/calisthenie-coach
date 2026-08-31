@@ -6734,6 +6734,191 @@ renderFlexibility=function(){
     .replace(/cette priorité/gi,'cette zone à travailler');
 };
 
+
+/* ========================================================================== */
+/* V10.84 · Étape 3 — Confiance du moteur "À surveiller"                     */
+/* Coverage + evidence + goal importance. No strong claim on partial data.     */
+/* ========================================================================== */
+function v1084FactorWeight(f){
+  const goal=String(getAthleteProfile().primaryGoal||'').toLowerCase(),label=String(f.label||'').toLowerCase(),id=String(f.id||'').toLowerCase();
+  if(/muscle.?up/.test(goal)){
+    if(/explos|chest|tirage haut/.test(label+id))return 1.6;
+    if(/force de tirage|pullups/.test(label+id))return 1.45;
+    if(/pouss|dips/.test(label+id))return .9;
+    if(/grip|dead_hang/.test(label+id))return .8;
+    if(/mobilité|shoulder/.test(label+id))return .65;
+  }
+  if(/handstand|hspu/.test(goal)){
+    if(/base inversée|wall_handstand/.test(label+id))return 1.45;
+    if(/équilibre libre|handstand libre/.test(label+id))return 1.55;
+    if(/poussée verticale|push/.test(label+id))return 1.35;
+    if(/poignet|shoulder|épaule/.test(label+id))return .95;
+  }
+  if(/front lever/.test(goal)){
+    if(/tirage|pull/.test(label+id))return 1.5;
+    if(/core/.test(label+id))return 1.35;
+    if(/grip/.test(label+id))return 1.15;
+    if(/front lever/.test(label+id))return 1.6;
+  }
+  if(/human flag/.test(goal)){
+    if(/human flag/.test(label+id))return 1.6;
+    if(/core/.test(label+id))return 1.4;
+    if(/tirage|poussée|pull|push/.test(label+id))return 1.25;
+    if(/équilibre|balance/.test(label+id))return 1.0;
+  }
+  if(/l.?sit/.test(goal)){
+    if(/l-sit|l sit/.test(label+id))return 1.55;
+    if(/core/.test(label+id))return 1.4;
+    if(/postérieure|hanches|posterior|hips/.test(label+id))return 1.05;
+  }
+  return 1;
+}
+function v1084EvidenceNumeric(f){
+  const c=Number(f?.confidence||0);
+  return clamp(c,0,3);
+}
+function v1084ConfidenceLabel(score){
+  score=Math.round(clamp(Number(score)||0,0,100));
+  if(score>=75)return {id:'high',label:'Élevée'};
+  if(score>=50)return {id:'medium',label:'Moyenne'};
+  if(score>0)return {id:'low',label:'Faible'};
+  return {id:'none',label:'Insuffisante'};
+}
+function v1084GoalAnalysis(){
+  const factors=v1060GoalFactors().map(f=>({...f,weight:v1084FactorWeight(f)}));
+  const totalWeight=factors.reduce((s,f)=>s+f.weight,0)||1;
+  const known=factors.filter(f=>f.score!=null),missing=factors.filter(f=>f.score==null);
+  const coveredWeight=known.reduce((s,f)=>s+f.weight,0);
+  const coveragePct=Math.round(coveredWeight/totalWeight*100);
+  const evidencePct=known.length?Math.round(known.reduce((s,f)=>s+(v1084EvidenceNumeric(f)/3)*f.weight,0)/Math.max(.01,coveredWeight)*100):0;
+
+  /* Urgency mixes deficit with importance. Evidence only breaks close ties:
+     a strongly important but poorly measured factor is not allowed to become a
+     confident limiter; it instead lowers global confidence. */
+  const ranked=known.map(f=>{
+    const deficit=100-clamp(Number(f.score),0,100);
+    const urgency=deficit*f.weight;
+    return {...f,deficit,urgency,evidence:v1084EvidenceNumeric(f)};
+  }).sort((a,b)=>b.urgency-a.urgency || b.evidence-a.evidence);
+
+  const candidate=ranked[0]||null;
+  const criticalMissing=missing.filter(f=>f.weight>=1.25).sort((a,b)=>b.weight-a.weight);
+  const candidateEvidencePct=candidate?Math.round(candidate.evidence/3*100):0;
+  const confidenceScore=candidate
+    ? Math.round(coveragePct*.55 + evidencePct*.25 + candidateEvidencePct*.20)
+    : 0;
+  const confidence=v1084ConfidenceLabel(confidenceScore);
+
+  return {
+    factors,known,missing,candidate,criticalMissing,
+    coveragePct,evidencePct,confidenceScore,confidence,
+    complete:missing.length===0
+  };
+}
+
+/* Preserve the legacy return shape for all existing consumers. */
+v1060GoalLimiter=function(){
+  const a=v1084GoalAnalysis();
+  return {
+    limiter:a.candidate,
+    missing:a.missing,
+    factors:a.factors,
+    confidence:a.confidence,
+    confidenceScore:a.confidenceScore,
+    coveragePct:a.coveragePct,
+    evidencePct:a.evidencePct,
+    criticalMissing:a.criticalMissing,
+    complete:a.complete,
+    knownCount:a.known.length
+  };
+};
+
+v1060NextBestChoice=function(){
+  const readiness=v1060ReadinessState(),lim=v1060GoalLimiter(),plateau=v1060PlateauCandidate(),quality=v1060AssessmentQuality();
+  if(readiness.mode==='reduced')return {id:'recover',label:'Respecter la séance allégée',detail:readiness.reasons[0]||'Charge récente élevée.',action:'today'};
+
+  /* A missing high-importance prerequisite wins over a speculative focus. */
+  const critical=lim.criticalMissing?.[0];
+  if(critical)return {
+    id:'assess',
+    label:`Mesurer ${critical.label.toLowerCase()}`,
+    detail:`Cette donnée est importante pour ton objectif et manque encore. KINETIK évite de désigner un point faible tant qu’elle n’est pas connue.`,
+    action:'assessment'
+  };
+
+  if(lim.coveragePct<70){
+    const missing=lim.missing?.[0];
+    return {
+      id:'assess',
+      label:missing?`Compléter ${missing.label.toLowerCase()}`:'Compléter les évaluations',
+      detail:`Seulement ${lim.coveragePct}% des facteurs utiles à ton objectif sont actuellement renseignés.`,
+      action:'assessment'
+    };
+  }
+
+  if(plateau)return {id:'plateau',label:`Revoir la progression · ${plateau.name}`,detail:plateau.reason,action:'performance'};
+
+  if(lim.limiter&&lim.limiter.score<55&&lim.confidenceScore>=60)return {
+    id:'focus',
+    label:`Travailler ${lim.limiter.label.toLowerCase()}`,
+    detail:`C’est le point le moins avancé parmi les facteurs suffisamment documentés de ton objectif.`,
+    action:'today'
+  };
+
+  if(lim.limiter&&lim.confidenceScore<60)return {
+    id:'confirm',
+    label:'Confirmer les données',
+    detail:`KINETIK voit un signal possible sur ${lim.limiter.label.toLowerCase()}, mais la confiance reste ${lim.confidence.label.toLowerCase()}.`,
+    action:'assessment'
+  };
+
+  return {id:'continue',label:'Continuer le cycle actuel',detail:'Aucun signal suffisamment fiable ne justifie actuellement un changement important du programme.',action:'today'};
+};
+
+v1060InsightDecision=function(days=30){
+  const s=v1060AthleteState(days),r=v1060ReadinessState(),lim=v1060GoalLimiter(),plateau=v1060PlateauCandidate(),body=v1060BodySignal(),next=v1060NextBestChoice();
+  let title='Progression en construction',tone='neutral',text=next.detail;
+  if(r.mode==='reduced'){title='Charge récente à absorber';tone='warn';text='La charge récente justifie surtout un ajustement de la séance, pas une conclusion sur tes capacités.';}
+  else if(plateau){title='Progression ralentie à vérifier';tone='warn';text=plateau.reason;}
+  else if(lim.coveragePct<70){title='Données encore incomplètes';tone='neutral';text=`${lim.coveragePct}% des facteurs utiles à ton objectif sont renseignés. KINETIK préfère compléter le profil avant de conclure.`;}
+  else if(lim.limiter&&lim.confidenceScore>=60){title=`Point à surveiller · ${lim.limiter.label}`;tone='neutral';text=`${lim.limiter.detail}. Confiance ${lim.confidence.label.toLowerCase()} (${lim.confidenceScore}%).`;}
+  else if(s.force.tone==='up'&&s.load.delta!=null&&s.load.delta<=25){title='Progression cohérente';tone='good';text='Les performances de force progressent sans hausse rapide de la charge sportive enregistrée.';}
+  return {title,tone,text,state:s,readiness:r,limiter:lim,plateau,body,next};
+};
+
+/* Replace the v10.81 overview block with certainty-aware language. */
+v1080ProgressInsight=function(){
+  const i=v1060InsightDecision(30),s=i.state,lim=i.limiter,issue=lim.limiter?.label;
+  const enough=lim.coveragePct>=70&&lim.confidenceScore>=60;
+  const title=enough&&issue?issue:(lim.coveragePct<70?'Profil à compléter':issue||'Progression générale');
+  const reason=enough&&issue
+    ?`${issue} ressort comme le point le moins avancé parmi les facteurs actuellement suffisamment documentés.`
+    :lim.coveragePct<70
+      ?`KINETIK connaît ${lim.coveragePct}% des facteurs utiles à ton objectif. Il manque encore des données pour identifier un point faible de façon crédible.`
+      :`Un signal existe${issue?` sur ${issue.toLowerCase()}`:''}, mais la confiance est encore ${lim.confidence.label.toLowerCase()}.`;
+
+  return `<section class="p81-insight ${i.tone} p84-insight">
+    <div class="p81-insight-head">
+      <div><div class="kicker">À surveiller maintenant</div><h2>${esc(title)}</h2></div>
+      <div class="p84-confidence ${lim.confidence.id}"><span>Confiance</span><strong>${lim.confidence.label}</strong><small>${lim.confidenceScore}%</small></div>
+    </div>
+    <p class="p81-insight-reason">${esc(reason)}</p>
+    <div class="p84-data-coverage">
+      <div><span>Facteurs connus</span><strong>${lim.knownCount??(lim.factors.length-lim.missing.length)}/${lim.factors.length}</strong></div>
+      <div><span>Couverture utile</span><strong>${lim.coveragePct}%</strong></div>
+      <div><span>Qualité des preuves</span><strong>${lim.evidencePct}%</strong></div>
+    </div>
+    ${lim.missing.length?`<div class="p84-missing"><span>Encore à renseigner</span><strong>${lim.missing.slice(0,3).map(x=>esc(x.label)).join(' · ')}</strong></div>`:''}
+    <div class="p81-advice">
+      <span>Action recommandée</span>
+      <strong>${esc(i.next?.label||'Continuer le cycle')}</strong>
+      <p>${esc(i.next?.detail||'')}</p>
+      <button ${i.next?.action==='assessment'?'data-view="assessment"':i.next?.action==='performance'?'data-progress-tab="performance"':'data-view="today"'}>Ouvrir →</button>
+    </div>
+    ${v1081InsightSupportRow(s)}
+  </section>`;
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
