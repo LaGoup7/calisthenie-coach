@@ -6919,6 +6919,69 @@ v1080ProgressInsight=function(){
   </section>`;
 };
 
+
+/* ========================================================================== */
+/* V10.85 · Étape 4 — Performance → Évaluation → Capacités → Rang             */
+/* A single mental model shared by Progression, Assessment and Capacities.      */
+/* ========================================================================== */
+function v1085ProgressionChain(active='performance',compact=false){
+  const steps=[
+    {id:'performance',n:'01',label:'Performance',text:'Ce que tu réalises réellement en séance.',action:'progress'},
+    {id:'assessment',n:'02',label:'Évaluation',text:'Confirme les performances qui ont besoin d’une preuve plus solide.',action:'assessment'},
+    {id:'capabilities',n:'03',label:'Capacités',text:'Regroupe tes performances en forces, grip, core, équilibre…',action:'skills'},
+    {id:'rank',n:'04',label:'Rang',text:'Synthétise plusieurs capacités avec des exigences strictes.',action:'skills'}
+  ];
+  return `<${compact?'div':'details'} class="p85-chain ${compact?'compact':''}" ${compact?'':'open'}>
+    ${compact?'':`<summary><div><div class="kicker">Comment fonctionne KINETIK</div><strong>Performance → Évaluation → Capacités → Rang</strong><span>Une seule chaîne, quatre rôles différents.</span></div><b>Comprendre ↓</b></summary>`}
+    <div class="p85-chain-steps">${steps.map(s=>`<button class="${active===s.id?'active':''}" ${s.action==='progress'?'data-progress-tab="performance"':`data-view="${s.action}"`}>
+      <i>${s.n}</i><div><strong>${s.label}</strong><span>${s.text}</span></div>
+    </button>`).join('')}</div>
+    ${compact?'':`<p class="p85-chain-note"><strong>Important :</strong> une performance peut être enregistrée sans test. L’évaluation sert surtout à augmenter la fiabilité des données importantes ; elle n’est pas obligatoire après chaque séance.</p>`}
+  </${compact?'div':'details'}>`;
+}
+
+/* Progression is the entry point: show the mental model once, after the weekly summary. */
+const _renderProgressOverviewV1085=renderProgressOverview;
+renderProgressOverview=function(){
+  let html=_renderProgressOverviewV1085();
+  const marker='</section>';
+  const firstEnd=html.indexOf(marker);
+  if(firstEnd>=0)html=html.slice(0,firstEnd+marker.length)+v1085ProgressionChain('performance')+html.slice(firstEnd+marker.length);
+  return html;
+};
+
+/* Assessment = step 2. Explain why the user is here before protocols. */
+const _renderAssessmentCenterV1085=renderAssessmentCenter;
+renderAssessmentCenter=function(){
+  let html=_renderAssessmentCenterV1085();
+  const marker='<section class="assessment-hero">';
+  const context=`<section class="p85-context p85-assessment-context">
+    <div><div class="kicker">Étape 2 sur 4 · Évaluation</div><strong>Tu ne repars pas de zéro.</strong><p>KINETIK connaît déjà tes performances enregistrées. Ici, tu confirmes seulement celles qui ont besoin d’une preuve plus fiable pour les analyses, les Capacités ou certains rangs.</p></div>
+    ${v1085ProgressionChain('assessment',true)}
+  </section>`;
+  return html.includes(marker)?html.replace(marker,context+marker):context+html;
+};
+
+/* Capacities = step 3, Rank = step 4 on the same screen. */
+const _renderSkillsV1085=renderSkills;
+renderSkills=function(){
+  let html=_renderSkillsV1085();
+  const marker='<section class="cap-rank-intro">';
+  const context=`<section class="p85-context p85-cap-context">
+    <div><div class="kicker">Étapes 3 & 4 · Capacités puis Rang</div><strong>Deux niveaux de lecture différents.</strong><p><b>Capacités</b> = ton profil détaillé. <b>Rang</b> = une synthèse exigeante qui n’augmente que lorsque plusieurs critères sont réellement validés.</p></div>
+    ${v1085ProgressionChain('capabilities',true)}
+  </section>`;
+  return html.includes(marker)?html.replace(marker,context+marker):context+html;
+};
+
+/* Assessment wording: don't imply that every metric must become a formal test. */
+const _renderAssessmentProtocolRowV1085=renderAssessmentProtocolRow;
+renderAssessmentProtocolRow=function(p){
+  return _renderAssessmentProtocolRowV1085(p)
+    .replace('Non évalué','Pas encore confirmé')
+    .replace('Évaluer →','Confirmer →');
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
