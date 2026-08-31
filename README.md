@@ -45,3 +45,10 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Ajout de la confiance par zone : aucune / faible / moyenne / élevée.
 - Panneau zone enrichi avec les données qui alimentent le score.
 - Nouveau statut « Données limitées » pour éviter de classer trop vite une zone comme faible.
+
+
+## V10.101
+- Body Map V3 : silhouette plus naturelle et continue.
+- Zones musculaires mieux intégrées à la silhouette, face et dos.
+- Sélection conservée avec halo violet, score et confiance inchangés.
+- Cache PWA et versions des assets passés à 10.101.

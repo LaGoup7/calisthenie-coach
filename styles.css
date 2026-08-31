@@ -3453,3 +3453,20 @@ body{
 .body-overview-chip.tone-partial{background:#eef2ff;border-color:#c7d2fe}
 .body-overview-legend .tone-partial{background:#c7d2fe}
 @media(max-width:460px){.body-zone-state-grid{grid-template-columns:1fr}}
+
+
+/* ========================================================================== */
+/* V10.101 · Body Map V3 — silhouette plus naturelle                           */
+/* ========================================================================== */
+.body-overview-model{padding:16px 14px;background:linear-gradient(180deg,#f9fbff 0%,rgba(244,247,252,.92) 100%)}
+.bodymap-v3{max-height:580px}
+.bodymap-v3 .bodymap-base{fill:url(#bodyShellDark);stroke:#c7d1de;stroke-width:1.5}
+.bodymap-v3 .bodymap-shell-torso,.bodymap-v3 .bodymap-shell-pelvis,.bodymap-v3 .bodymap-shell-leg,.bodymap-v3 .bodymap-shell-arm{fill:url(#bodyShell);stroke:#c7d1de;stroke-width:1.4}
+.bodymap-v3 .bodymap-subshape{fill:rgba(255,255,255,.28);stroke:none;pointer-events:none}
+.bodymap-v3 .bodymap-zone path,.bodymap-v3 .bodymap-zone ellipse,.bodymap-v3 .bodymap-zone rect,.bodymap-v3 .bodymap-zone circle{stroke:#f8fafc;stroke-width:2.2;transition:transform .16s ease,filter .16s ease,opacity .16s ease,stroke-width .16s ease}
+.bodymap-v3 .bodymap-zone:hover path,.bodymap-v3 .bodymap-zone:hover ellipse,.bodymap-v3 .bodymap-zone:hover rect,.bodymap-v3 .bodymap-zone:hover circle{transform-box:fill-box;transform-origin:center;filter:brightness(1.03)}
+.bodymap-v3 .bodymap-zone.selected path,.bodymap-v3 .bodymap-zone.selected ellipse,.bodymap-v3 .bodymap-zone.selected rect,.bodymap-v3 .bodymap-zone.selected circle{stroke:#4f46e5;stroke-width:3.2;filter:url(#bodyGlowV3)}
+.bodymap-v3 .bodymap-outline{stroke:#b7c2cf;stroke-width:1.25;stroke-dasharray:3 6;opacity:.34}
+.bodymap-v3 .bodymap-midline{stroke:#ccd5e1;stroke-width:1.1;opacity:.38}
+.bodymap-v3 .bodymap-caption{font-size:11.5px;letter-spacing:.11em;font-weight:800}
+@media(max-width:720px){.bodymap-v3{max-height:520px}}
