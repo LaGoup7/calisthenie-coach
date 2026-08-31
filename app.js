@@ -6566,6 +6566,100 @@ v1080ProgressInsight=function(){
   </section>`;
 };
 
+
+/* ========================================================================== */
+/* V10.82 · Étape 1 — Vocabulaire produit                                     */
+/* Une notion = un terme visible. Les termes techniques restent secondaires.  */
+/* ========================================================================== */
+function v1082RirCopy(n){
+  n=Number(n);
+  return Number.isFinite(n)?`RIR ${n} · environ ${n} rep${n!==1?'s':''} en réserve`:'RIR —';
+}
+function v1082EffortCopy(n){
+  n=Number(n);
+  return Number.isFinite(n)?`Effort ${n}/10`:'Effort —';
+}
+function v1082LoadCopy(n){
+  n=Math.round(Number(n)||0);
+  return `Charge estimée · ${n.toLocaleString('fr-FR')} UA`;
+}
+
+/* "Quick Log" stays an internal data source; users see "Enregistrement rapide". */
+const _renderQuickLogModalV1082=renderQuickLogModal;
+renderQuickLogModal=function(){
+  let html=_renderQuickLogModalV1082();
+  return html
+    .replace('<div class="kicker">Quick Log</div>','<div class="kicker">Enregistrement rapide</div>')
+    .replace('Ajouter une micro-série','Enregistrer une performance')
+    .replace('Répéter en 1 tap','Répéter rapidement');
+};
+
+/* Mobility uses its own vocabulary: a zone to work, not another generic priority. */
+const _v1079MobilityProfileV1082=v1079MobilityProfile;
+v1079MobilityProfile=function(profiles,priority,chartZone){
+  return _v1079MobilityProfileV1082(profiles,priority,chartZone)
+    .replace(/<em>Priorité<\/em>/g,'<em>À travailler</em>');
+};
+
+const _renderFlexibilityV1082=renderFlexibility;
+renderFlexibility=function(){
+  let html=_renderFlexibilityV1082();
+  html=html
+    .replace('<div class="mob79-priority-line"><span>Priorité</span>','<div class="mob79-priority-line"><span>Zone à travailler</span>')
+    .replace(/Priorité ([^<]+) selon tes mesures/g,'Zone à travailler : $1')
+    .replace(/Priorité ([^<]+) ·/g,'Zone à travailler : $1 ·');
+  return html;
+};
+
+/* Planning: explain the abstract load unit at the point where it matters. */
+const _v1076RenderKinetikV1082=v1076RenderKinetik;
+v1076RenderKinetik=function(day){
+  let html=_v1076RenderKinetikV1082(day);
+  if(day?.kinetik && !day.actualStrength?.[0]){
+    const load=Number(day.kinetik.load||0);
+    html=html.replace(`<span>${load} UA</span>`,`<span title="UA = durée × effort perçu. Cette unité sert à comparer la charge entre tes journées et tes semaines.">${v1082LoadCopy(load)}</span>`);
+  }
+  return html;
+};
+
+/* Activity logging: RPE is useful internally, "effort" is clearer in the main UI. */
+const _renderActivityEditorV1082=renderActivityEditor;
+renderActivityEditor=function(){
+  let html=_renderActivityEditorV1082();
+  return html
+    .replace(/RPE réel/g,'Effort réel')
+    .replace(/RPE prévu/g,'Effort prévu')
+    .replace(/RPE/g,'effort')
+    .replace(/durée × effort/gi,'durée × effort perçu')
+    .replace(/<small>UA<\/small>/g,'<small title="Unité de charge : durée × effort perçu">UA</small>');
+};
+
+/* Progression: remove technical shorthand from the first reading level. */
+const _renderProgressOverviewV1082=renderProgressOverview;
+renderProgressOverview=function(){
+  let html=_renderProgressOverviewV1082();
+  const c=getCycleState();
+  html=html.replace(`RIR ${c.rir} ·`,`${v1082RirCopy(c.rir)} ·`);
+  return html;
+};
+
+const _renderProgressHistoryV1082=renderProgressHistory;
+renderProgressHistory=function(){
+  return _renderProgressHistoryV1082().replace(/RPE ([0-9]+(?:\.[0-9]+)?|—)/g,'Effort $1/10');
+};
+const _v1080HistoryDetailV1082=v1080HistoryDetail;
+v1080HistoryDetail=function(id){
+  return _v1080HistoryDetailV1082(id).replace(/RPE ([0-9]+(?:\.[0-9]+)?|—)/g,'Effort $1/10');
+};
+
+/* Vocabulary shown in the consolidated volume view. */
+const _renderProgressVolumeV1082=renderProgressVolume;
+renderProgressVolume=function(){
+  return _renderProgressVolumeV1082()
+    .replace(/Quick Logs/g,'enregistrements rapides')
+    .replace(/Quick Log/g,'enregistrement rapide');
+};
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});

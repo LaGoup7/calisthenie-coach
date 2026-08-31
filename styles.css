@@ -3310,3 +3310,6 @@ body{
 .p81-insight-support span{font-size:.56rem;color:var(--muted)}
 .p81-insight-support b{color:var(--text);margin-right:5px}
 @media(max-width:520px){.p81-insight-head{align-items:start}.p81-advice{grid-template-columns:1fr}.p81-advice>button{grid-column:1;grid-row:auto;justify-self:start;margin-top:4px}.p81-insight-support{gap:10px}}
+
+/* v10.82 · product vocabulary */
+.mob79-zone em{white-space:nowrap}
