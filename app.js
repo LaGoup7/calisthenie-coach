@@ -2436,9 +2436,9 @@ function renderCustomSessions(){
   const list=getCustomWorkouts(),cycles=allTrainingCycles(false),active=getActiveTrainingCycle();
   return shell(`<header class="topbar"><div><div class="brand">Planning</div><div class="daylabel">Cycles hebdomadaires et séances libres</div></div><div class="topbar-actions"><button class="btn btn-secondary compact" id="newCustomSession">＋ Séance</button><button class="btn btn-primary compact" id="newTrainingCycle">＋ Cycle</button></div></header>
     ${renderPlanningTabs('programs')}
+    ${renderCycleHeatmap(16)}
     <section class="cycle-page-intro"><div><div class="kicker">Cycle actif</div><h1>${esc(active.name)}</h1><p class="muted">Le calendrier et la séance du jour utilisent automatiquement ce cycle.</p></div></section>
     <section class="training-cycle-list">${cycles.map(renderTrainingCycleCard).join('')}</section>
-    ${renderCycleHeatmap(16)}
     <section class="custom-free-head"><div><div class="kicker">Hors cycle</div><h2>Séances libres</h2><p class="muted small">Pour un entraînement ponctuel qui ne remplace pas ton planning hebdomadaire.</p></div><button class="btn btn-secondary compact" id="newCustomSession2">＋ Nouvelle séance</button></section>
     <section class="card clone-card"><div class="kicker">Créer plus vite</div><h2>Partir d'une journée du cycle actif</h2><p class="muted small">La copie devient indépendante : tu peux la modifier sans toucher au cycle.</p><div class="clone-day-grid">${[1,2,3,4,5,6,0].map(day=>{const w=workoutTemplateForDay(day);return (w.exercises||[]).length?`<button class="btn btn-outline clone-program-day" data-clone-day="${day}">${DAY_NAMES[day]} · ${esc(w.name)}</button>`:''}).join('')}</div></section>
     ${list.length?`<section class="custom-session-list">${list.map(w=>{const cov=customSessionCoverage(w);return `<article class="card custom-session-card"><div class="section-head"><div><div class="kicker">Séance libre</div><h2>${esc(w.name)}</h2><p class="muted">${esc(w.subtitle||'')}</p></div><span class="pill">≈ ${w.duration||estimateWorkoutMinutes(w)} min</span></div><div class="meta"><span class="pill">${(w.exercises||[]).length} étapes</span><span class="pill">${cov.groups.length} zones</span><span class="pill">${cov.equipment.length} équipements</span></div><div class="custom-session-actions"><button class="btn btn-primary start-custom-session" data-custom-id="${w.id}">Lancer</button><button class="btn btn-secondary edit-custom-session" data-custom-id="${w.id}">Modifier</button><button class="btn btn-outline duplicate-custom-session" data-custom-id="${w.id}">Dupliquer</button><button class="btn btn-outline danger delete-custom-session" data-custom-id="${w.id}">Supprimer</button></div></article>`}).join('')}</section>`:`<section class="card empty-custom"><h2>Aucune séance libre</h2><p class="muted">Tes cycles suffisent pour le quotidien. Crée une séance libre uniquement pour un entraînement ponctuel.</p></section>`}`,'more');
@@ -6223,6 +6223,8 @@ renderWeek=function(){
     ${v1071RenderAnalysis(stats,conflicts,maxLoad)}
     <section class="planning-days-v1076">${stats.days.map(v1076RenderDay).join('')}</section>`, "week");
 };
+
+/* V10.77 · Programmes heatmap moved to top for immediate cycle regularity visibility. */
 
 applyAppTheme();
 
