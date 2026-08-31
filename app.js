@@ -9484,6 +9484,13 @@ bindEvents=function(){
   }
 };
 
+
+/* ========================================================================== */
+/* V10.108 · Correctif renderer Body Map 3D                                   */
+/* Le renderer Progression gardait encore la référence V7 2D.                 */
+/* ========================================================================== */
+renderProgressOverview=v1095RenderProgressOverview;
+
 applyAppTheme();
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});

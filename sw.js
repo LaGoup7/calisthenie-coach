@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-107-body-map-3d-beta';
-const ASSETS = ['./','./index.html','./styles.css?v=10.107','./app.js?v=10.107','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-108-body-map-3d-renderer-fix';
+const ASSETS = ['./','./index.html','./styles.css?v=10.108','./app.js?v=10.108','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {

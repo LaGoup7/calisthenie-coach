@@ -94,3 +94,10 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Face/Dos recentrent le modèle ; molette = zoom léger.
 - Toggle 2D / 3D. La Body Map SVG V7 reste le fallback si Three.js/WebGL n’est pas disponible.
 - Three.js 0.160.1 chargé depuis cdnjs dans index.html.
+
+
+## V10.108
+- Correctif critique : la page Progression utilisait encore le renderer Body Map V7 2D.
+- Le renderer V10.107 3D est maintenant réellement autoritaire.
+- Le sélecteur 2D / 3D doit désormais être visible.
+- Le mode 3D reste le mode par défaut, avec fallback 2D si Three.js/WebGL est indisponible.
