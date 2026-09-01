@@ -73,7 +73,8 @@ const tests=`
  const decisions=window.KinetikDailyTasks.getTaskDecisions({now});
  ok(decisions.some(x=>x.taskId===weight.id&&x.state==='postponed'),'decision history is not readable');
  ok(localStorage.getItem('cc_daily_task_decisions_v1')!==null,'decision journal is not persisted separately');
- ok(renderReminderSettings().includes('Historique des décisions')&&renderReminderSettings().includes('Conservé 180 jours'),'decision history is not exposed in reminder settings');
+ const settingsJournal=renderSettings();
+ ok(settingsJournal.includes('Journal du parcours')&&settingsJournal.includes('Historique des décisions')&&settingsJournal.includes('Conservé 180 jours'),'decision history is not exposed in the Data journal');
 
  // A specific postponed workout must survive even when the next day has a different natural workout.
  window.KinetikDailyTasks.clearTaskDecision(weight.id);setBodyLogs([]);

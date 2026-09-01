@@ -71,8 +71,9 @@ vm.runInContext(appSource+'\n'+dailySource+'\n'+localSource+'\n'+pushSource,sand
   ok(syncCall&&syncCall.body.manifest&&Object.keys(syncCall.body.manifest.days).length>0,'reminder manifest missing from sync');
   ok(syncCall&&typeof syncCall.body.deviceSecret==='string'&&syncCall.body.deviceSecret.length>=32,'device capability secret missing');
   ok(sandbox.KinetikLocalReminders.getNextOccurrence(now)===null,'P1 local reminder was not suppressed while P2 is active');
-  ok(/Notifications fiables/.test(sandbox.renderReminderSettings()),'P2 Web Push settings block is not rendered');
-  ok(/P2 Web Push/.test(sandbox.renderReminderSettings()),'P2 status badge missing');
+  const pushSettings=sandbox.renderReminderSettings();
+  ok(/Détails appareil/.test(pushSettings),'P2 Web Push device details are not rendered');
+  ok(/Web Push/.test(pushSettings),'Web Push status is missing from device details');
 
   const tested=await manager.test();ok(tested===true&&calls.some(x=>x.url.includes('/api/push/test')),'server push test endpoint was not called');
   await manager.disable();
@@ -94,7 +95,7 @@ vm.runInContext(appSource+'\n'+dailySource+'\n'+localSource+'\n'+pushSource,sand
 
   const sw=fs.readFileSync(__dirname+'/sw.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8'),appText=loadAppSource(__dirname),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
   ok(sw.includes("addEventListener('push'")&&sw.includes('registration.showNotification'),'service worker push event is missing');
-  ok(sw.includes('web-push-manager.js?v=10.131')&&html.includes('web-push-manager.js?v=10.131'),'Web Push manager is not in PWA asset chain');
+  ok(sw.includes('web-push-manager.js?v=10.132')&&html.includes('web-push-manager.js?v=10.132'),'Web Push manager is not in PWA asset chain');
   ok(pkg.dependencies&&pkg.dependencies['web-push'],'server web-push dependency missing');
   ok(appText.includes('webPushDeviceState: "cc_web_push_device_v1"'),'device Web Push state not registered for reset');
   ok(appText.includes('function backupStorageEntries()')&&appText.includes("'localNotificationState','webPushDeviceState','skillPriorities'"),'device push state would leak into user backup');

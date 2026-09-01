@@ -415,3 +415,12 @@ Le problème principal n'est plus le manque de fonctionnalités : c'est que quel
 - les sauvegardes sont fiables ;
 - les API ont de la marge ;
 - les tests vérifient également ce que l'utilisateur peut réellement atteindre.
+
+
+---
+
+## Suivi de résolution
+
+- **LOT A — v10.131 : terminé** : intégrité tests, backup 3 photos, import replacement, restrictions, priorités historiques, apparence, Strava, vocabulaire tour de taille.
+- **LOT B — v10.132 : terminé** : CTA Aujourd'hui dédupliqués, Notifications simplifiées, Journal déplacé, routes Profil/Réglages rationalisées, Apple Santé retiré.
+- **LOT C : restant** : consolidation technique pré-cloud.

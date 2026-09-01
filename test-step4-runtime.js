@@ -41,19 +41,19 @@ const tests=`
 
   setReminderPrefs({...p,enabled:true,workout:true,activities:true,measurements:true,tests:true,mobility:true,recovery:true,visibility:'due-and-soon',upcomingDays:3,preferredMoment:'evening',preferredTime:'19:00'});
   const settings=renderReminderSettings();
-  ok(settings.includes('Rappels & priorités'),'modern reminder settings heading missing');
+  ok(settings.includes('<h2>Rappels</h2>'),'simplified reminder settings heading missing');
   ok(settings.includes('data-reminder="activities"')&&settings.includes('data-reminder="mobility"')&&settings.includes('data-reminder="recovery"'),'new reminder category controls missing');
   ok(settings.includes('id="reminderVisibility"')&&settings.includes('id="reminderUpcomingDays"'),'visibility/horizon controls missing');
-  ok(settings.includes('id="reminderPreferredMoment"')&&settings.includes('id="reminderPreferredTime"'),'preferred moment controls missing');
-  const profile=renderProfile();
-  ok(profile.includes('Rappels & priorités'),'reminder settings are not present in the final V10.88 settings renderer');
+  ok(settings.includes('id="reminderPreferredTime"')&&settings.includes('id="localReminderSnooze"')&&settings.includes('id="localWorkoutFollowup"'),'simplified schedule controls missing');
+  ok(settings.includes('Détails appareil')&&settings.includes('Avancé & support'),'progressive notification disclosure missing');
+  const profile=renderSettings();
+  ok(profile.includes('<h2>Rappels</h2>'),'reminder settings are not present in the final Settings renderer');
 
   const oldGet=document.getElementById,oldQuery=document.querySelectorAll;
   const controls={
     remindersEnabled:{checked:true},
     reminderVisibility:{value:'due-only'},
     reminderUpcomingDays:{value:'3'},
-    reminderPreferredMoment:{value:'morning'},
     reminderPreferredTime:{value:'08:00'}
   };
   const categoryToggle={dataset:{reminder:'activities'},checked:true};
@@ -64,7 +64,7 @@ const tests=`
   ok(typeof categoryToggle.onchange==='function','category reminder controls are not bound by final bindEvents chain');
   ok(typeof controls.reminderVisibility.onchange==='function','visibility control is not bound by final bindEvents chain');
   ok(typeof controls.reminderUpcomingDays.onchange==='function','upcoming horizon control is not bound by final bindEvents chain');
-  ok(typeof controls.reminderPreferredMoment.onchange==='function'&&typeof controls.reminderPreferredTime.onchange==='function','preferred moment controls are not bound by final bindEvents chain');
+  ok(typeof controls.reminderPreferredTime.onchange==='function','preferred time control is not bound by final bindEvents chain');
   document.getElementById=oldGet;document.querySelectorAll=oldQuery;
 
   window.KinetikDailyTasks.registerProvider({id:'step4-test-activity',order:1,getTasks(ctx){return [{id:'step4-activity',kind:'activity',title:'Activité test',detail:'test',status:'pending',priority:80,dueKey:ctx.dateKey}]}});

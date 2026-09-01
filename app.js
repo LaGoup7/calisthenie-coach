@@ -1,4 +1,4 @@
-/* KINETIK v10.131 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.132 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -1373,7 +1373,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.131',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.132',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1396,7 +1396,7 @@ async function importBackupFile(file){
     if(backup.photos&&typeof backup.photos==='object'){
       for(const [id,dataURL] of Object.entries(backup.photos)){const blob=dataURLToBlob(dataURL);if(blob)await putPhoto(id,blob);}
     }
-    state.active=null;state.quickEditor=false;state.bodyEditor=false;state.selectedHistoryId=null;state.view='profile';render();alert('Sauvegarde restaurée avec succès.');
+    state.active=null;state.quickEditor=false;state.bodyEditor=false;state.selectedHistoryId=null;state.view='athlete';render();alert('Sauvegarde restaurée avec succès.');
   }catch(e){console.error(e);alert('La restauration a échoué. Les données du fichier n’ont pas pu être entièrement importées.');}
 }
 
@@ -2481,10 +2481,8 @@ function render() {
   else if (state.view === "skills") app.innerHTML = renderSkills();
   else if (state.view === "measurements") app.innerHTML = renderMeasurements();
   else if (state.view === "athlete") app.innerHTML = renderMore();
-  else if (state.view === "settings") app.innerHTML = renderProfile();
-  else if (state.view === "profile") app.innerHTML = renderMore();
+  else if (state.view === "settings") app.innerHTML = renderSettings();
   else if (state.view === "custom") app.innerHTML = renderCustomSessions();
-  else if (state.view === "more") app.innerHTML = renderMore();
   else app.innerHTML = renderToday();
   bindEvents();
 }
@@ -2511,7 +2509,7 @@ function uiIcon(name, cls="ui-icon") {
 }
 
 function shell(content, activeTab=state.view) {
-  const navTab=activeTab==='custom'?'week':['today','week','flexibility','progress'].includes(activeTab)?activeTab:((activeTab==='athlete'||activeTab==='more'||activeTab==='settings'||activeTab==='profile'||activeTab==='skills'||activeTab==='measurements')?'athlete':'athlete');
+  const navTab=activeTab==='custom'?'week':['today','week','flexibility','progress'].includes(activeTab)?activeTab:'athlete';
   return `<main class="shell">${content}</main>
   ${['today','week','flexibility','progress'].includes(activeTab)?`<button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une performance"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`:''}
   ${renderQuickLogModal()}
@@ -2702,10 +2700,8 @@ function renderToday() {
   const hero=!w.exercises.length?`<section class="card hero rest-banner"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]} · ${esc(activeCycle.name)}</div><h1>Repos planifié</h1><p class="muted">Récupération complète. Marche tranquille ou mobilité douce si tu en as envie.</p></section>`:`<section class="card hero"><div class="kicker">Aujourd'hui · ${DAY_NAMES[day]}</div><h1>${w.name}</h1><p class="muted">${w.subtitle}</p><div class="meta"><span class="pill">Complète ≈ ${w.duration} min</span><span class="pill">Express ≈ ${baseToday.shortDuration||Math.max(20,Math.round((baseToday.duration||45)*.48))} min</span></div>${todayEquipment.length?`<div class="today-equipment today-equipment-visual"><strong>Matériel prévu</strong><div class="today-equipment-grid">${todayEquipment.map(x=>`<div class="today-equipment-item"><span class="today-equipment-icon" aria-hidden="true">${equipmentVisualIcon(x)}</span><span>${esc(x)}</span></div>`).join('')}</div></div>`:''}<button class="btn btn-primary" id="startWorkout" data-day="${day}">Choisir le format</button></section>`;
   const program=w.exercises.length?`<details class="card today-details"><summary><div><div class="kicker">Séance complète</div><strong>Voir les ${w.exercises.length} étapes</strong></div><span>⌄</span></summary><div class="exercise-list">${w.exercises.map((e,i)=>`<div class="exercise-row exercise-row-visual">${exerciseImage(e.name,'mini')}<div class="num">${i+1}</div><div class="grow"><div class="exercise-name">${e.name}</div><div class="exercise-detail">${describe(e)} · ${phaseLabel(e.phase)}</div></div></div>`).join('')}</div></details>`:'';
   return shell(`<header class="topbar"><div><div class="brand">KINETIK</div><div class="daylabel">✓ Sauvegarde locale active</div></div></header>${renderPRNotice()}${hero}
-    <section class="today-cockpit today-primary-actions">
+    <section class="today-cockpit today-primary-actions today-primary-shortcuts">
       <button class="cockpit-card rank-cockpit rank-${rank.current.id}" data-view="skills"><span>${uiIcon('award')}</span><strong>${rank.displayName||rank.current.name}</strong><small>${rank.next?`${Math.round(rank.readiness*100)}% vers ${rank.next.name}`:'Rang maximal'}</small></button>
-      <button class="cockpit-card today-action-card" data-open-quick-log="true"><span>${uiIcon('add')}</span><strong>Ajouter</strong><small>Série libre</small></button>
-      <button class="cockpit-card today-action-card" data-open-activity="true"><span>${uiIcon('spark')}</span><strong>Activité</strong><small>Course, vélo, boxe…</small></button>
     </section>
     ${program}${renderTodayMobilityPrompt()}${renderActivityHub()}${renderDailyVolumeCard()}${renderTodayUsefulActions()}`, 'today');
 }

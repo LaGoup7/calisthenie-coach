@@ -1,4 +1,4 @@
-# KINETIK · Architecture JavaScript v10.130
+# KINETIK · Architecture JavaScript v10.132
 
 ## Pourquoi ce refactor
 
@@ -52,3 +52,11 @@ Côté serveur, `lib/account-core.js` partage Redis avec P2 mais ne lit ni n’�
 - ancien moteur Priorités de skills migré vers les objectifs du profil puis neutralisé ;
 - Déconnecter Strava restauré dans le profil ;
 - libellés de tour de taille désambiguïsés.
+
+
+## V10.132 · Lot B — simplification des routes et surfaces
+
+- Le routeur principal expose désormais `athlete` pour le Profil et `settings` pour les Réglages. Les aliases historiques `profile` et `more` ne sont plus routés.
+- `renderSettings()` est l'entrée publique des Réglages. `renderProfile()` subsiste temporairement comme implémentation interne héritée ; sa consolidation est réservée au LOT C.
+- Le renderer Notifications final est possédé par `app-journey.js` et applique une divulgation progressive : contrôles usuels, détails appareil, puis support avancé.
+- Le cockpit Aujourd'hui ne doit plus ajouter un second CTA lorsqu'une action canonique existe déjà ailleurs sur la page.

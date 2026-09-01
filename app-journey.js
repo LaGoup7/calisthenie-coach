@@ -1,4 +1,4 @@
-/* KINETIK v10.131 · Daily journey, reminders, actions and Web Push settings UI. */
+/* KINETIK v10.132 · Daily journey, reminders, actions and Web Push settings UI. */
 /* KINETIK v10.120 · Step 6 · Today Agenda                                   */
 /* One compact surface for the Daily Tasks Engine.                            */
 /* Completed tasks leave the active list and feed the daily progress.         */
@@ -685,3 +685,70 @@ bindEvents=function(){
   const leave=document.getElementById('leaveKinetikAccount');if(leave)leave.onclick=async()=>{if(!confirm('Dissocier cet appareil du compte KINETIK ? Les données sportives locales resteront sur cet appareil.'))return;leave.disabled=true;await manager?.leave?.();render();};
   const clear=document.getElementById('clearAllData');if(clear)clear.onclick=async()=>{if(confirm('Effacer historique, tests, skills, mesures, compte appareil, rappels serveur et photos ?')){await manager?.clearAll?.();await window.KinetikWebPush?.disable?.({unsubscribeBrowser:true,render:false});Object.values(STORAGE).forEach(k=>localStorage.removeItem(k));await clearPhotos();render();}};
 };
+
+/* ========================================================================== */
+/* KINETIK v10.132 · Lot B · UX simplification                                */
+/* Today owns one action per intent; notification internals are progressive.   */
+/* ========================================================================== */
+const _todayAgendaActionV10132=todayAgendaAction;
+todayAgendaAction=function(task){
+  /* The workout hero owns the workout start action. The agenda keeps status/progress only. */
+  if(task?.kind==='workout')return '';
+  return _todayAgendaActionV10132(task);
+};
+
+function v10132ReminderCategories(p){
+  const rows=[
+    ['workout','🏋️','Séance','Entraînement prévu'],
+    ['activities','🏃','Activités','Course, vélo, boxe…'],
+    ['measurements','📏','Mesures','Poids, tour de taille, photos'],
+    ['tests','◇','Évaluations','Tests KINETIK à renouveler'],
+    ['mobility','∿','Mobilité','Routines et évaluations'],
+    ['recovery','◌','Récupération','Jours de repos et routines douces']
+  ];
+  return `<div class="reminder-category-grid reminder-category-grid-v10132">${rows.map(([id,icon,label,note])=>`<label class="reminder-category ${p[id]!==false?'active':''}"><span class="reminder-category-icon">${icon}</span><span><strong>${label}</strong><small>${note}</small></span><input class="reminder-toggle" data-reminder="${id}" type="checkbox" ${p[id]!==false?'checked':''}></label>`).join('')}</div>`;
+}
+function v10132DeviceDetails(){
+  const p=getReminderPrefs(),local=v10124NotificationStatus(),[localBadge,localNote]=v10124PermissionLabel(local),localGranted=local.permission==='granted';
+  const push=v10125WebPushStatus(),[pushBadge,pushNote]=v10125WebPushBadge(push),pushActive=!!push.active;
+  const synced=push.lastSyncAt?v10126HealthDate(push.lastSyncAt):'Jamais';
+  return `<details class="reminder-progressive reminder-device-details"><summary><div><strong>Détails appareil</strong><span>${pushActive?'Web Push actif':localGranted?'Notifications autorisées':'Notifications à configurer'}</span></div><b>⌄</b></summary><div class="reminder-progressive-body">
+    <div class="reminder-device-row"><div><span class="local-notification-dot ${localGranted?'is-on':local.permission==='denied'?'is-off':'is-idle'}"></span><div><strong>Notifications de cet appareil · ${esc(localBadge)}</strong><small>${esc(localNote)}</small></div></div>${local.supported&&local.permission==='default'?`<button type="button" class="btn btn-outline compact" id="requestLocalNotifications">Autoriser</button>`:localGranted?`<label class="reminder-inline-switch"><span>Fallback local</span><input id="localNotificationsEnabled" type="checkbox" ${p.localNotifications?'checked':''}></label>`:''}</div>
+    <div class="reminder-device-row"><div><span class="local-notification-dot ${pushActive?'is-on':push.permission==='denied'?'is-off':'is-idle'}"></span><div><strong>Web Push · ${esc(pushBadge)}</strong><small>${esc(pushNote)}</small></div></div>${push.configured&&push.supported&&push.permission!=='denied'&&!pushActive?`<button type="button" class="btn btn-primary compact" id="activateWebPush">Activer</button>`:''}</div>
+    ${pushActive?`<div class="reminder-device-summary"><span><small>Planification</small><strong>${push.lastManifestDays||0} jours</strong></span><span><small>Fuseau</small><strong>${esc(push.timezone||'—')}</strong></span><span><small>Dernière synchro</small><strong>${esc(synced)}</strong></span></div><div class="local-notification-actions"><button type="button" class="btn btn-outline compact" id="testWebPush">Tester</button><button type="button" class="btn btn-outline compact" id="syncWebPush">Synchroniser</button><button type="button" class="btn btn-ghost compact" id="disableWebPush">Désactiver</button></div>`:''}
+    ${push.lastError?`<p class="reminder-local-note web-push-error"><strong>Dernière erreur :</strong> ${esc(push.lastError)}</p>`:''}
+    <p class="reminder-local-note">Web Push est la voie fiable lorsque KINETIK est fermé. Le rappel local P1 reste un fallback de cet appareil et se met en veille lorsque P2 est actif.</p>
+  </div></details>`;
+}
+function v10132AdvancedReminderDetails(p){
+  const push=v10125WebPushStatus(),health=push.enabled?renderWebPushHealth():'';
+  return `<details class="reminder-progressive reminder-advanced-details"><summary><div><strong>Avancé & support</strong><span>Affichage, confidentialité et diagnostic technique</span></div><b>⌄</b></summary><div class="reminder-progressive-body">
+    <div class="reminder-preference-grid"><label><span>Échéances dans Aujourd’hui</span><select id="reminderVisibility"><option value="due-only" ${p.visibility==='due-only'?'selected':''}>Uniquement ce qui est dû</option><option value="due-and-soon" ${p.visibility==='due-and-soon'?'selected':''}>Dû + bientôt à refaire</option></select></label><label class="reminder-upcoming-field ${p.visibility==='due-and-soon'?'':'is-muted'}"><span>Fenêtre “bientôt”</span><div class="reminder-number"><input id="reminderUpcomingDays" type="number" min="1" max="14" value="${p.upcomingDays}" ${p.visibility==='due-and-soon'?'':'disabled'}><small>jours</small></div></label></div>
+    <div class="switchline"><div><strong>Détails sur l’écran verrouillé</strong><div class="small muted">Désactivé par défaut : les noms des tâches restent privés.</div></div><input id="localNotificationDetail" type="checkbox" ${p.notificationDetail==='detailed'?'checked':''}></div>
+    ${typeof Notification!=='undefined'&&Notification.permission==='granted'?`<button type="button" class="btn btn-outline compact" id="testLocalNotification">Tester le fallback local</button>`:''}
+    ${health||'<p class="reminder-local-note">Le diagnostic Web Push apparaîtra ici après activation sur cet appareil.</p>'}
+  </div></details>`;
+}
+renderReminderSettings=function(){
+  const p=getReminderPrefs(),active=reminderCategoryCount(p),disabled=p.enabled?'':' reminder-settings-disabled';
+  return `<section class="p88-settings-section reminder-settings reminder-settings-v10132${disabled}"><div class="p88-section-head"><div><div class="kicker">Notifications</div><h2>Rappels</h2></div><span class="pill">${p.enabled?active+' catégories':'désactivés'}</span></div>
+    <p class="p88-muted">Choisis simplement <strong>quoi</strong> te rappeler et <strong>quand</strong>. Les détails techniques de l’appareil restent repliés.</p>
+    <div class="reminder-master switchline"><div><strong>Rappels intelligents</strong><div class="small muted">Pilote les priorités d’Aujourd’hui et les notifications.</div></div><input id="remindersEnabled" type="checkbox" ${p.enabled?'checked':''}></div>
+    <div class="reminder-settings-body">
+      <div class="reminder-settings-block"><div class="reminder-settings-title"><strong>Catégories</strong><span>Ce que KINETIK peut te rappeler</span></div>${v10132ReminderCategories(p)}</div>
+      <div class="reminder-settings-block reminder-main-schedule"><div class="reminder-settings-title"><strong>Horaire</strong><span>Réglages habituels de notification</span></div><div class="reminder-preference-grid"><label><span>Heure principale</span><input id="reminderPreferredTime" type="time" value="${p.preferredTime}"></label><label><span>Snooze par défaut</span><select id="localReminderSnooze">${[[15,'15 min'],[30,'30 min'],[60,'1 h'],[120,'2 h']].map(([v,l])=>`<option value="${v}" ${p.snoozeMinutes===v?'selected':''}>${l}</option>`).join('')}</select></label><label><span>Relance séance</span><select id="localWorkoutFollowupDelay" ${p.workoutFollowup?'':'disabled'}>${[[60,'1 h'],[120,'2 h'],[180,'3 h'],[240,'4 h']].map(([v,l])=>`<option value="${v}" ${p.workoutFollowupDelay===v?'selected':''}>${l} après</option>`).join('')}</select></label></div><div class="switchline"><div><strong>Relancer une séance encore à faire</strong><div class="small muted">Au plus tôt à 18:00 et jamais après 21:30.</div></div><input id="localWorkoutFollowup" type="checkbox" ${p.workoutFollowup?'checked':''}></div></div>
+      ${v10132DeviceDetails()}
+      ${v10132AdvancedReminderDetails(p)}
+    </div>
+  </section>`;
+};
+
+function renderDecisionJournalSettings(){
+  return `<section class="p88-settings-section decision-journal-settings"><details class="p88-settings-details"><summary><div><div class="kicker">Données</div><strong>Journal du parcours</strong><span>Fait, reporté et ignoré · historique local sur 180 jours</span></div><b>⌄</b></summary>${renderDailyTaskDecisionHistory()}</details></section>`;
+}
+function renderSettings(){
+  let html=renderProfile();
+  const marker='<section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Données</div><h2>Sauvegarde locale</h2>';
+  if(html.includes(marker))html=html.replace(marker,renderDecisionJournalSettings()+marker);
+  return html;
+}

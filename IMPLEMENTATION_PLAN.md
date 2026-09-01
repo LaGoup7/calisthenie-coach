@@ -228,4 +228,17 @@ Le compte KINETIK regroupe uniquement les installations et leurs préférences d
 - désambiguïsation Tour de taille ;
 - 457 contrôles fonctionnels cumulés.
 
-Étape suivante recommandée : **LOT B — simplification UX**, puis LOT C — consolidation architecture pré-cloud.
+LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.132 ; la prochaine étape est le LOT C — consolidation architecture pré-cloud.
+
+## Stabilisation pré-cloud — LOT B · TERMINÉ / v10.132
+
+- déduplication des CTA de la page Aujourd'hui ;
+- notifications restructurées en surface principale + Détails appareil + Avancé & support ;
+- historique des décisions déplacé vers Données → Journal du parcours ;
+- routes Profil/Réglages simplifiées : `athlete` + `settings`, aliases `profile/more` retirés du routeur actif ;
+- `renderSettings()` devient l'entrée explicite des Réglages ;
+- Apple Santé retiré des connexions tant que l'intégration n'est pas réelle ;
+- invariant Vercel Hobby maintenu à 12 fonctions ;
+- contrôle UX dédié via `test-lot-b-runtime.js`.
+
+Étape suivante recommandée : **LOT C — consolidation technique pré-cloud** (binders/renderers, code mort, consolidation des fonctions Vercel, surface-contract tests et round-trip backup complet).

@@ -1,4 +1,4 @@
-/* KINETIK v10.131 · Mobility, progression UX and product-coaching layers. */
+/* KINETIK v10.132 · Mobility, progression UX and product-coaching layers. */
 /* V10.79 · Mobility Visual Clarity                                           */
 /* Today → Profile → Assessment → Progression → Details                        */
 /* ========================================================================== */
@@ -865,12 +865,10 @@ function v1088ConnectionSection(){
   if(!st.checked)return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Connexions</div><h2>Services externes</h2></div></div><div class="p88-connection"><div><strong>Strava</strong><span>Vérification de la connexion…</span></div><b>…</b></div></section>`;
   if(!st.connected)return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Connexions</div><h2>Services externes</h2></div></div>
     <div class="p88-connection"><div><strong>Strava</strong><span>Non connecté · import automatique des courses facultatif</span></div><a href="/api/strava/auth">Connecter →</a></div>
-    <div class="p88-connection disabled"><div><strong>Apple Santé</strong><span>Non disponible directement dans la PWA web</span></div><b>Plus tard</b></div>
   </section>`;
   const athlete=st.athlete?`${st.athlete.firstname||''} ${st.athlete.lastname||''}`.trim():'';
   return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Connexions</div><h2>Services externes</h2></div></div>
     <div class="p88-connection connected"><div><strong>Strava</strong><span>${athlete?esc(athlete)+' · ':''}${meta.lastSync?`synchro ${formatDate(meta.lastSync)}`:'connecté'}</span></div><div class="p88-connection-actions"><button id="syncStrava">Synchroniser →</button><button type="button" class="btn btn-ghost compact" id="disconnectStrava">Déconnecter</button></div></div>
-    <div class="p88-connection disabled"><div><strong>Apple Santé</strong><span>Non disponible directement dans la PWA web</span></div><b>Plus tard</b></div>
   </section>`;
 }
 function v1088ProfileContext(p){
@@ -963,7 +961,7 @@ renderProfile=function(){
       <p class="p88-muted">Exporte une sauvegarde avant un changement de téléphone, navigateur ou domaine. Les fichiers restent sous ton contrôle.</p>
       <div class="data-actions"><button class="btn btn-primary" id="exportData">Exporter mes données</button><button class="btn btn-secondary" id="importData">Importer une sauvegarde</button><input id="importDataFile" type="file" accept="application/json,.json" hidden></div>
       <div class="p88-danger-zone"><button class="btn btn-danger" id="clearAllData">Effacer toutes les données</button></div>
-    </section>`, 'profile');
+    </section>`, 'settings');
 };
 
 

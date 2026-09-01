@@ -1,4 +1,4 @@
-/* KINETIK v10.131 · Body map, anatomy, body-system consistency and measurements. */
+/* KINETIK v10.132 · Body map, anatomy, body-system consistency and measurements. */
 /* V10.100 · Body Map V2 — anatomie + confiance + statuts fiables             */
 /* ========================================================================== */
 
@@ -1668,7 +1668,7 @@ renderProgressOverview=v1095RenderProgressOverview;
 
 applyAppTheme();
 
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='profile'&&!state.active)render();});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;if(state.view==='settings'&&!state.active)render();});
 window.addEventListener('appinstalled',()=>{state.deferredInstall=null;});
 // Prime Web Audio from a genuine user gesture. This matters on iOS.
 document.addEventListener('pointerdown',()=>unlockTimerAudio(),{passive:true});

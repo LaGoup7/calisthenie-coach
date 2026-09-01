@@ -372,3 +372,13 @@ La route Strava de diagnostic a été fusionnée dans `/api/strava/status?diagno
 - ancien moteur Priorités de skills migré vers les objectifs du profil puis neutralisé ;
 - Déconnecter Strava restauré dans le profil ;
 - libellés de tour de taille désambiguïsés.
+
+## V10.132 · LOT B — simplification UX
+
+- **Aujourd'hui** : suppression des doublons d'action. Le workout reste dans l'Agenda comme état, mais le hero est l'unique CTA de démarrage. `Ajouter` reste au FAB et l'ajout d'activité reste dans `Charge sportive`.
+- **Notifications** : la surface principale ne montre plus que catégories, heure, snooze et relance. Web Push, santé et diagnostic sont rangés dans `Détails appareil` puis `Avancé & support`.
+- **Journal du parcours** : l'historique Fait / Reporté / Ignoré quitte Notifications et rejoint la zone Données des Réglages.
+- **Profil / Réglages** : le routeur actif conserve uniquement `athlete` et `settings`; les aliases `profile` / `more` sont retirés. La route Settings appelle maintenant `renderSettings()`.
+- **Intégrations** : la ligne inactive Apple Santé est retirée tant qu'aucune intégration réelle n'est disponible. Strava reste inchangé.
+- **Vercel Hobby** : toujours 12 fonctions physiques.
+- Tests : `test-lot-b-runtime.js` (22 contrôles) + toutes les suites historiques.
