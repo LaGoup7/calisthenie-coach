@@ -10953,3 +10953,59 @@ bindEvents=function(){
   const test=document.getElementById('testWebPush');if(test)test.onclick=async()=>{test.disabled=true;const ok=await manager?.test?.();if(!ok)alert('Notification Web Push de test impossible.');test.disabled=false;};
   const clear=document.getElementById('clearAllData');if(clear)clear.onclick=async()=>{if(confirm('Effacer historique, tests, skills, mesures, rappels serveur et photos ?')){await manager?.disable?.({unsubscribeBrowser:true,render:false});Object.values(STORAGE).forEach(k=>localStorage.removeItem(k));await clearPhotos();render();}};
 };
+
+/* ========================================================================== */
+/* KINETIK v10.126 · Step 12 · Notification health & current device          */
+/* Adds explicit diagnostics/repair without introducing a cloud user account. */
+/* ========================================================================== */
+function v10126HealthDate(value){
+  if(!value)return 'Jamais';
+  const d=new Date(value);if(Number.isNaN(d.getTime()))return '—';
+  return d.toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+function v10126RepairLabel(reason){
+  return ({permission_denied:'Notifications bloquées',subscription_missing:'Abonnement Push perdu',subscription_changed:'Abonnement Push modifié',vapid_key_changed:'Clé Push renouvelée',server_missing:'Appareil absent du serveur',device_auth_failed:'Identité appareil désynchronisée',repair_failed:'Réparation incomplète'})[reason]||'Connexion Push à réparer';
+}
+function v10126ErrorLabel(code){
+  return ({subscription_expired:'Abonnement expiré',push_auth_failed:'Authentification Push refusée',push_rate_limited:'Service Push temporairement limité',push_service_unavailable:'Service Push indisponible',push_timeout:'Délai Push dépassé',push_network_error:'Erreur réseau Push',delivery_failed:'Échec de remise',subscription_missing:'Abonnement Push perdu',vapid_key_changed:'Clé Push renouvelée',permission_denied:'Notifications bloquées',device_auth_failed:'Identité appareil désynchronisée',server_missing:'Appareil absent du serveur'})[code]||String(code||'—').replace(/_/g,' ');
+}
+function v10126NotificationHealthBadge(status){
+  const h=status.serverHealth||{};
+  if(status.repairReason)return ['À réparer',v10126RepairLabel(status.repairReason),'is-repair'];
+  if(Number(h.consecutiveFailures||0)>0||h.lastDeliveryError)return ['À surveiller',v10126ErrorLabel(h.lastDeliveryError),'is-warning'];
+  if(status.active)return ['Opérationnel','Abonnement client et appareil serveur sont synchronisés.','is-healthy'];
+  if(status.configured)return ['Prêt','Active Web Push pour commencer le suivi de santé.','is-idle'];
+  return ['Indisponible','Le backend Web Push doit être configuré.','is-idle'];
+}
+function renderWebPushHealth(){
+  const status=v10125WebPushStatus(),health=status.serverHealth||{},server=status.serverInfo||{},[badge,note,tone]=v10126NotificationHealthBadge(status),enabled=!!status.enabled;
+  if(!status.configured&&!enabled)return '';
+  const schedules=server.schedules?`${server.schedules.primary?'rappel ✓':'rappel —'} · ${server.schedules.followup?'relance ✓':'relance —'}`:'—';
+  const delivery=health.lastDeliveryAcceptedAt?v10126HealthDate(health.lastDeliveryAcceptedAt):'Aucune encore';
+  const lastError=health.lastDeliveryError?v10126ErrorLabel(health.lastDeliveryError):(status.lastError?v10126ErrorLabel(status.lastError):'Aucune');
+  const canRepair=enabled&&status.permission==='granted'&&!!status.repairReason;
+  return `<div class="web-push-health ${tone}"><div class="web-push-health-head"><div><span class="local-notification-dot ${tone==='is-healthy'?'is-on':tone==='is-repair'||tone==='is-warning'?'is-off':'is-idle'}"></span><div><strong>Santé des notifications · ${esc(badge)}</strong><small>${esc(note)}</small></div></div><button type="button" class="btn btn-outline compact" id="checkWebPushHealth" ${enabled?'':'disabled'}>Vérifier</button></div>
+    ${enabled?`<div class="web-push-device"><div class="web-push-device-title"><div><strong>Cet appareil</strong><small>${esc(status.devicePlatform||'other')} · installation …${esc(status.installationSuffix||'—')}</small></div><span class="pill">P2.1</span></div><div class="web-push-device-label"><label for="webPushDeviceLabel">Nom de l’appareil</label><div><input id="webPushDeviceLabel" maxlength="48" value="${esc(status.deviceLabel||'Cet appareil')}"><button type="button" class="btn btn-ghost compact" id="saveWebPushDeviceLabel">Enregistrer</button></div></div></div>
+    <div class="web-push-health-grid"><div><span>Abonnement navigateur</span><strong>${status.subscribed?'Connecté':'Absent'}</strong></div><div><span>Appareil serveur</span><strong>${status.serverExists?'Présent':'Absent'}</strong></div><div><span>Schedules</span><strong>${esc(schedules)}</strong></div><div><span>Dernière synchro</span><strong>${esc(v10126HealthDate(status.lastSyncAt))}</strong></div><div><span>Dernière remise Push</span><strong>${esc(delivery)}</strong></div><div><span>Dernier test serveur</span><strong>${esc(v10126HealthDate(health.lastTestAcceptedAt))}</strong></div></div>
+    ${(health.lastDeliveryError||status.lastError)?`<div class="web-push-health-alert"><strong>Dernier incident</strong><span>${esc(lastError)}${Number(health.consecutiveFailures||0)>0?` · ${Number(health.consecutiveFailures)} échec${Number(health.consecutiveFailures)>1?'s':''} consécutif${Number(health.consecutiveFailures)>1?'s':''}`:''}</span></div>`:''}
+    ${canRepair?`<button type="button" class="btn btn-primary" id="repairWebPush">Réparer Web Push</button>`:''}
+    <p class="reminder-local-note"><strong>Diagnostic :</strong> « Dernière remise Push » signifie que le service Push a accepté la notification côté serveur ; ce n’est pas une preuve que l’utilisateur l’a ouverte.</p>
+    <p class="reminder-local-note"><strong>Multi-appareils :</strong> chaque installation possède déjà son identité et son état séparés. Une liste de tous les appareils ne sera ajoutée qu’avec une authentification utilisateur/cloud, afin qu’un appareil ne puisse jamais découvrir ceux d’un autre utilisateur.</p>`:''}
+  </div>`;
+}
+const _renderWebPushSettingsV10126=renderWebPushSettings;
+renderWebPushSettings=function(){
+  let html=_renderWebPushSettingsV10126(),status=v10125WebPushStatus(),health=renderWebPushHealth();
+  if(status.enabled&&status.repairReason)html=html.replace(/<button[^>]+id="activateWebPush"[^>]*>Activer Web Push<\/button>/,'');
+  const marker='<p class="reminder-local-note"><strong>Données serveur minimales :</strong>';
+  return html.includes(marker)?html.replace(marker,health+marker):html.replace(/<\/div>\s*$/,health+'</div>');
+};
+const _bindEventsV10126=bindEvents;
+bindEvents=function(){
+  _bindEventsV10126();
+  const manager=window.KinetikWebPush;
+  const check=document.getElementById('checkWebPushHealth');if(check)check.onclick=async()=>{check.disabled=true;await manager?.checkHealth?.({force:true});render();};
+  const repair=document.getElementById('repairWebPush');if(repair)repair.onclick=async()=>{repair.disabled=true;const ok=await manager?.repair?.();if(!ok)alert('Réparation Web Push impossible. Vérifie l’autorisation de notifications et la connexion réseau.');render();};
+  const saveLabel=document.getElementById('saveWebPushDeviceLabel');if(saveLabel)saveLabel.onclick=async()=>{const input=document.getElementById('webPushDeviceLabel');saveLabel.disabled=true;await manager?.setDeviceLabel?.(input?.value||'Cet appareil');render();};
+  const label=document.getElementById('webPushDeviceLabel');if(label)label.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('saveWebPushDeviceLabel')?.click();}};
+};

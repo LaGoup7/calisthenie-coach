@@ -149,3 +149,28 @@ Notification système
 ## Limite volontaire
 
 Le navigateur calcule et synchronise un manifeste de **60 jours**. Si KINETIK n'est jamais ouverte pendant plus de 60 jours, le serveur finit par ne plus avoir de tâche future à envoyer. La prochaine ouverture régénère automatiquement le manifeste.
+
+
+## 7. Diagnostic v10.126
+
+Après activation, le panneau **Santé des notifications** permet de vérifier :
+
+- abonnement navigateur présent ;
+- installation présente dans Redis ;
+- schedules rappel / relance ;
+- dernière synchronisation ;
+- dernière remise acceptée par Apple/Google/Mozilla Push ;
+- dernier test serveur ;
+- dernière erreur normalisée.
+
+Le bouton **Vérifier** appelle `POST /api/push/status` avec l'identifiant et le secret de l'installation courante. Le serveur ne permet pas de lister d'autres appareils.
+
+Le bouton **Réparer Web Push** peut recréer un abonnement perdu ou renouvelé, puis appelle `/api/push/sync` pour reconstruire l'état serveur et les schedules. Aucune nouvelle variable d'environnement n'est nécessaire pour v10.126.
+
+### Signification de « Dernière remise Push »
+
+Cette date indique que le fournisseur Web Push a accepté la notification envoyée par le backend. Elle ne prouve pas que l'utilisateur a vu ou ouvert la notification. Un accusé d'ouverture pourra être ajouté dans une étape ultérieure, séparément et de façon transparente.
+
+### Multi-appareils
+
+Chaque installation possède déjà son propre `installationId`, secret, abonnement et état de santé. KINETIK n'essaie pas de relier ou d'afficher plusieurs appareils sans authentification utilisateur : cela évite qu'un identifiant local permette de découvrir les appareils d'une autre personne.

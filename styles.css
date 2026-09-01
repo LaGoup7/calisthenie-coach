@@ -3736,3 +3736,15 @@ body{
 .web-push-summary span{font-size:.72rem;opacity:.65}.web-push-summary strong{font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .web-push-error{border-left:3px solid currentColor;padding-left:10px}
 @media(max-width:680px){.web-push-summary{grid-template-columns:1fr}.web-push-summary strong{white-space:normal}}
+
+/* V10.126 · Web Push health & current device */
+.web-push-health{margin:14px 0;border:1px solid var(--line,#dfe3e8);border-radius:16px;padding:14px;background:color-mix(in srgb,var(--surface,#fff) 97%,transparent)}
+.web-push-health.is-healthy{box-shadow:inset 3px 0 0 color-mix(in srgb,currentColor 52%,transparent)}
+.web-push-health.is-warning,.web-push-health.is-repair{box-shadow:inset 3px 0 0 color-mix(in srgb,currentColor 35%,transparent)}
+.web-push-health-head,.web-push-device-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.web-push-health-head>div,.web-push-device-title>div{display:flex;align-items:center;gap:10px;min-width:0}.web-push-health-head small,.web-push-device-title small{display:block;margin-top:2px;opacity:.68}
+.web-push-device{margin-top:14px;padding:12px;border:1px solid var(--line,#e4e7eb);border-radius:14px}.web-push-device-label{margin-top:11px}.web-push-device-label label{display:block;font-size:.73rem;opacity:.7;margin-bottom:5px}.web-push-device-label>div{display:flex;gap:8px}.web-push-device-label input{min-width:0;flex:1}
+.web-push-health-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.web-push-health-grid>div{padding:10px;border-radius:12px;background:color-mix(in srgb,var(--surface-2,#f5f6f8) 88%,transparent);min-width:0}.web-push-health-grid span{display:block;font-size:.7rem;opacity:.65}.web-push-health-grid strong{display:block;margin-top:3px;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.web-push-health-alert{display:flex;justify-content:space-between;gap:12px;padding:10px 11px;margin:10px 0;border:1px solid var(--line,#e4e7eb);border-radius:12px;font-size:.8rem}.web-push-health-alert span{text-align:right;opacity:.78}
+@media(max-width:680px){.web-push-health-grid{grid-template-columns:1fr 1fr}.web-push-health-head{align-items:flex-start}.web-push-device-label>div{flex-direction:column}.web-push-device-label button{width:100%}}
+@media(max-width:390px){.web-push-health-grid{grid-template-columns:1fr}.web-push-health-head{flex-direction:column}.web-push-health-head>button{width:100%}}

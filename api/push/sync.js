@@ -1,7 +1,7 @@
 const {
   envReady,json,readJson,safeId,safeSecret,hash,validateTimezone,normalizeTime,followupTime,cronAt,
   deterministicScheduleId,validateSubscription,sanitizeManifest,canonicalOrigin,getDevice,putDevice,
-  upsertSchedule,deleteSchedule,publishOneOff,cancelMessage,allowNewDevice,authDevice
+  upsertSchedule,deleteSchedule,publishOneOff,cancelMessage,allowNewDevice,authDevice,sanitizeDeviceMeta,healthSnapshot
 }=require('../_lib/push-core');
 
 module.exports = async function handler(req,res){
@@ -13,7 +13,7 @@ module.exports = async function handler(req,res){
     const existing=await getDevice(installationId);
     if(existing&&!authDevice(existing,secret)) return json(res,403,{ok:false,error:'device_auth_failed'});
     if(!existing&&!(await allowNewDevice(req))) return json(res,429,{ok:false,error:'registration_rate_limited'});
-    const timezone=validateTimezone(body.timezone),prefs={
+    const timezone=validateTimezone(body.timezone),deviceMeta=sanitizeDeviceMeta(body.device),prefs={
       preferredTime:normalizeTime(body.prefs?.preferredTime,'08:00'),
       notificationDetail:body.prefs?.notificationDetail==='detailed'?'detailed':'discreet',
       workoutFollowup:body.prefs?.workoutFollowup!==false,
@@ -25,7 +25,8 @@ module.exports = async function handler(req,res){
     const primaryId=deterministicScheduleId(installationId,'primary');
     const followupId=deterministicScheduleId(installationId,'followup');
     const followTime=followupTime(prefs),hasReminders=Object.keys(manifest.days).length>0;
-    const prelim={version:1,installationId,secretHash:existing?.secretHash||hash(secret),subscription,timezone,prefs,manifest,schedules:{primaryId:hasReminders?primaryId:null,followupId:hasReminders&&followTime?followupId:null},snooze:existing?.snooze||null,createdAt:existing?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+    const nowIso=new Date().toISOString(),health={...healthSnapshot(existing),lastClientSyncAt:nowIso};
+    const prelim={version:2,installationId,secretHash:existing?.secretHash||hash(secret),device:deviceMeta,subscription,timezone,prefs,manifest,schedules:{primaryId:hasReminders?primaryId:null,followupId:hasReminders&&followTime?followupId:null},snooze:existing?.snooze||null,health,createdAt:existing?.createdAt||nowIso,updatedAt:nowIso};
     await putDevice(prelim);
     if(hasReminders){
       await upsertSchedule({scheduleId:primaryId,destination,cron:cronAt(prefs.preferredTime,timezone),body:{installationId,reason:'primary'}});
@@ -45,6 +46,6 @@ module.exports = async function handler(req,res){
     }
     const device={...prelim,schedules:{primaryId:hasReminders?primaryId:null,followupId:hasReminders&&followTime?followupId:null},snooze,updatedAt:new Date().toISOString()};
     await putDevice(device);
-    return json(res,200,{ok:true,active:true,syncedAt:device.updatedAt,timezone,preferredTime:prefs.preferredTime,followupTime:followTime,manifestDays:Object.keys(manifest.days).length});
+    return json(res,200,{ok:true,active:true,syncedAt:device.updatedAt,timezone,preferredTime:prefs.preferredTime,followupTime:followTime,manifestDays:Object.keys(manifest.days).length,device:device.device,health:healthSnapshot(device)});
   }catch(error){console.error('[KINETIK push sync]',error);return json(res,error.statusCode||500,{ok:false,error:error.message||'sync_failed'});}
 };

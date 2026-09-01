@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-125-web-push';
-const ASSETS = ['./','./index.html','./styles.css?v=10.125','./app.js?v=10.125','./daily-tasks.js?v=10.125','./local-reminders.js?v=10.125','./web-push-manager.js?v=10.125','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-126-push-health';
+const ASSETS = ['./','./index.html','./styles.css?v=10.126','./app.js?v=10.126','./daily-tasks.js?v=10.126','./local-reminders.js?v=10.126','./web-push-manager.js?v=10.126','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {
@@ -58,5 +58,15 @@ self.addEventListener('notificationclick', event => {
     if (data.taskId) url.searchParams.set('task',String(data.taskId));
     if (action === 'snooze') url.searchParams.set('snooze','1');
     await self.clients.openWindow(url.href);
+  })());
+});
+
+/* V10.126 · Notify open KINETIK clients when the browser rotates/losses the
+   PushSubscription. The next foreground refresh performs the authenticated
+   repair/synchronization because Service Workers cannot read localStorage. */
+self.addEventListener('pushsubscriptionchange', event => {
+  event.waitUntil((async()=>{
+    const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    windows.forEach(client=>client.postMessage({type:'kinetik-push-subscription-change'}));
   })());
 });

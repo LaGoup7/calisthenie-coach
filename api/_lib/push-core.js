@@ -123,6 +123,43 @@ function sanitizeManifest(input) {
   return { generatedAt:String(input?.generatedAt || new Date().toISOString()).slice(0,40), days };
 }
 
+
+function sanitizeDeviceMeta(input) {
+  const platform = ['ios','android','windows','macos','linux','other'].includes(String(input?.platform||'')) ? String(input.platform) : 'other';
+  const label = String(input?.label || 'Cet appareil').trim().replace(/\s+/g,' ').slice(0,48) || 'Cet appareil';
+  return { label, platform, standalone: !!input?.standalone, appVersion: String(input?.appVersion || '').slice(0,24) };
+}
+
+function deliveryErrorCode(error) {
+  const status = Number(error?.statusCode || error?.status || 0);
+  if (status === 404 || status === 410) return 'subscription_expired';
+  if (status === 401 || status === 403) return 'push_auth_failed';
+  if (status === 429) return 'push_rate_limited';
+  if (status >= 500) return 'push_service_unavailable';
+  const raw = String(error?.message || 'delivery_failed').toLowerCase();
+  if (/timeout|timed out/.test(raw)) return 'push_timeout';
+  if (/network|fetch|socket|econn/.test(raw)) return 'push_network_error';
+  return 'delivery_failed';
+}
+
+function healthSnapshot(device) {
+  const health = device?.health || {};
+  return {
+    lastClientSyncAt: health.lastClientSyncAt || null,
+    lastDeliveryAcceptedAt: health.lastDeliveryAcceptedAt || null,
+    lastDeliveryReason: health.lastDeliveryReason || null,
+    lastDeliveryDate: health.lastDeliveryDate || null,
+    lastTestAcceptedAt: health.lastTestAcceptedAt || null,
+    lastDeliveryErrorAt: health.lastDeliveryErrorAt || null,
+    lastDeliveryError: health.lastDeliveryError || null,
+    consecutiveFailures: Math.max(0, Number(health.consecutiveFailures || 0)),
+  };
+}
+
+function withHealth(device, patch) {
+  return { ...device, health: { ...healthSnapshot(device), ...(patch || {}) }, updatedAt: new Date().toISOString() };
+}
+
 function canonicalOrigin(req) {
   const configured = String(process.env.PUBLIC_APP_URL || '').replace(/\/$/,'');
   if (configured.startsWith('https://')) return configured;
@@ -239,7 +276,7 @@ function authDevice(device, secret) {
 
 module.exports = {
   envReady,json,readJson,safeId,safeSecret,hash,deviceKey,validateTimezone,dateKeyInTimezone,
-  normalizeTime,followupTime,cronAt,deterministicScheduleId,validateSubscription,sanitizeManifest,
-  canonicalOrigin,redisCommand,getDevice,putDevice,deleteDevice,claimDelivery,releaseDelivery,upsertSchedule,
+  normalizeTime,followupTime,cronAt,deterministicScheduleId,validateSubscription,sanitizeManifest,sanitizeDeviceMeta,
+  deliveryErrorCode,healthSnapshot,withHealth,canonicalOrigin,redisCommand,getDevice,putDevice,deleteDevice,claimDelivery,releaseDelivery,upsertSchedule,
   deleteSchedule,publishOneOff,cancelMessage,allowNewDevice,authDevice
 };

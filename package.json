@@ -1,8 +1,8 @@
 {
   "name": "kinetik-pwa",
-  "version": "10.125.0",
+  "version": "10.126.0",
   "private": true,
-  "description": "KINETIK PWA with reliable Web Push reminders",
+  "description": "KINETIK PWA with reliable Web Push health diagnostics and repair",
   "engines": {
     "node": ">=20"
   },

@@ -304,3 +304,19 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Configuration : voir **`P2_SETUP.md`** et **`.env.example`**.
 - Cache PWA : `kinetik-v10-125-web-push` avec `web-push-manager.js?v=10.125` disponible offline.
 - Tests : `test-step11-runtime.js` (44 contrôles) + toutes les suites étapes 3–10.
+
+
+## V10.126 · Étape 12 — Santé Web Push & appareil courant
+- `web-push-manager.js` passe en **v1.1.0** et distingue maintenant un Push réellement opérationnel d’un état seulement « activé » dans le stockage local.
+- Nouveau diagnostic client : permission, présence du `PushSubscription`, changement de clé VAPID, endpoint navigateur renouvelé et présence de l’installation côté serveur.
+- Nouveau endpoint authentifié **`POST /api/push/status`** : retourne uniquement la santé de l’installation possédant le bon secret appareil.
+- Le backend conserve une santé minimale par appareil : dernière synchronisation client, dernière remise acceptée par le service Push, dernier test serveur, dernière erreur normalisée et nombre d’échecs consécutifs.
+- Les livraisons réussies remettent le compteur d’erreurs à zéro ; les erreurs 404/410 continuent de supprimer l’appareil et ses schedules.
+- Nouveau bouton **Réparer Web Push** pour abonnement perdu, rotation VAPID, appareil serveur manquant ou identité locale désynchronisée.
+- Une désynchronisation d’identité provoque aussi la rotation du `PushSubscription` afin que l’ancien endpoint devienne invalide et que l’ancien record serveur s’auto-nettoie au prochain envoi.
+- Le Service Worker signale `pushsubscriptionchange` aux fenêtres ouvertes ; la réparation authentifiée reste exécutée par l’app, car le Service Worker n’a pas accès au secret stocké dans `localStorage`.
+- **Cet appareil** possède désormais un nom éditable ainsi que des métadonnées minimales : plateforme, PWA/navigateur et version KINETIK. Aucune donnée sportive n’est ajoutée au backend.
+- Préparation multi-appareils : le schéma est déjà isolé par `installationId`, mais KINETIK n’expose volontairement aucune liste d’autres appareils tant qu’il n’existe pas de compte utilisateur authentifié.
+- L’UI précise que **Dernière remise Push** signifie « acceptée par le service Push », et non « notification ouverte par l’utilisateur ».
+- Cache PWA : `kinetik-v10-126-push-health` et assets `?v=10.126`.
+- Tests : `test-step12-runtime.js` (**53 contrôles**) + toutes les suites étapes 3–11.

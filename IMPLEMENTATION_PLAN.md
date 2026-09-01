@@ -119,7 +119,7 @@
    - frontière P1 explicite : aucune promesse de livraison si la PWA est suspendue ou fermée
    - contrôle qualité automatisé : 35 vérifications (`test-step10-runtime.js`) + non-régression étapes 3–9
 
-## P2 — notifications système fiables — TERMINÉ / v10.125
+## P2 — notifications système fiables — TERMINÉ / v10.126
 
 11. **Web Push + planification serveur** — TERMINÉ / v10.125
    - abonnement Push API standard lié au Service Worker et à une paire VAPID
@@ -141,10 +141,23 @@
    - configuration documentée dans `P2_SETUP.md`
    - contrôle qualité : 44 vérifications (`test-step11-runtime.js`) + toutes les non-régressions P0/P1
 
+12. **Santé des notifications & appareils** — TERMINÉ / v10.126
+   - diagnostic local + serveur par installation : permission, PushSubscription, présence serveur, schedules et dernière synchronisation
+   - dernière remise acceptée par le service Push, dernier test serveur, dernière erreur et compteur d’échecs consécutifs
+   - endpoint authentifié `/api/push/status` : aucune possibilité de consulter un autre appareil sans son secret local
+   - détection explicite des abonnements perdus, changements de clé VAPID, appareil serveur absent et identité désynchronisée
+   - bouton `Réparer Web Push` : recrée uniquement l’abonnement / l’identité nécessaires puis resynchronise le manifeste
+   - en cas d’identité désynchronisée, rotation aussi du PushSubscription afin que l’ancien endpoint s’auto-nettoie en 404/410 et ne crée pas de doublon
+   - signal `pushsubscriptionchange` du Service Worker vers les fenêtres KINETIK ouvertes
+   - nom d’appareil éditable + métadonnées minimales (plateforme, mode PWA, version), sans synchroniser de données sportives
+   - modèle serveur déjà séparé par installation pour préparer le multi-appareils ; aucune liste cross-device sans authentification utilisateur/cloud
+   - santé opérationnelle stockée dans l’état appareil, exclue des exports comme le reste de l’état Push
+   - contrôle qualité automatisé : 53 vérifications (`test-step12-runtime.js`) + toutes les non-régressions étapes 3–11
+
 ## Suite recommandée
 
-12. **Santé des notifications & appareils** — À FAIRE
-   - diagnostic de dernière livraison / dernière erreur par appareil
-   - renouvellement explicite d'un abonnement perdu
-   - interface de suppression d'anciens appareils lorsqu'une identité utilisateur/cloud sera ajoutée
-   - télémétrie minimale opt-in sur les échecs de delivery
+13. **Résilience & observabilité P2** — À FAIRE
+   - accusé d’ouverture optionnel pour distinguer « accepté par le service Push » de « ouvert par l’utilisateur »
+   - backoff / circuit breaker sur erreurs serveur persistantes
+   - écran de diagnostic exportable sans secret pour le support
+   - liste multi-appareils uniquement après ajout d’une identité utilisateur authentifiée
