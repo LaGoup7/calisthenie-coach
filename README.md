@@ -168,3 +168,17 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - L'ancien `prefs.heightCm` est migré vers le profil puis supprimé.
 - Les tailles présentes dans les anciens relevés restent des snapshots historiques pour reproduire les anciens calculs IMC / masse grasse.
 - Modifier le poids depuis Profil écrit désormais un relevé de Mesures au lieu d'une deuxième valeur indépendante.
+
+
+## v10.117 · Étape 3 — réglages Mesures restaurés
+
+- Le panneau **Réglages des mesures** est de nouveau accessible directement depuis la page Mesures, y compris avant le premier relevé.
+- Les fréquences poids / tour de taille / bilan complet / photos sont modifiables et continuent d'alimenter `bodyTrackingSchedule()` puis le Daily Tasks Engine.
+- Les objectifs corporels configurés sont de nouveau visibles sur la page Mesures avec une progression calculée à partir de l'historique.
+- Les champs suivis peuvent être masqués dans l'éditeur ; si aucun champ rapide ne reste actif, KINETIK ouvre automatiquement le bilan complet.
+- Les réglages de composition corporelle (US Navy homme/femme/off + source balance/estimation/auto) sont restaurés et persistés.
+- Les champs personnalisés sont configurables, saisissables et désormais affichés dans les mensurations détaillées avec leur évolution.
+- Les fréquences sont bornées entre 1 et 365 jours et le panneau reste ouvert avec confirmation après sauvegarde.
+- Le rappel « bilan complet » n’est plus considéré comme réalisé simplement parce que le formulaire complet a été ouvert : il faut au moins 4 mensurations détaillées renseignées.
+- Cache PWA et assets incrémentés en `10.117`.
+- Contrôle automatique : `test-step3-runtime.js` couvre 17 points fonctionnels. Voir `STEP3_AUDIT.md`.

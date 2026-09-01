@@ -18,12 +18,17 @@
    - migration automatique des anciennes valeurs
    - suppression de `prefs.heightCm` et `athleteProfile.weight` comme sources concurrentes
 
-3. **Restaurer les réglages Mesures**
-   - fréquences
-   - objectifs
-   - champs suivis
-   - formule MG
-   - champs personnalisés
+3. **Restaurer les réglages Mesures** — TERMINÉ / v10.117
+   - panneau Réglages accessible depuis Mesures, même sans historique
+   - fréquences poids / tour de taille / bilan complet / photos reconnectées à `bodyTrackingSchedule()` et Daily Tasks
+   - objectifs reconnectés à la page Mesures avec progression visible
+   - champs suivis réellement appliqués à l'éditeur et aux détails
+   - formule US Navy homme / femme / désactivée + source balance / estimation / auto
+   - champs personnalisés configurables, saisissables et visibles dans les mensurations détaillées
+   - validation des fréquences (1–365 jours) et retour visuel après sauvegarde
+   - fallback automatique vers le bilan complet si tous les champs de saisie rapide sont masqués
+   - un simple passage en mode « complet » ne valide plus le rappel : au moins 4 champs détaillés doivent être renseignés
+   - contrôle qualité automatisé : 17 vérifications (`test-step3-runtime.js`)
 
 4. **Restaurer les réglages Rappels**
    - activation générale
