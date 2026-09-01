@@ -182,3 +182,16 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Le rappel « bilan complet » n’est plus considéré comme réalisé simplement parce que le formulaire complet a été ouvert : il faut au moins 4 mensurations détaillées renseignées.
 - Cache PWA et assets incrémentés en `10.117`.
 - Contrôle automatique : `test-step3-runtime.js` couvre 17 points fonctionnels. Voir `STEP3_AUDIT.md`.
+
+## V10.118 · Étape 4 — Réglages Rappels
+- Restauration des rappels dans le renderer final **Réglages KINETIK** (la refonte V10.88 écrasait l'ancien panneau).
+- Nouveau schéma de préférences de rappels v2, compatible avec les données existantes.
+- Interrupteur général et catégories séparées : séance, activités, mesures, tests, mobilité, récupération.
+- Nouveau filtre d'affichage : uniquement les échéances dues, ou échéances dues + éléments bientôt à refaire.
+- Horizon « bientôt » configurable de 1 à 14 jours.
+- Moment préféré (matin / après-midi / soir / personnalisé) et heure préférée sauvegardés pour les futures notifications.
+- Le Daily Tasks Engine passe en **v1.1.0** et applique désormais toutes les catégories de rappel ainsi que l'horizon des tâches à venir.
+- Les fréquences de poids / tour de taille / bilan / photos restent centralisées dans **Mesures > Réglages** : aucun second réglage concurrent n'est créé.
+- Limite volontaire : l'heure préférée ne programme pas encore de notification quand l'app est fermée ; elle prépare P1/P2 et n'empêche jamais une tâche due d'apparaître dans l'app.
+- Cache PWA : `kinetik-v10-118-reminder-settings`.
+- Tests : `test-step4-runtime.js` (26 contrôles) + suite étape 3 (17 contrôles).

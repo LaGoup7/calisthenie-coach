@@ -14,7 +14,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   const DAY_MS = 86400000;
   const providers = [];
 
@@ -249,6 +249,7 @@
           metadata: {
             everyDays: Number(item.every || 0),
             ageDays: Number(item.age || 0),
+            remainingDays: Math.max(0, Number(item.every || 0) - Number(item.age || 0)),
             due,
           },
         };
@@ -274,37 +275,48 @@
         dueKey: ctx.dateKey,
         source: 'performance-tests',
         action: { type: 'view', view: 'progress', label: 'Tester' },
-        metadata: { overdue: !!due.overdue },
+        metadata: { overdue: !!due.overdue, daysUntil: due.overdue ? 0 : Number((String(due.label || '').match(/\d+/) || [999])[0]) },
       }];
     },
   });
 
   function reminderPreferences() {
-    if (typeof getReminderPrefs !== 'function') {
-      return { enabled: true, workout: true, measurements: true, tests: true };
-    }
-    return safeCall(() => getReminderPrefs(), { enabled: true, workout: true, measurements: true, tests: true });
+    const fallback = { enabled: true, workout: true, activities: true, measurements: true, tests: true, mobility: true, recovery: true, visibility: 'due-only', upcomingDays: 3 };
+    if (typeof getReminderPrefs !== 'function') return fallback;
+    return safeCall(() => getReminderPrefs(), fallback);
   }
 
-  function taskAllowedByLegacyPreferences(task, prefs) {
+  function taskAllowedByReminderPreferences(task, prefs) {
     if (task.kind === KIND.workout) return prefs.workout !== false;
+    if (task.kind === KIND.activity) return prefs.activities !== false;
     if (task.kind === KIND.measurement) return prefs.measurements !== false;
     if (task.kind === KIND.test) return prefs.tests !== false;
+    if (task.kind === KIND.mobility) return prefs.mobility !== false;
+    if (task.kind === KIND.recovery) return prefs.recovery !== false;
     return true;
+  }
+
+  function upcomingDistance(task) {
+    if (task.kind === KIND.measurement) return Number(task.metadata?.remainingDays ?? 999);
+    if (task.kind === KIND.test) return Number(task.metadata?.daysUntil ?? 999);
+    return 999;
   }
 
   function toLegacyReminderItems() {
     const prefs = reminderPreferences();
     if (prefs.enabled === false) return [];
-    return getTodayTasks()
-      .filter((task) => task.status === 'pending')
-      .filter((task) => taskAllowedByLegacyPreferences(task, prefs))
+    const includeUpcoming = prefs.visibility === 'due-and-soon';
+    const horizon = Math.max(1, Math.min(14, Number(prefs.upcomingDays || 3)));
+    return getTodayTasks({ includeUpcoming })
+      .filter((task) => task.status === 'pending' || (includeUpcoming && task.status === 'upcoming' && upcomingDistance(task) <= horizon))
+      .filter((task) => taskAllowedByReminderPreferences(task, prefs))
       .map((task) => ({
         type: task.kind === KIND.measurement ? 'measure' : task.kind,
-        label: task.title,
+        label: task.status === 'upcoming' ? `${task.title} · bientôt` : task.title,
         detail: task.detail,
         taskId: task.id,
         priority: task.priority,
+        status: task.status,
       }));
   }
 

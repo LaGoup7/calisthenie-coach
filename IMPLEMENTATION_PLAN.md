@@ -30,10 +30,17 @@
    - un simple passage en mode « complet » ne valide plus le rappel : au moins 4 champs détaillés doivent être renseignés
    - contrôle qualité automatisé : 17 vérifications (`test-step3-runtime.js`)
 
-4. **Restaurer les réglages Rappels**
-   - activation générale
-   - catégories
-   - préférences de fréquence / moment
+4. **Restaurer les réglages Rappels** — TERMINÉ / v10.118
+   - panneau reconnecté au renderer final V10.88 des Réglages KINETIK
+   - activation générale des rappels intelligents
+   - catégories distinctes : séance, activités, mesures, tests, mobilité, récupération
+   - migration transparente des anciennes préférences `cc_smart_reminders_v1` vers le schéma v2
+   - choix d'affichage : uniquement dû / dû + bientôt à refaire
+   - horizon « bientôt » configurable de 1 à 14 jours
+   - moment et heure préférés enregistrés pour la future couche de notifications
+   - préférences réellement consommées par le Daily Tasks Engine v1.1
+   - les fréquences propres aux mensurations restent dans Réglages Mesures afin d'éviter un doublon de configuration
+   - contrôle qualité automatisé : 26 vérifications (`test-step4-runtime.js`) + non-régression étape 3 (17 vérifications)
 
 5. **Ajouter Mobilité au moteur**
    - routines recommandées
