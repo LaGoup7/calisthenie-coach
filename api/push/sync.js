@@ -25,7 +25,7 @@ module.exports = async function handler(req,res){
     const primaryId=deterministicScheduleId(installationId,'primary');
     const followupId=deterministicScheduleId(installationId,'followup');
     const followTime=followupTime(prefs),hasReminders=Object.keys(manifest.days).length>0;
-    const nowIso=new Date().toISOString(),health={...healthSnapshot(existing),lastClientSyncAt:nowIso};
+    const nowIso=new Date().toISOString(),subscriptionChanged=!!(existing?.subscription?.endpoint&&existing.subscription.endpoint!==subscription.endpoint),health={...healthSnapshot(existing),lastClientSyncAt:nowIso,...(subscriptionChanged?{lastDeliveryErrorAt:null,lastDeliveryError:null,consecutiveFailures:0,backoffUntil:null,backoffReason:null}:{})};
     const prelim={version:2,installationId,secretHash:existing?.secretHash||hash(secret),device:deviceMeta,subscription,timezone,prefs,manifest,schedules:{primaryId:hasReminders?primaryId:null,followupId:hasReminders&&followTime?followupId:null},snooze:existing?.snooze||null,health,createdAt:existing?.createdAt||nowIso,updatedAt:nowIso};
     await putDevice(prelim);
     if(hasReminders){

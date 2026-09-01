@@ -174,3 +174,38 @@ Cette date indique que le fournisseur Web Push a accepté la notification envoy�
 ### Multi-appareils
 
 Chaque installation possède déjà son propre `installationId`, secret, abonnement et état de santé. KINETIK n'essaie pas de relier ou d'afficher plusieurs appareils sans authentification utilisateur : cela évite qu'un identifiant local permette de découvrir les appareils d'une autre personne.
+
+
+## 8. Observabilité et backoff v10.127
+
+Aucune nouvelle variable d’environnement n’est nécessaire. `PUSH_DELIVERY_SECRET` sert maintenant aussi à signer des reçus HMAC à durée limitée inclus dans chaque notification.
+
+Le cycle observé est :
+
+```text
+/api/push/deliver
+→ fournisseur Web Push accepte
+→ Service Worker reçoit le push
+→ POST /api/push/receipt { event: received }
+→ utilisateur clique
+→ POST /api/push/receipt { event: opened }
+```
+
+Le reçu ne contient pas le `deviceSecret`. Le Service Worker ne peut donc toujours pas modifier l’installation ou son manifeste. Les événements de reçu sont dédupliqués dans Redis et le jeton expire après quelques jours.
+
+### Backoff
+
+Après un échec temporaire, le serveur enregistre `backoffUntil` et ignore les livraisons planifiées jusqu’à cette date. Les pauses augmentent avec les échecs consécutifs et sont plafonnées. Un test manuel ou une réparation explicite peut toujours vérifier le service immédiatement. Une nouvelle souscription navigateur efface le backoff précédent.
+
+### Diagnostic support
+
+Dans **Réglages → Rappels & priorités → Santé des notifications**, `Exporter diagnostic support` produit un JSON partageable qui exclut volontairement :
+
+- `deviceSecret` ;
+- `installationId` complet ;
+- endpoint Push complet ;
+- clés d’abonnement ;
+- manifeste / noms de tâches ;
+- mensurations, photos, performances et notes.
+
+Le fichier contient seulement versions, plateforme, état permission/abonnement, booléens de schedules, dates de santé, codes d’erreur et paramètres de rappel nécessaires au diagnostic.

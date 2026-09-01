@@ -320,3 +320,18 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - L’UI précise que **Dernière remise Push** signifie « acceptée par le service Push », et non « notification ouverte par l’utilisateur ».
 - Cache PWA : `kinetik-v10-126-push-health` et assets `?v=10.126`.
 - Tests : `test-step12-runtime.js` (**53 contrôles**) + toutes les suites étapes 3–11.
+
+
+## V10.127 · Étape 13 — Résilience & observabilité Web Push
+- `web-push-manager.js` passe en **v1.2.0**.
+- Chaque notification serveur reçoit un **reçu signé HMAC** à durée limitée. Le Service Worker peut ainsi signaler `received` puis `opened` sans jamais connaître le secret appareil.
+- Nouveau endpoint **`POST /api/push/receipt`** : accepte uniquement `received` / `opened`, vérifie le reçu signé et déduplique les événements via Redis.
+- La santé serveur distingue maintenant : dernière remise acceptée par le fournisseur Push, dernière réception par le Service Worker, dernière ouverture et délai d’ouverture.
+- Backoff adaptatif après erreurs temporaires : timeout/réseau/service indisponible, rate-limit, auth Push ou échec générique. Les pauses sont exponentielles et plafonnées.
+- `/api/push/deliver` saute une livraison pendant un backoff actif ; un test manuel ou une réparation reste possible. Une vraie rotation du PushSubscription efface un backoff devenu obsolète.
+- Une livraison réussie efface erreur, compteur d’échecs et backoff. Les `404/410` continuent de supprimer immédiatement l’appareil expiré.
+- Nouveau bouton **Exporter diagnostic support** dans Santé des notifications. Le JSON ne contient aucun `deviceSecret`, installationId complet, endpoint Push, manifeste, mesure, photo ou performance.
+- Durcissement : `/api/push/deliver` refuse désormais explicitement les appels si `PUSH_DELIVERY_SECRET` est absent.
+- UI : parcours **Acceptée → Reçue → Ouverte**, délai d’ouverture et état de protection/backoff.
+- Cache PWA : `kinetik-v10-127-push-observability` et assets `?v=10.127`.
+- Tests : `test-step13-runtime.js` (**40 contrôles**) + toutes les suites étapes 3–12.

@@ -2,6 +2,7 @@ const crypto = require('crypto');
 
 const DEVICE_PREFIX = 'kinetik:push:device:';
 const SENT_PREFIX = 'kinetik:push:sent:';
+const RECEIPT_PREFIX = 'kinetik:push:receipt:';
 const DEVICE_TTL_SECONDS = 60 * 60 * 24 * 120;
 
 function envReady() {
@@ -52,6 +53,7 @@ function sameHash(a,b) {
 
 function deviceKey(id) { return DEVICE_PREFIX + id; }
 function sentKey(id,date,reason) { return SENT_PREFIX + id + ':' + date + ':' + reason; }
+function receiptKey(token,event) { return RECEIPT_PREFIX + hash(token).slice(0,40) + ':' + event; }
 
 function validateTimezone(value) {
   const timezone = String(value || 'UTC').slice(0,100);
@@ -142,6 +144,61 @@ function deliveryErrorCode(error) {
   return 'delivery_failed';
 }
 
+function backoffDelayMs(code, failures) {
+  const n = Math.max(1, Math.min(8, Number(failures || 1)));
+  const hour = 60 * 60 * 1000;
+  if (code === 'push_rate_limited') return Math.min(24 * hour, hour * Math.pow(2, n - 1));
+  if (code === 'push_auth_failed') return Math.min(72 * hour, 12 * hour * Math.pow(2, n - 1));
+  if (['push_timeout','push_network_error','push_service_unavailable'].includes(code)) return Math.min(24 * hour, 15 * 60 * 1000 * Math.pow(4, n - 1));
+  if (code === 'delivery_failed') return Math.min(24 * hour, hour * Math.pow(2, n - 1));
+  return 0;
+}
+
+function applyDeliveryFailure(device, code, now = new Date()) {
+  const failures = Math.max(0, Number(device?.health?.consecutiveFailures || 0)) + 1;
+  const delay = backoffDelayMs(code, failures);
+  const at = new Date(now).toISOString();
+  const backoffUntil = delay > 0 ? new Date(new Date(now).getTime() + delay).toISOString() : null;
+  return withHealth(device, {
+    lastDeliveryErrorAt: at,
+    lastDeliveryError: code,
+    consecutiveFailures: failures,
+    backoffUntil,
+    backoffReason: backoffUntil ? code : null,
+  });
+}
+
+function clearDeliveryFailure(device) {
+  return withHealth(device, { lastDeliveryErrorAt:null, lastDeliveryError:null, consecutiveFailures:0, backoffUntil:null, backoffReason:null });
+}
+
+function isBackoffActive(device, now = new Date()) {
+  const until = device?.health?.backoffUntil ? new Date(device.health.backoffUntil).getTime() : 0;
+  return Number.isFinite(until) && until > new Date(now).getTime();
+}
+
+function base64urlJson(value) { return Buffer.from(JSON.stringify(value)).toString('base64url'); }
+function receiptSignature(payloadPart) {
+  return crypto.createHmac('sha256', String(process.env.PUSH_DELIVERY_SECRET || '')).update(payloadPart).digest('base64url');
+}
+function createReceiptToken({installationId, deliveryId, reason, issuedAt = Date.now()}) {
+  const id=safeId(installationId), delivery=String(deliveryId || '').slice(0,96), why=String(reason || '').slice(0,40);
+  if (!id || !/^[A-Za-z0-9_-]{12,96}$/.test(delivery) || !why || !process.env.PUSH_DELIVERY_SECRET) return null;
+  const payload=base64urlJson({i:id,d:delivery,r:why,t:Number(issuedAt)||Date.now()});
+  return payload + '.' + receiptSignature(payload);
+}
+function verifyReceiptToken(token, maxAgeMs = 8 * 24 * 60 * 60 * 1000) {
+  if(!process.env.PUSH_DELIVERY_SECRET)return null;
+  const parts=String(token || '').split('.'); if(parts.length!==2) return null;
+  const [payload,sig]=parts, expected=receiptSignature(payload);
+  try { if(!crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected))) return null; } catch (_) { return null; }
+  let data=null; try { data=JSON.parse(Buffer.from(payload,'base64url').toString('utf8')); } catch (_) { return null; }
+  const id=safeId(data?.i), delivery=String(data?.d||''), reason=String(data?.r||''), issuedAt=Number(data?.t||0);
+  if(!id||!/^[A-Za-z0-9_-]{12,96}$/.test(delivery)||!reason||!Number.isFinite(issuedAt)) return null;
+  const age=Math.abs(Date.now()-issuedAt); if(age>maxAgeMs) return null;
+  return {installationId:id,deliveryId:delivery,reason:reason.slice(0,40),issuedAt};
+}
+
 function healthSnapshot(device) {
   const health = device?.health || {};
   return {
@@ -149,10 +206,17 @@ function healthSnapshot(device) {
     lastDeliveryAcceptedAt: health.lastDeliveryAcceptedAt || null,
     lastDeliveryReason: health.lastDeliveryReason || null,
     lastDeliveryDate: health.lastDeliveryDate || null,
+    lastReceivedAt: health.lastReceivedAt || null,
+    lastReceivedReason: health.lastReceivedReason || null,
+    lastOpenedAt: health.lastOpenedAt || null,
+    lastOpenedReason: health.lastOpenedReason || null,
+    lastOpenDelayMs: health.lastOpenDelayMs != null && Number.isFinite(Number(health.lastOpenDelayMs)) ? Math.max(0, Number(health.lastOpenDelayMs)) : null,
     lastTestAcceptedAt: health.lastTestAcceptedAt || null,
     lastDeliveryErrorAt: health.lastDeliveryErrorAt || null,
     lastDeliveryError: health.lastDeliveryError || null,
     consecutiveFailures: Math.max(0, Number(health.consecutiveFailures || 0)),
+    backoffUntil: health.backoffUntil || null,
+    backoffReason: health.backoffReason || null,
   };
 }
 
@@ -203,6 +267,10 @@ async function claimDelivery(id,date,reason) {
 }
 
 async function releaseDelivery(id,date,reason) { await redisCommand(['DEL',sentKey(id,date,reason)]); }
+async function claimReceipt(token,event) {
+  const result=await redisCommand(['SET',receiptKey(token,event),String(Date.now()),'NX','EX',60*60*24*8]);
+  return result==='OK';
+}
 
 async function qstashRequest(path, options={}) {
   const token = process.env.QSTASH_TOKEN;
@@ -277,6 +345,6 @@ function authDevice(device, secret) {
 module.exports = {
   envReady,json,readJson,safeId,safeSecret,hash,deviceKey,validateTimezone,dateKeyInTimezone,
   normalizeTime,followupTime,cronAt,deterministicScheduleId,validateSubscription,sanitizeManifest,sanitizeDeviceMeta,
-  deliveryErrorCode,healthSnapshot,withHealth,canonicalOrigin,redisCommand,getDevice,putDevice,deleteDevice,claimDelivery,releaseDelivery,upsertSchedule,
+  deliveryErrorCode,backoffDelayMs,applyDeliveryFailure,clearDeliveryFailure,isBackoffActive,createReceiptToken,verifyReceiptToken,healthSnapshot,withHealth,canonicalOrigin,redisCommand,getDevice,putDevice,deleteDevice,claimDelivery,releaseDelivery,claimReceipt,upsertSchedule,
   deleteSchedule,publishOneOff,cancelMessage,allowNewDevice,authDevice
 };

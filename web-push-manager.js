@@ -1,10 +1,10 @@
 /* ========================================================================== */
-/* KINETIK v10.126 · Web Push Health & Device Manager                         */
+/* KINETIK v10.127 · Web Push Observability & Resilience Manager                         */
 /* P2.1: subscription health, repair flow and per-installation metadata.      */
 /* ========================================================================== */
 (function(global){
   'use strict';
-  const VERSION='1.1.0';
+  const VERSION='1.2.0';
   const STATE_KEY='cc_web_push_device_v1';
   const MANIFEST_DAYS=60;
   const SYNC_DEBOUNCE_MS=1200;
@@ -71,7 +71,7 @@
   function sanitizeLabel(value){const text=String(value||'').trim().replace(/\s+/g,' ');return (text||defaultDeviceLabel()).slice(0,48);}
   function deviceMetadata(){
     const state=parseState();
-    return {label:sanitizeLabel(state.deviceLabel),platform:detectPlatform(),standalone:isStandalone(),appVersion:'10.126'};
+    return {label:sanitizeLabel(state.deviceLabel),platform:detectPlatform(),standalone:isStandalone(),appVersion:'10.127'};
   }
   function capability(){
     const local=global.KinetikLocalReminders?.getCapability?.()||{};
@@ -255,9 +255,29 @@
     }
     try{global.render?.();}catch(_){}
   }
+  function supportDiagnostic(){
+    const st=status(),cap=capability(),p=prefs(),health=st.serverHealth||{},server=st.serverInfo||{};
+    return {
+      schema:'kinetik-support-diagnostic-v1',generatedAt:new Date().toISOString(),appVersion:'10.127',webPushManager:VERSION,
+      runtime:{platform:st.devicePlatform||'other',standalone:!!st.deviceStandalone,timezone:st.timezone||timezone(),notificationPermission:st.permission||'default',pushSupported:!!cap.pushSupported,serviceWorkerSupported:!!global.navigator?.serviceWorker},
+      webPush:{configured:!!st.configured,enabled:!!st.enabled,active:!!st.active,subscribed:!!st.subscribed,repairReason:st.repairReason||null,serverExists:!!st.serverExists,lastSyncAt:st.lastSyncAt||null,lastHealthAt:st.lastHealthAt||null,manifestDays:Number(st.lastManifestDays||0),installationSuffix:st.installationSuffix||null,subscriptionFingerprint:st.subscriptionEndpointFp||null},
+      server:{schedules:server.schedules?{primary:!!server.schedules.primary,followup:!!server.schedules.followup,snooze:!!server.schedules.snooze}:null,manifestDays:Number(server.manifestDays||0),preferredTime:server.preferredTime||null,subscriptionFingerprint:server.subscription?.fingerprint||null,serverNow:server.serverNow||null},
+      health:{lastClientSyncAt:health.lastClientSyncAt||null,lastDeliveryAcceptedAt:health.lastDeliveryAcceptedAt||null,lastDeliveryReason:health.lastDeliveryReason||null,lastReceivedAt:health.lastReceivedAt||null,lastReceivedReason:health.lastReceivedReason||null,lastOpenedAt:health.lastOpenedAt||null,lastOpenedReason:health.lastOpenedReason||null,lastOpenDelayMs:health.lastOpenDelayMs!=null&&Number.isFinite(Number(health.lastOpenDelayMs))?Number(health.lastOpenDelayMs):null,lastTestAcceptedAt:health.lastTestAcceptedAt||null,lastDeliveryErrorAt:health.lastDeliveryErrorAt||null,lastDeliveryError:health.lastDeliveryError||null,consecutiveFailures:Number(health.consecutiveFailures||0),backoffUntil:health.backoffUntil||null,backoffReason:health.backoffReason||null},
+      reminderSettings:{enabled:p.enabled!==false,localNotifications:p.localNotifications!==false,preferredTime:p.preferredTime||'08:00',workoutFollowup:p.workoutFollowup!==false,workoutFollowupDelay:Number(p.workoutFollowupDelay||120),notificationDetail:p.notificationDetail==='detailed'?'detailed':'discreet'},
+      privacy:{deviceSecretIncluded:false,installationIdIncluded:false,pushEndpointIncluded:false,manifestIncluded:false,measurementsIncluded:false,performanceIncluded:false,photosIncluded:false}
+    };
+  }
+  function downloadSupportDiagnostic(){
+    const diagnostic=supportDiagnostic(),text=JSON.stringify(diagnostic,null,2);
+    try{
+      const blob=new Blob([text],{type:'application/json'}),url=global.URL?.createObjectURL?.(blob),a=global.document?.createElement?.('a');
+      if(url&&a){a.href=url;a.download=`kinetik-diagnostic-${new Date().toISOString().slice(0,10)}.json`;a.style.display='none';global.document?.body?.appendChild?.(a);a.click();a.remove?.();setTimeout(()=>global.URL?.revokeObjectURL?.(url),1000);return true;}
+    }catch(_){}
+    return false;
+  }
   function clearLocalState(){try{global.localStorage?.removeItem(STATE_KEY);}catch(_){} }
 
-  const apiPublic={version:VERSION,stateKey:STATE_KEY,getStatus:status,getCapability:capability,loadConfig,activate,repair,disable,sync,scheduleSync,test,buildManifest,refresh,checkHealth,setDeviceLabel,deviceMetadata,currentSubscription,clearLocalState};
+  const apiPublic={version:VERSION,stateKey:STATE_KEY,getStatus:status,getCapability:capability,loadConfig,activate,repair,disable,sync,scheduleSync,test,buildManifest,refresh,checkHealth,setDeviceLabel,deviceMetadata,currentSubscription,supportDiagnostic,downloadSupportDiagnostic,clearLocalState};
   global.KinetikWebPush=apiPublic;
 
   // Most KINETIK mutations end with render(). Debounce a manifest sync after those renders.

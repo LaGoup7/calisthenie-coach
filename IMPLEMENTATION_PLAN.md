@@ -119,7 +119,7 @@
    - frontière P1 explicite : aucune promesse de livraison si la PWA est suspendue ou fermée
    - contrôle qualité automatisé : 35 vérifications (`test-step10-runtime.js`) + non-régression étapes 3–9
 
-## P2 — notifications système fiables — TERMINÉ / v10.126
+## P2 — notifications système fiables — TERMINÉ / v10.127
 
 11. **Web Push + planification serveur** — TERMINÉ / v10.125
    - abonnement Push API standard lié au Service Worker et à une paire VAPID
@@ -154,10 +154,24 @@
    - santé opérationnelle stockée dans l’état appareil, exclue des exports comme le reste de l’état Push
    - contrôle qualité automatisé : 53 vérifications (`test-step12-runtime.js`) + toutes les non-régressions étapes 3–11
 
+13. **Résilience & observabilité P2** — TERMINÉ / v10.127
+   - chaîne de livraison observable : acceptée par le service Push → reçue par le Service Worker → ouverte par l’utilisateur
+   - reçu signé HMAC par notification ; aucun `deviceSecret` nécessaire dans le Service Worker
+   - endpoint `/api/push/receipt` limité aux événements `received` / `opened`, avec anti-rejeu Redis et jeton expirant
+   - délai entre émission serveur et ouverture enregistré pour la dernière notification ouverte
+   - backoff exponentiel après erreurs temporaires ; plafond selon la classe d’erreur et contournement possible par un test manuel / une réparation
+   - une rotation réelle du PushSubscription efface le backoff obsolète
+   - endpoint `/api/push/deliver` refuse explicitement de fonctionner si `PUSH_DELIVERY_SECRET` est absent
+   - export diagnostic support JSON volontairement expurgé : aucun secret, installationId complet, endpoint Push, manifeste, mesure, photo ou performance
+   - UI de santé enrichie avec parcours de la dernière notification et protection/backoff active
+   - `web-push-manager.js` v1.2.0
+   - contrôle qualité automatisé : 40 vérifications (`test-step13-runtime.js`) + toutes les non-régressions étapes 3–12
+
 ## Suite recommandée
 
-13. **Résilience & observabilité P2** — À FAIRE
-   - accusé d’ouverture optionnel pour distinguer « accepté par le service Push » de « ouvert par l’utilisateur »
-   - backoff / circuit breaker sur erreurs serveur persistantes
-   - écran de diagnostic exportable sans secret pour le support
-   - liste multi-appareils uniquement après ajout d’une identité utilisateur authentifiée
+14. **Identité utilisateur & multi-appareils** — À FAIRE
+   - authentification explicite avant toute découverte cross-device
+   - rattachement de plusieurs installations à un même compte
+   - révocation d’un appareil perdu depuis un autre appareil
+   - préférences de notification par appareil
+   - aucune synchronisation des données sportives tant que le modèle cloud n’est pas validé

@@ -3748,3 +3748,11 @@ body{
 .web-push-health-alert{display:flex;justify-content:space-between;gap:12px;padding:10px 11px;margin:10px 0;border:1px solid var(--line,#e4e7eb);border-radius:12px;font-size:.8rem}.web-push-health-alert span{text-align:right;opacity:.78}
 @media(max-width:680px){.web-push-health-grid{grid-template-columns:1fr 1fr}.web-push-health-head{align-items:flex-start}.web-push-device-label>div{flex-direction:column}.web-push-device-label button{width:100%}}
 @media(max-width:390px){.web-push-health-grid{grid-template-columns:1fr}.web-push-health-head{flex-direction:column}.web-push-health-head>button{width:100%}}
+
+
+/* KINETIK v10.127 · Push observability */
+.web-push-observability{margin-top:12px;padding-top:12px;border-top:1px solid var(--line,#e4e7eb)}
+.web-push-observability-title{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:9px}.web-push-observability-title span{font-size:.73rem;opacity:.62}
+.web-push-observability-flow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:7px}.web-push-observability-flow>div{padding:10px;border-radius:12px;background:color-mix(in srgb,var(--surface-2,#f5f6f8) 88%,transparent);min-width:0}.web-push-observability-flow>div>span{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;border:1px solid var(--line,#dfe3e8);font-size:.68rem}.web-push-observability-flow small{display:block;margin-top:6px;opacity:.62}.web-push-observability-flow strong{display:block;margin-top:2px;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.web-push-observability-flow>i{font-style:normal;opacity:.35}
+.web-push-backoff{display:flex;justify-content:space-between;gap:12px;padding:10px 11px;margin:10px 0;border:1px solid var(--line,#e4e7eb);border-radius:12px;font-size:.8rem}.web-push-backoff span{text-align:right;opacity:.78}
+@media(max-width:560px){.web-push-observability-title{align-items:flex-start;flex-direction:column}.web-push-observability-flow{grid-template-columns:1fr}.web-push-observability-flow>i{display:none}.web-push-backoff{flex-direction:column}.web-push-backoff span{text-align:left}}

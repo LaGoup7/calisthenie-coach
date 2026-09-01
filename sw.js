@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-126-push-health';
-const ASSETS = ['./','./index.html','./styles.css?v=10.126','./app.js?v=10.126','./daily-tasks.js?v=10.126','./local-reminders.js?v=10.126','./web-push-manager.js?v=10.126','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-127-push-observability';
+const ASSETS = ['./','./index.html','./styles.css?v=10.127','./app.js?v=10.127','./daily-tasks.js?v=10.127','./local-reminders.js?v=10.127','./web-push-manager.js?v=10.127','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {
@@ -21,6 +21,15 @@ self.addEventListener('fetch', e => {
 });
 
 
+
+async function kinetikSendPushReceipt(data,eventName){
+  const receiptToken=data?.receiptToken;if(!receiptToken)return false;
+  try{
+    const response=await fetch('/api/push/receipt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({receiptToken,event:eventName})});
+    return !!response.ok;
+  }catch(_){return false;}
+}
+
 /* P2 reliable Web Push. The service worker is started by the browser even when
    the KINETIK window is closed. */
 self.addEventListener('push', event => {
@@ -37,6 +46,7 @@ self.addEventListener('push', event => {
     };
     try { await self.registration.showNotification(title,options); }
     catch (_) { const {actions,...fallback}=options; await self.registration.showNotification(title,fallback); }
+    await kinetikSendPushReceipt(options.data,'received');
   })());
 });
 
@@ -46,6 +56,7 @@ self.addEventListener('notificationclick', event => {
   const action = event.action === 'snooze' ? 'snooze' : 'open';
   event.notification?.close?.();
   event.waitUntil((async()=>{
+    await kinetikSendPushReceipt(data,'opened');
     const windows = await self.clients.matchAll({ type:'window', includeUncontrolled:true });
     const target = windows.find(client => 'focus' in client) || null;
     if (target) {
@@ -61,7 +72,7 @@ self.addEventListener('notificationclick', event => {
   })());
 });
 
-/* V10.126 · Notify open KINETIK clients when the browser rotates/losses the
+/* V10.127 · Notify open KINETIK clients when the browser rotates/losses the
    PushSubscription. The next foreground refresh performs the authenticated
    repair/synchronization because Service Workers cannot read localStorage. */
 self.addEventListener('pushsubscriptionchange', event => {

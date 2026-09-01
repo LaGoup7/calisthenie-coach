@@ -11009,3 +11009,36 @@ bindEvents=function(){
   const saveLabel=document.getElementById('saveWebPushDeviceLabel');if(saveLabel)saveLabel.onclick=async()=>{const input=document.getElementById('webPushDeviceLabel');saveLabel.disabled=true;await manager?.setDeviceLabel?.(input?.value||'Cet appareil');render();};
   const label=document.getElementById('webPushDeviceLabel');if(label)label.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('saveWebPushDeviceLabel')?.click();}};
 };
+
+
+/* ========================================================================== */
+/* KINETIK v10.127 · Step 13 · Push resilience & observability                */
+/* Distinguishes accepted/received/opened delivery, exposes adaptive backoff  */
+/* and provides a privacy-safe support diagnostic export.                     */
+/* ========================================================================== */
+function v10127Duration(ms){
+  const n=Number(ms);if(!Number.isFinite(n)||n<0)return '—';
+  if(n<60000)return `${Math.max(1,Math.round(n/1000))} s`;
+  if(n<3600000)return `${Math.round(n/60000)} min`;
+  return `${Math.round(n/360000)/10} h`;
+}
+function v10127BackoffText(health){
+  if(!health?.backoffUntil)return null;const until=new Date(health.backoffUntil);if(Number.isNaN(until.getTime())||until.getTime()<=Date.now())return null;
+  return `Pause automatique jusqu’au ${until.toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}`;
+}
+const _renderWebPushHealthV10127=renderWebPushHealth;
+renderWebPushHealth=function(){
+  let html=_renderWebPushHealthV10127(),status=v10125WebPushStatus(),health=status.serverHealth||{};
+  if(!html||!status.enabled)return html;
+  const accepted=v10126HealthDate(health.lastDeliveryAcceptedAt),received=v10126HealthDate(health.lastReceivedAt),opened=v10126HealthDate(health.lastOpenedAt),delay=health.lastOpenedAt&&health.lastOpenDelayMs!=null?v10127Duration(health.lastOpenDelayMs):'—',backoff=v10127BackoffText(health);
+  const observability=`<div class="web-push-observability"><div class="web-push-observability-title"><strong>Parcours de la dernière notification</strong><span>Serveur → appareil → ouverture</span></div><div class="web-push-observability-flow"><div><span>1</span><small>Acceptée</small><strong>${esc(accepted)}</strong></div><i>→</i><div><span>2</span><small>Reçue</small><strong>${esc(received)}</strong></div><i>→</i><div><span>3</span><small>Ouverte</small><strong>${esc(opened)}</strong></div></div>${health.lastOpenedAt?`<p class="reminder-local-note">Dernière ouverture : <strong>${esc(delay)}</strong> après l’envoi serveur.</p>`:''}${backoff?`<div class="web-push-backoff"><strong>Protection active</strong><span>${esc(backoff)} · ${esc(v10126ErrorLabel(health.backoffReason))}</span></div>`:''}<div class="local-notification-actions"><button type="button" class="btn btn-outline compact" id="exportWebPushDiagnostic">Exporter diagnostic support</button></div><p class="reminder-local-note"><strong>Diagnostic exporté :</strong> état technique, horaires et codes d’erreur uniquement. Aucun secret, endpoint Push complet, manifeste de tâches, mesure, photo ou performance n’est inclus.</p></div>`;
+  const marker='<p class="reminder-local-note"><strong>Diagnostic :</strong>';
+  html=html.includes(marker)?html.replace(marker,observability+marker):html.replace(/<\/div>\s*$/,observability+'</div>');
+  return html.replace('ce n’est pas une preuve que l’utilisateur l’a ouverte.','KINETIK distingue maintenant cette acceptation, la réception par le Service Worker et l’ouverture explicite par l’utilisateur.');
+};
+const _bindEventsV10127=bindEvents;
+bindEvents=function(){
+  _bindEventsV10127();
+  const manager=window.KinetikWebPush,exportBtn=document.getElementById('exportWebPushDiagnostic');
+  if(exportBtn)exportBtn.onclick=()=>{const ok=manager?.downloadSupportDiagnostic?.();if(!ok){const data=manager?.supportDiagnostic?.();if(data)prompt('Diagnostic KINETIK (copier le JSON)',JSON.stringify(data,null,2));}};
+};
