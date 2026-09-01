@@ -1,4 +1,4 @@
-/* KINETIK v10.132 · Daily journey, reminders, actions and Web Push settings UI. */
+/* KINETIK v10.133 · Daily journey, reminders, actions and Web Push settings UI. */
 /* KINETIK v10.120 · Step 6 · Today Agenda                                   */
 /* One compact surface for the Daily Tasks Engine.                            */
 /* Completed tasks leave the active list and feed the daily progress.         */
@@ -75,7 +75,7 @@ const _renderTodayV10120=renderToday;
 renderToday=function(){
   let html=_renderTodayV10120();
   html=html.replace('<section class="card hero','<section id="todayWorkoutHero" class="card hero');
-  const marker='<section class="today-cockpit today-primary-actions">';
+  const marker='<section class="today-cockpit today-primary-actions';
   if(html.includes(marker))html=html.replace(marker,renderTodayAgenda()+marker);
   else{
     const hero='<section id="todayWorkoutHero" class="card hero';

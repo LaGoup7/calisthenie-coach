@@ -1,4 +1,4 @@
-/* KINETIK v10.132 · Mobility, progression UX and product-coaching layers. */
+/* KINETIK v10.133 · Mobility, progression UX and product-coaching layers. */
 /* V10.79 · Mobility Visual Clarity                                           */
 /* Today → Profile → Assessment → Progression → Details                        */
 /* ========================================================================== */

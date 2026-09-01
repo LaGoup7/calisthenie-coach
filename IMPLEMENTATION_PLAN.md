@@ -242,3 +242,11 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - contrôle UX dédié via `test-lot-b-runtime.js`.
 
 Étape suivante recommandée : **LOT C — consolidation technique pré-cloud** (binders/renderers, code mort, consolidation des fonctions Vercel, surface-contract tests et round-trip backup complet).
+
+
+## Hotfix UX — v10.133
+
+- correction de l’ordre de la page Aujourd’hui : hero séance avant l’Agenda ;
+- restauration de l’accès Gainage (chronomètre + routines) ;
+- sélecteurs d’injection du cockpit rendus robustes aux classes additionnelles ;
+- aucune modification des règles Daily Tasks / Planning / Progression.

@@ -1,4 +1,4 @@
-/* KINETIK v10.132 · Adaptive coaching, assessment and progression intelligence. */
+/* KINETIK v10.133 · Adaptive coaching, assessment and progression intelligence. */
 /* V10.0 · Adaptive Local Coach                                                */
 /* Cloud/onboarding intentionally excluded.                                    */
 /* ========================================================================== */
@@ -1057,7 +1057,7 @@ function renderTodayCoachStrip(){
 }
 const _renderTodayV1060=renderToday;
 renderToday=function(){
-  let html=_renderTodayV1060(),marker='<section class="today-cockpit today-primary-actions">';
+  let html=_renderTodayV1060(),marker='<section class="today-cockpit today-primary-actions';
   return html.includes(marker)?html.replace(marker,renderTodayCoachStrip()+marker):html;
 };
 

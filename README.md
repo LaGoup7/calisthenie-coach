@@ -382,3 +382,8 @@ La route Strava de diagnostic a été fusionnée dans `/api/strava/status?diagno
 - **Intégrations** : la ligne inactive Apple Santé est retirée tant qu'aucune intégration réelle n'est disponible. Strava reste inchangé.
 - **Vercel Hobby** : toujours 12 fonctions physiques.
 - Tests : `test-lot-b-runtime.js` (22 contrôles) + toutes les suites historiques.
+
+
+## V10.133 · Hotfix Aujourd’hui
+
+Correction ciblée après le LOT B : le cockpit Aujourd’hui possède désormais une classe supplémentaire (`today-primary-shortcuts`), mais plusieurs wrappers historiques recherchaient encore la chaîne HTML exacte précédente. Cela faisait passer l’Agenda avant le hero séance et empêchait l’injection du raccourci Gainage. Les sélecteurs utilisent maintenant le préfixe stable `today-cockpit today-primary-actions`. Ordre attendu : **hero séance → À faire aujourd’hui → raccourcis → Gainage**.

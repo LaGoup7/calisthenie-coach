@@ -1,4 +1,4 @@
-/* KINETIK v10.132 · Multisport planning, timers and planning presentation. */
+/* KINETIK v10.133 · Multisport planning, timers and planning presentation. */
 /* V10.70 · Multisport Planning                                               */
 /* Planned vs completed · weekly load forecast · conflicts · opt-in optimizer */
 /* ========================================================================== */
@@ -150,7 +150,7 @@ function renderTodayPlannedEvents(){
   return `<section class="today-planned-events"><div><div class="kicker">Aussi prévu aujourd’hui</div>${events.map(e=>{const type=plannedEventType(e);return `<button data-complete-plan="${e.id}"><span>${e.time||'—'}</span><div><strong>${esc(type.label)}</strong><small>${e.duration} min · RPE ${e.rpe}</small></div><b>Réaliser →</b></button>`}).join('')}</div></section>`;
 }
 const _renderTodayV1070=renderToday;
-renderToday=function(){let html=_renderTodayV1070(),marker='<section class="today-cockpit today-primary-actions">';return html.includes(marker)?html.replace(marker,renderTodayPlannedEvents()+marker):html;};
+renderToday=function(){let html=_renderTodayV1070(),marker='<section class="today-cockpit today-primary-actions';return html.includes(marker)?html.replace(marker,renderTodayPlannedEvents()+marker):html;};
 
 const _renderV1070=render;
 render=function(){if(state.planningEditor){document.getElementById("app").innerHTML=renderPlanningEventEditor();bindEvents();return;}_renderV1070();};
@@ -388,7 +388,7 @@ function renderTodayCoreTimer(){
 const _renderTodayV1074=renderToday;
 renderToday=function(){
   let html=_renderTodayV1074(),marker='</section>';
-  const cockpit=html.indexOf('<section class="today-cockpit today-primary-actions">');
+  const cockpit=html.indexOf('<section class="today-cockpit today-primary-actions');
   if(cockpit>=0){
     const close=html.indexOf(marker,cockpit);
     if(close>=0)html=html.slice(0,close+marker.length)+renderTodayCoreTimer()+html.slice(close+marker.length);

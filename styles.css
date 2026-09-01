@@ -3794,3 +3794,5 @@ body{
 .decision-journal-settings .daily-decision-history{padding:14px 0 0}
 .decision-journal-settings .reminder-settings-title{display:none}
 @media(max-width:620px){.reminder-main-schedule .reminder-preference-grid,.reminder-device-summary{grid-template-columns:1fr}.reminder-device-row{align-items:flex-start;flex-direction:column}.reminder-device-row>.btn,.reminder-device-row>.reminder-inline-switch{align-self:flex-start}}
+
+/* KINETIK v10.133 · Today hotfix: DOM injection selectors fixed; no visual style override required. */
