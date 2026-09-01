@@ -10403,3 +10403,90 @@ if(typeof window!=='undefined'){
 
 /* One final render applies the cleaned labels/card without changing navigation. */
 try{render();}catch(e){console.warn('KINETIK body consistency refresh',e);}
+
+/* ========================================================================== */
+/* KINETIK v10.120 · Step 6 · Today Agenda                                   */
+/* One compact surface for the Daily Tasks Engine.                            */
+/* Completed tasks leave the active list and feed the daily progress.         */
+/* Direct task execution remains intentionally reserved for Step 7.           */
+/* ========================================================================== */
+function todayAgendaTaskMeta(task){
+  const map={
+    workout:{icon:'↟',label:'Entraînement'},
+    activity:{icon:'↗',label:'Activité'},
+    measurement:{icon:'◎',label:'Mesure'},
+    test:{icon:'◇',label:'Évaluation'},
+    mobility:{icon:'∿',label:task?.category==='mobility-assessment'?'Mobilité · test':'Mobilité'},
+    recovery:{icon:'◌',label:'Récupération'}
+  };
+  return map[task?.kind]||{icon:'•',label:'À faire'};
+}
+function todayAgendaAction(task){
+  if(!task?.action)return '';
+  const label=task.action.label||'Ouvrir';
+  if(task.kind==='workout')return `<a class="today-agenda-action" href="#todayWorkoutHero">Voir la séance →</a>`;
+  if(task.action.type==='planned-event')return `<button class="today-agenda-action" type="button" data-view="week">Planning →</button>`;
+  const view=task.action.view;
+  if(view&&view!=='today')return `<button class="today-agenda-action" type="button" data-view="${esc(view)}">${esc(label)} →</button>`;
+  return '';
+}
+function renderTodayAgendaTask(task){
+  const meta=todayAgendaTaskMeta(task),high=Number(task.priority||0)>=80;
+  return `<article class="today-agenda-task kind-${esc(task.kind)} ${high?'is-priority':''}">
+    <span class="today-agenda-task-icon" aria-hidden="true">${meta.icon}</span>
+    <div class="today-agenda-task-copy"><div class="today-agenda-task-meta"><span>${esc(meta.label)}</span>${high?'<b>Prioritaire</b>':''}</div><strong>${esc(task.title)}</strong>${task.detail?`<small>${esc(task.detail)}</small>`:''}</div>
+    ${todayAgendaAction(task)}
+  </article>`;
+}
+function renderTodayAgenda(){
+  const engine=window.KinetikDailyTasks;
+  if(!engine?.getAgendaTasks||!engine?.agendaSummary)return '';
+  const prefs=engine.getReminderPreferences?engine.getReminderPreferences():{enabled:true};
+  if(prefs?.enabled===false){
+    return `<section class="card today-agenda today-agenda-disabled"><div class="today-agenda-head"><div><div class="kicker">Aujourd'hui</div><h2>Priorités masquées</h2><p>Les rappels sont désactivés dans tes réglages.</p></div><button class="btn btn-outline compact" data-view="settings">Réactiver</button></div></section>`;
+  }
+  const tasks=engine.getAgendaTasks({includeDone:true}),summary=engine.agendaSummary(tasks);
+  const pending=tasks.filter(t=>t.status==='pending'||t.status==='blocked');
+  const done=tasks.filter(t=>t.status==='done');
+  const upcoming=tasks.filter(t=>t.status==='upcoming');
+  const title=summary.complete?'Journée validée':summary.empty?'Rien d’obligatoire':'À faire aujourd’hui';
+  const subtitle=summary.complete
+    ? `${summary.done} tâche${summary.done>1?'s':''} terminée${summary.done>1?'s':''}.`
+    : summary.empty
+      ? 'Aucune priorité due pour le moment.'
+      : `${summary.pending} tâche${summary.pending>1?'s':''} restante${summary.pending>1?'s':''} · ${summary.done}/${summary.total} terminée${summary.done>1?'s':''}`;
+  return `<section class="card today-agenda ${summary.complete?'is-complete':''}">
+    <div class="today-agenda-head">
+      <div><div class="kicker">Parcours du jour</div><h2>${title}</h2><p>${subtitle}</p></div>
+      <div class="today-agenda-score" aria-label="${summary.percent}% terminé"><strong>${summary.percent}%</strong><span>${summary.done}/${summary.total||0}</span></div>
+    </div>
+    <div class="today-agenda-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${summary.percent}"><i style="width:${summary.percent}%"></i></div>
+    ${pending.length?`<div class="today-agenda-list">${pending.map(renderTodayAgendaTask).join('')}</div>`:summary.complete?'<div class="today-agenda-complete"><span>✓</span><div><strong>Tout est fait pour aujourd’hui</strong><small>Les tâches terminées sont automatiquement retirées de la liste active.</small></div></div>':'<div class="today-agenda-empty"><span>✓</span><div><strong>Agenda libre</strong><small>Tu peux t’entraîner librement ou simplement récupérer.</small></div></div>'}
+    ${done.length?`<details class="today-agenda-done"><summary><span>✓ ${done.length} terminée${done.length>1?'s':''} aujourd’hui</span><b>⌄</b></summary><div>${done.map(t=>`<span>${todayAgendaTaskMeta(t).icon} ${esc(t.title.replace(/\s*·\s*fait$/i,''))}</span>`).join('')}</div></details>`:''}
+    ${upcoming.length?`<div class="today-agenda-upcoming"><div><span>Bientôt</span><small>Ne compte pas dans la progression du jour</small></div>${upcoming.slice(0,3).map(t=>`<span><b>${esc(t.title)}</b><small>${esc(t.detail)}</small></span>`).join('')}</div>`:''}
+  </section>`;
+}
+
+/* These legacy Today surfaces are now consolidated into the central agenda. */
+renderTodayMobilityPrompt=function(){return '';};
+renderTodayPlannedEvents=function(){return '';};
+renderTodayUsefulActions=function(){
+  const x=progressWeekStats(),rank=getRankState(),next=rank.next;
+  const count=(x.recs?.length||0)+(next?1:0);
+  if(!count)return '';
+  return `<section class="card today-actions-card"><div class="section-head"><div><div class="kicker">Progression</div><h2>À surveiller</h2></div><span class="pill">${count}</span></div><div class="progress-watch-list">${x.recs?.length?`<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)}</small></div><b>Rangs →</b></button>`:''}</div></section>`;
+};
+
+const _renderTodayV10120=renderToday;
+renderToday=function(){
+  let html=_renderTodayV10120();
+  html=html.replace('<section class="card hero','<section id="todayWorkoutHero" class="card hero');
+  const marker='<section class="today-cockpit today-primary-actions">';
+  if(html.includes(marker))html=html.replace(marker,renderTodayAgenda()+marker);
+  else{
+    const hero='<section id="todayWorkoutHero" class="card hero';
+    const pos=html.indexOf(hero);
+    if(pos>=0)html=html.slice(0,pos)+renderTodayAgenda()+html.slice(pos);
+  }
+  return html;
+};

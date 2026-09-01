@@ -26,7 +26,7 @@ const tests=`
   setReminderPrefs({...getReminderPrefs(),enabled:true,mobility:true,recovery:true,visibility:'due-only'});
 
   const providerIds=window.KinetikDailyTasks.listProviders().map(x=>x.id);
-  ok(window.KinetikDailyTasks.version==='1.2.0','Daily Tasks engine is not v1.2.0');
+  ok(window.KinetikDailyTasks.version==='1.3.0','Daily Tasks engine is not v1.3.0');
   ok(providerIds.includes('mobility-assessment'),'mobility assessment provider missing');
   ok(providerIds.includes('mobility-coaching'),'mobility coaching provider missing');
 

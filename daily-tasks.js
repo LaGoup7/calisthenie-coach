@@ -2,19 +2,19 @@
 /* KINETIK v10.119 · Daily Tasks Engine                                       */
 /* Central source of truth for "what should I do today?".                    */
 /*                                                                            */
-/* Steps P0.1 + P0.5                                                         */
+/* Steps P0.1 + P0.5 + P0.6                                                  */
 /* - Normalized task contract                                                 */
 /* - Provider registry                                                        */
 /* - Workout / activity / measurement / test / mobility / recovery providers  */
 /* - Completion inferred from existing KINETIK data                           */
 /* - Legacy reminder adapter                                                  */
 /*                                                                            */
-/* UI rendering and snooze/ignore state intentionally belong to later steps.  */
+/* Today UI consumes this API; direct actions and snooze/ignore come later.    */
 /* ========================================================================== */
 (function (global) {
   'use strict';
 
-  const VERSION = '1.2.0';
+  const VERSION = '1.3.0';
   const DAY_MS = 86400000;
   const providers = [];
 
@@ -226,6 +226,32 @@
     },
   });
 
+  function bodyLogsForDate(key) {
+    const logs = safeCall(() => (typeof getBodyLogs === 'function' ? getBodyLogs() : []), []);
+    return logs.filter((row) => dateKey(row.date) === key);
+  }
+
+  function measurementCompletedToday(label, key) {
+    const rows = bodyLogsForDate(key);
+    if (!rows.length) return false;
+    const name = String(label || '').toLowerCase();
+    if (name.includes('poids')) return rows.some((row) => safeCall(() => typeof bodyValue === 'function' ? !!bodyValue(row, 'weight') : !!row.weight, !!row.weight));
+    if (name.includes('tour de taille')) return rows.some((row) => safeCall(() => typeof bodyValue === 'function' ? !!bodyValue(row, 'waist') : !!row.waist, !!row.waist));
+    if (name.includes('bilan complet')) {
+      return rows.some((row) => {
+        if (typeof BODY_FIELDS === 'undefined') return row.measurementMode === 'full';
+        return BODY_FIELDS.filter((field) => !field.quick && safeCall(() => typeof bodyValue === 'function' ? !!bodyValue(row, field.key) : !!row[field.key], !!row[field.key])).length >= 4;
+      });
+    }
+    if (name.includes('photo')) {
+      return rows.some((row) => safeCall(() => typeof bodyPhotoId === 'function'
+        ? !!(bodyPhotoId(row, 'front') || bodyPhotoId(row, 'side') || bodyPhotoId(row, 'back'))
+        : !!(row.photoId || row.photoIds?.front || row.photoIds?.side || row.photoIds?.back),
+      !!(row.photoId || row.photoIds?.front || row.photoIds?.side || row.photoIds?.back)));
+    }
+    return false;
+  }
+
   registerProvider({
     id: 'measurements',
     order: 30,
@@ -235,13 +261,14 @@
       return schedule.map((item) => {
         const slug = String(item.label || 'mesure').toLowerCase().replace(/[^a-z0-9à-ÿ]+/gi, '-').replace(/^-|-$/g, '');
         const due = !!item.due;
+        const completedToday = measurementCompletedToday(item.label, ctx.dateKey);
         return {
           id: `measurement:${slug}:${ctx.dateKey}`,
           kind: KIND.measurement,
           category: 'body',
-          title: item.label || 'Mesure',
-          detail: due ? (item.text || 'À faire') : (item.text || ''),
-          status: due ? 'pending' : 'upcoming',
+          title: completedToday ? `${item.label || 'Mesure'} · fait` : (item.label || 'Mesure'),
+          detail: completedToday ? 'Enregistré aujourd’hui.' : (due ? (item.text || 'À faire') : (item.text || '')),
+          status: completedToday ? 'done' : (due ? 'pending' : 'upcoming'),
           priority: due ? PRIORITY.high : PRIORITY.info,
           dueKey: ctx.dateKey,
           source: 'body-tracking',
@@ -251,6 +278,7 @@
             ageDays: Number(item.age || 0),
             remainingDays: Math.max(0, Number(item.every || 0) - Number(item.age || 0)),
             due,
+            completedToday,
           },
         };
       });
@@ -264,18 +292,21 @@
       if (typeof testDueSummary !== 'function') return [];
       const due = safeCall(() => testDueSummary(), null);
       if (!due) return [];
+      const testsToday = safeCall(() => (typeof getTests === 'function' ? getTests() : []), []).filter((row) => dateKey(row.date) === ctx.dateKey);
+      const coreIds = safeCall(() => (typeof TEST_DEFS !== 'undefined' ? TEST_DEFS.map((x) => x.id).filter((id) => id !== 'cardio12') : []), []);
+      const completedToday = coreIds.length > 0 && coreIds.every((id) => testsToday.some((row) => row.testId === id));
       return [{
         id: `tests:periodic:${ctx.dateKey}`,
         kind: KIND.test,
         category: 'assessment',
-        title: due.overdue ? 'Tests périodiques' : 'Prochain bilan performance',
-        detail: due.label || '',
-        status: due.overdue ? 'pending' : 'upcoming',
+        title: completedToday ? 'Bilan performance · fait' : (due.overdue ? 'Tests périodiques' : 'Prochain bilan performance'),
+        detail: completedToday ? `${coreIds.length} repères enregistrés aujourd’hui.` : (due.label || ''),
+        status: completedToday ? 'done' : (due.overdue ? 'pending' : 'upcoming'),
         priority: due.overdue ? PRIORITY.high : PRIORITY.info,
         dueKey: ctx.dateKey,
         source: 'performance-tests',
         action: { type: 'view', view: 'progress', label: 'Tester' },
-        metadata: { overdue: !!due.overdue, daysUntil: due.overdue ? 0 : Number((String(due.label || '').match(/\d+/) || [999])[0]) },
+        metadata: { completedToday, overdue: !!due.overdue, daysUntil: due.overdue ? 0 : Number((String(due.label || '').match(/\d+/) || [999])[0]) },
       }];
     },
   });
@@ -413,6 +444,24 @@
     id: 'mobility-assessment',
     order: 45,
     getTasks(ctx) {
+      const todayTests = mobilityLogs().filter((row) => dateKey(row.date) === ctx.dateKey);
+      if (todayTests.length) {
+        const zones = mobilityDefinitions().filter((zone) => (zone.tests || []).some((id) => todayTests.some((row) => row.testId === id)));
+        const zone = zones[0] || null;
+        return [{
+          id: `mobility:assessment:done:${zone?.id || 'today'}:${ctx.dateKey}`,
+          kind: KIND.mobility,
+          category: 'mobility-assessment',
+          title: zone ? `Bilan mobilité · ${zone.label} · fait` : 'Bilan mobilité · fait',
+          detail: `${todayTests.length} test${todayTests.length > 1 ? 's' : ''} enregistré${todayTests.length > 1 ? 's' : ''} aujourd’hui.`,
+          status: 'done',
+          priority: PRIORITY.normal,
+          dueKey: ctx.dateKey,
+          source: 'mobility-tests-completed',
+          action: { type: 'view', view: 'flexibility', label: 'Voir' },
+          metadata: { zoneId: zone?.id || null, assessment: true, completedToday: true, testsToday: todayTests.length },
+        }];
+      }
       const candidate = mobilityAssessmentCandidate(ctx);
       if (!candidate) return [];
       const missing = candidate.missing.length > 0;
@@ -549,14 +598,37 @@
     return 999;
   }
 
-  function toLegacyReminderItems() {
+  function getAgendaTasks(options) {
     const prefs = reminderPreferences();
     if (prefs.enabled === false) return [];
+    const includeDone = options?.includeDone !== false;
     const includeUpcoming = prefs.visibility === 'due-and-soon';
     const horizon = Math.max(1, Math.min(14, Number(prefs.upcomingDays || 3)));
-    return getTodayTasks({ includeUpcoming })
-      .filter((task) => task.status === 'pending' || (includeUpcoming && task.status === 'upcoming' && upcomingDistance(task) <= horizon))
+    return getTodayTasks({ ...(options || {}), includeDone, includeUpcoming })
       .filter((task) => taskAllowedByReminderPreferences(task, prefs))
+      .filter((task) => task.status !== 'upcoming' || (includeUpcoming && upcomingDistance(task) <= horizon));
+  }
+
+  function agendaSummary(tasks) {
+    const rows = Array.isArray(tasks) ? tasks : getAgendaTasks({ includeDone: true });
+    const dueRows = rows.filter((task) => task.status !== 'upcoming');
+    const done = dueRows.filter((task) => task.status === 'done').length;
+    const pending = dueRows.filter((task) => task.status === 'pending' || task.status === 'blocked').length;
+    const total = done + pending;
+    return {
+      total,
+      done,
+      pending,
+      upcoming: rows.filter((task) => task.status === 'upcoming').length,
+      percent: total ? Math.round((done / total) * 100) : 100,
+      complete: total > 0 && pending === 0,
+      empty: total === 0,
+    };
+  }
+
+  function toLegacyReminderItems() {
+    return getAgendaTasks({ includeDone: false })
+      .filter((task) => task.status === 'pending' || task.status === 'upcoming')
       .map((task) => ({
         type: task.kind === KIND.measurement ? 'measure' : task.kind,
         label: task.status === 'upcoming' ? `${task.title} · bientôt` : task.title,
@@ -575,7 +647,10 @@
     collect,
     getTodayTasks,
     summary,
+    agendaSummary,
     dateKey,
+    getAgendaTasks,
+    getReminderPreferences: reminderPreferences,
     toLegacyReminderItems,
     listProviders() {
       return providers.map((x) => ({ id: x.id, order: x.order }));

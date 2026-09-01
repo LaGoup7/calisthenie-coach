@@ -209,3 +209,17 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Les tâches exposent déjà `routineId`, `zoneId`, durée et mode Progression/Recovery pour les actions directes de l'étape 7.
 - Cache PWA : `kinetik-v10-119-mobility-recovery`.
 - Tests : `test-step5-runtime.js` (22 contrôles), plus non-régression étape 3 (17) et étape 4 (26).
+
+
+## V10.120 · Étape 6 — « À faire aujourd’hui »
+- Le Daily Tasks Engine passe en **v1.3.0** et expose `getAgendaTasks()` + `agendaSummary()` pour alimenter une seule surface de parcours quotidien.
+- La page **Aujourd’hui** possède maintenant un bloc central **À faire aujourd’hui** avec nombre de tâches restantes, pourcentage terminé et hiérarchie de priorité.
+- Le pourcentage ne compte que les tâches réellement dues ; les éléments **Bientôt** sont affichés séparément et ne peuvent pas dégrader la progression du jour.
+- Une tâche réellement terminée disparaît de la liste active et alimente le résumé repliable **terminées aujourd’hui**.
+- Les mesures corporelles savent désormais reconnaître une saisie faite le jour même : poids, tour de taille, bilan complet (≥4 mensurations détaillées) et photos.
+- Un test mobilité saisi aujourd’hui crée un état terminé et empêche KINETIK d’enchaîner immédiatement avec une deuxième zone à réévaluer le même jour.
+- Le vieux prompt mobilité, le bloc séparé d’activités planifiées et la ligne Tests périodiques de « Prochaines actions utiles » sont supprimés de l’accueil afin d’éviter les doublons avec Daily Tasks.
+- États UX ajoutés : **À faire aujourd’hui**, **Journée validée**, **Agenda libre** et **Priorités masquées**.
+- Les actions restent volontairement des navigations vers les écrans existants ; les CTA directs Commencer / Mesurer / Tester / Réaliser seront traités à l’étape 7.
+- Cache PWA : `kinetik-v10-120-today-agenda`.
+- Tests : `test-step6-runtime.js` (25 contrôles), plus non-régression étapes 3 (17), 4 (26) et 5 (22).

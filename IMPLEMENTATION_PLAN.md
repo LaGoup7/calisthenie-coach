@@ -52,10 +52,16 @@
    - métadonnées prêtes pour l'étape 7 : `routineId`, `zoneId`, mode Progression/Recovery, durée et état hebdomadaire
    - contrôle qualité automatisé : 22 vérifications (`test-step5-runtime.js`) + non-régression étapes 3–4
 
-6. **Intégration complète sur Aujourd'hui**
-   - bloc À faire aujourd'hui
-   - hiérarchie de priorité
-   - progression de journée
+6. **Intégration complète sur Aujourd'hui** — TERMINÉ / v10.120
+   - bloc central « À faire aujourd’hui » alimenté exclusivement par le Daily Tasks Engine v1.3
+   - hiérarchie automatique par priorité et catégorie
+   - progression de journée calculée uniquement sur les tâches dues (les tâches « bientôt » n’entrent pas dans le pourcentage)
+   - les tâches terminées quittent automatiquement la liste active et restent accessibles dans un résumé compact « terminées aujourd’hui »
+   - états dédiés : agenda libre, journée validée et priorités masquées si les rappels sont désactivés
+   - poids / tour de taille / bilan complet / photos savent maintenant déclarer une réalisation effectuée aujourd’hui
+   - une évaluation mobilité faite aujourd’hui est validée sans proposer immédiatement une seconde zone le même jour
+   - consolidation des anciennes surfaces Aujourd’hui : suppression des doublons mobilité, activités planifiées et tests périodiques
+   - contrôle qualité automatisé : 25 vérifications (`test-step6-runtime.js`) + non-régression étapes 3–5
 
 7. **Actions directes**
    - Commencer
