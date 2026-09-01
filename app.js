@@ -10490,3 +10490,85 @@ renderToday=function(){
   }
   return html;
 };
+
+/* ========================================================================== */
+/* KINETIK v10.121 · Step 7 · Direct Daily Task Actions                       */
+/* A Today task now opens or starts the exact workflow it represents.          */
+/* ========================================================================== */
+function v10121TaskById(id){
+  const engine=window.KinetikDailyTasks;
+  if(!engine?.getAgendaTasks)return null;
+  return engine.getAgendaTasks({includeDone:true}).find(task=>String(task.id)===String(id))||null;
+}
+function v10121FocusDirectTarget(action){
+  const focusTarget=()=>{
+    let el=null;
+    const metric=action?.payload?.metric;
+    if(metric==='weight'||metric==='waist')el=document.querySelector(`[data-body-key="${metric}"]`);
+    else if(metric==='photos')el=document.getElementById('bodyPhotoFront');
+    if(!el)return false;
+    try{el.classList?.add('direct-task-target');el.scrollIntoView?.({behavior:'smooth',block:'center'});el.focus?.({preventScroll:true});}catch(_){try{el.focus?.();}catch(__){}}
+    return true;
+  };
+  if(!focusTarget()&&typeof requestAnimationFrame==='function')requestAnimationFrame(focusTarget);
+}
+function v10121OpenMobilityAssessment(action){
+  const zoneId=action?.payload?.zoneId||null,testId=action?.payload?.testId||null;
+  state.view='flexibility';
+  if(zoneId)state.mobilityChartZone=zoneId;
+  render();
+  const focusAssessment=()=>{
+    const root=document.getElementById('mobilityAssessment');
+    if(root){root.open=true;root.scrollIntoView?.({behavior:'smooth',block:'start'});}
+    const input=testId?document.getElementById(`mob_${testId}`):null;
+    if(input){const group=input.closest?.('details.mob-test-group');if(group)group.open=true;input.classList?.add('direct-task-target');input.scrollIntoView?.({behavior:'smooth',block:'center'});try{input.focus?.({preventScroll:true});}catch(_){input.focus?.();}}
+    return !!(root||input);
+  };
+  if(!focusAssessment()&&typeof requestAnimationFrame==='function')requestAnimationFrame(focusAssessment);
+}
+function executeTodayAgendaTask(task){
+  if(!task?.action)return false;
+  const action=task.action,payload=action.payload||{};
+  if(action.type==='workout-start'){
+    requestWorkoutStart(Number(payload.day??task.metadata?.day??todayDay()));
+    return true;
+  }
+  if(action.type==='planned-event'){
+    if(!action.id)return false;
+    state.activityDraftPlanId=action.id;state.activityEditId=null;state.activityEditor=true;render();
+    return true;
+  }
+  if(action.type==='measurement-entry'){
+    state.view='measurements';state.bodyEditor=true;state.bodyEditorMode=payload.mode==='full'?'full':'quick';state.bodyDirectTarget=payload.metric||null;render();v10121FocusDirectTarget(action);
+    return true;
+  }
+  if(action.type==='assessment-start'){
+    state.view='assessment';state.assessmentEditor=payload.protocolId||null;render();
+    return true;
+  }
+  if(action.type==='mobility-routine'){
+    if(payload.routineId&&typeof startFlexRoutine==='function'){startFlexRoutine(payload.routineId);return true;}
+    state.view='flexibility';render();return true;
+  }
+  if(action.type==='mobility-assessment'){
+    v10121OpenMobilityAssessment(action);return true;
+  }
+  if(action.type==='view'&&action.view){state.view=action.view;state.selectedHistoryId=null;render();return true;}
+  return false;
+}
+function executeTodayAgendaTaskById(id){const task=v10121TaskById(id);return task?executeTodayAgendaTask(task):false;}
+window.executeTodayAgendaTask=executeTodayAgendaTask;
+window.executeTodayAgendaTaskById=executeTodayAgendaTaskById;
+
+todayAgendaAction=function(task){
+  if(!task?.action||task.status==='done')return '';
+  const label=task.action.label||'Ouvrir';
+  if(task.status==='upcoming')return '';
+  return `<button class="today-agenda-action direct" type="button" data-daily-task-action="${esc(task.id)}">${esc(label)} →</button>`;
+};
+
+const _bindEventsV10121=bindEvents;
+bindEvents=function(){
+  _bindEventsV10121();
+  document.querySelectorAll('[data-daily-task-action]').forEach(button=>button.onclick=()=>executeTodayAgendaTaskById(button.dataset.dailyTaskAction));
+};

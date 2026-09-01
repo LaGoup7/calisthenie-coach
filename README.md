@@ -223,3 +223,19 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Les actions restent volontairement des navigations vers les écrans existants ; les CTA directs Commencer / Mesurer / Tester / Réaliser seront traités à l’étape 7.
 - Cache PWA : `kinetik-v10-120-today-agenda`.
 - Tests : `test-step6-runtime.js` (25 contrôles), plus non-régression étapes 3 (17), 4 (26) et 5 (22).
+
+
+## V10.121 · Étape 7 — Actions directes depuis « À faire aujourd’hui »
+- Le Daily Tasks Engine passe en **v1.4.0** et les tâches exposent désormais des actions exécutables, pas seulement des destinations de navigation.
+- **Séance** : `Commencer` ouvre directement le choix Complète / Express de la séance du jour.
+- **Activité planifiée** : `Enregistrer` ouvre directement l'éditeur « prévu vs réalisé » du planning concerné grâce à son `plannedEventId`.
+- **Poids / tour de taille** : `Saisir` ouvre la mesure rapide et cible le champ demandé.
+- **Bilan complet** : `Faire le bilan` ouvre directement l'éditeur complet.
+- **Photos** : `Ajouter les photos` ouvre le bilan complet et cible la première entrée photo.
+- **Tests performance** : `Faire le test` ouvre directement le protocole KINETIK actuellement recommandé par le Centre d'évaluation.
+- **Mobilité / récupération** : le CTA démarre immédiatement la routine exacte fournie par `routineId`, sans passage par la bibliothèque Mobilité.
+- **Évaluation mobilité** : KINETIK ouvre la zone concernée et cible en priorité le test manquant ; pour une réévaluation complète, il cible le test le plus ancien de la zone.
+- Les tâches `done` et `upcoming` n'affichent pas de CTA direct dans la liste active ; le fallback de navigation générique reste disponible pour la compatibilité interne.
+- API développeur : `window.executeTodayAgendaTask(task)` et `window.executeTodayAgendaTaskById(id)`.
+- Cache PWA : `kinetik-v10-121-direct-actions`.
+- Tests : `test-step7-runtime.js` (19 contrôles), plus non-régression étapes 3 (17), 4 (26), 5 (22) et 6 (25).

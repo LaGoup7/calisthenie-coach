@@ -3701,3 +3701,11 @@ body{
 .today-agenda-disabled .today-agenda-head{align-items:center}.today-agenda-disabled .btn{flex:0 0 auto}
 @media(max-width:620px){.today-agenda{padding:15px 14px}.today-agenda-task{grid-template-columns:36px minmax(0,1fr);gap:9px}.today-agenda-task-icon{width:36px;height:36px}.today-agenda-action{grid-column:2;justify-self:start;padding:3px 0 1px}.today-agenda-upcoming{grid-template-columns:1fr}.today-agenda-upcoming>div{margin-bottom:2px}.today-agenda-score{width:54px;height:54px;flex-basis:54px}}
 @media(max-width:390px){.today-agenda-head{gap:10px}.today-agenda-head h2{font-size:1.08rem}.today-agenda-score{width:50px;height:50px;flex-basis:50px;border-radius:15px}}
+
+/* KINETIK v10.121 · Step 7 · direct task actions */
+.today-agenda-action.direct{cursor:pointer}
+.direct-task-target{outline:2px solid currentColor;outline-offset:3px;animation:directTaskPulse .75s ease-out 1}
+@keyframes directTaskPulse{0%{transform:scale(.985);opacity:.72}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.direct-task-target{animation:none}}
+.today-agenda-action.direct{border:0;appearance:none;-webkit-appearance:none;font-family:inherit;text-align:left}
+.today-agenda-action.direct:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:4px}

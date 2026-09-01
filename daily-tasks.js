@@ -1,5 +1,5 @@
 /* ========================================================================== */
-/* KINETIK v10.119 · Daily Tasks Engine                                       */
+/* KINETIK v10.121 · Daily Tasks Engine                                       */
 /* Central source of truth for "what should I do today?".                    */
 /*                                                                            */
 /* Steps P0.1 + P0.5 + P0.6                                                  */
@@ -9,12 +9,12 @@
 /* - Completion inferred from existing KINETIK data                           */
 /* - Legacy reminder adapter                                                  */
 /*                                                                            */
-/* Today UI consumes this API; direct actions and snooze/ignore come later.    */
+/* Today UI consumes this API; Step 7 adds executable direct actions.          */
 /* ========================================================================== */
 (function (global) {
   'use strict';
 
-  const VERSION = '1.3.0';
+  const VERSION = '1.4.0';
   const DAY_MS = 86400000;
   const providers = [];
 
@@ -190,7 +190,7 @@
         priority: PRIORITY.critical,
         dueKey: ctx.dateKey,
         source: 'training-cycle',
-        action: { type: 'view', view: 'today', label: done ? 'Voir' : 'Commencer' },
+        action: { type: done ? 'view' : 'workout-start', view: 'today', label: done ? 'Voir' : 'Commencer', payload: { day } },
         metadata: { day, workoutName: workout.name || '', duration, shortDuration },
       }];
     },
@@ -219,7 +219,7 @@
           dueKey: ctx.dateKey,
           dueAt: event.time ? `${ctx.dateKey}T${event.time}:00` : null,
           source: 'planning',
-          action: { type: 'planned-event', view: 'today', id: event.id, label: done ? 'Voir' : 'Réaliser' },
+          action: { type: done ? 'view' : 'planned-event', view: done ? 'week' : 'today', id: event.id, label: done ? 'Voir' : 'Enregistrer' },
           metadata: { plannedEventId: event.id, activityType: typeId },
         };
       });
@@ -259,7 +259,8 @@
       if (typeof bodyTrackingSchedule !== 'function') return [];
       const schedule = safeCall(() => bodyTrackingSchedule(), []);
       return schedule.map((item) => {
-        const slug = String(item.label || 'mesure').toLowerCase().replace(/[^a-z0-9à-ÿ]+/gi, '-').replace(/^-|-$/g, '');
+        const name = String(item.label || 'mesure').toLowerCase();
+        const slug = name.replace(/[^a-z0-9à-ÿ]+/gi, '-').replace(/^-|-$/g, '');
         const due = !!item.due;
         const completedToday = measurementCompletedToday(item.label, ctx.dateKey);
         return {
@@ -272,7 +273,15 @@
           priority: due ? PRIORITY.high : PRIORITY.info,
           dueKey: ctx.dateKey,
           source: 'body-tracking',
-          action: { type: 'view', view: 'measurements', label: 'Mesurer' },
+          action: completedToday ? { type: 'view', view: 'measurements', label: 'Voir' } : {
+            type: 'measurement-entry',
+            view: 'measurements',
+            label: name.includes('photo') ? 'Ajouter les photos' : name.includes('bilan complet') ? 'Faire le bilan' : 'Saisir',
+            payload: {
+              metric: name.includes('poids') ? 'weight' : name.includes('tour de taille') ? 'waist' : name.includes('photo') ? 'photos' : 'full',
+              mode: (name.includes('bilan complet') || name.includes('photo')) ? 'full' : 'quick',
+            },
+          },
           metadata: {
             everyDays: Number(item.every || 0),
             ageDays: Number(item.age || 0),
@@ -295,6 +304,7 @@
       const testsToday = safeCall(() => (typeof getTests === 'function' ? getTests() : []), []).filter((row) => dateKey(row.date) === ctx.dateKey);
       const coreIds = safeCall(() => (typeof TEST_DEFS !== 'undefined' ? TEST_DEFS.map((x) => x.id).filter((id) => id !== 'cardio12') : []), []);
       const completedToday = coreIds.length > 0 && coreIds.every((id) => testsToday.some((row) => row.testId === id));
+      const recommended = safeCall(() => typeof assessmentRecommended === 'function' ? assessmentRecommended()[0] : null, null);
       return [{
         id: `tests:periodic:${ctx.dateKey}`,
         kind: KIND.test,
@@ -305,8 +315,8 @@
         priority: due.overdue ? PRIORITY.high : PRIORITY.info,
         dueKey: ctx.dateKey,
         source: 'performance-tests',
-        action: { type: 'view', view: 'progress', label: 'Tester' },
-        metadata: { completedToday, overdue: !!due.overdue, daysUntil: due.overdue ? 0 : Number((String(due.label || '').match(/\d+/) || [999])[0]) },
+        action: completedToday ? { type: 'view', view: 'assessment', label: 'Voir' } : { type: 'assessment-start', view: 'assessment', label: 'Faire le test', payload: { protocolId: recommended?.id || null } },
+        metadata: { completedToday, recommendedProtocolId: recommended?.id || null, overdue: !!due.overdue, daysUntil: due.overdue ? 0 : Number((String(due.label || '').match(/\d+/) || [999])[0]) },
       }];
     },
   });
@@ -375,15 +385,18 @@
     }
     return mobilityDefinitions().map((zone) => {
       const ids = Array.isArray(zone.tests) ? zone.tests : [];
-      const present = ids.map((id) => latestByTest.get(id)).filter(Number.isFinite);
+      const presentRows = ids.map((id) => ({ id, time: latestByTest.get(id) })).filter((row) => Number.isFinite(row.time));
+      const present = presentRows.map((row) => row.time);
       const missing = ids.filter((id) => !latestByTest.has(id));
-      const oldest = present.length ? Math.min(...present) : null;
+      const oldestRow = presentRows.slice().sort((a, b) => a.time - b.time)[0] || null;
+      const oldest = oldestRow ? oldestRow.time : null;
       const ageDays = oldest == null ? Infinity : Math.max(0, Math.floor((now.getTime() - oldest) / DAY_MS));
       const remainingDays = Number.isFinite(ageDays) ? Math.max(0, MOBILITY_ASSESSMENT_DAYS - ageDays) : 0;
       return {
         id: zone.id,
         label: zone.label || zone.id,
         tests: ids,
+        oldestTestId: oldestRow?.id || null,
         missing,
         tested: ids.length - missing.length,
         total: ids.length,
@@ -482,7 +495,7 @@
         priority: overdue && candidate.isPriority ? PRIORITY.high : overdue ? PRIORITY.normal : PRIORITY.info,
         dueKey: ctx.dateKey,
         source: 'mobility-tests',
-        action: { type: 'view', view: 'flexibility', label: missing ? 'Évaluer' : 'Re-tester' },
+        action: { type: 'mobility-assessment', view: 'flexibility', label: missing ? 'Évaluer' : 'Re-tester', payload: { zoneId: candidate.id, testId: candidate.missing[0] || candidate.oldestTestId || candidate.tests?.[0] || null } },
         metadata: {
           zoneId: candidate.id,
           assessment: true,
@@ -559,7 +572,7 @@
         priority: high ? PRIORITY.high : PRIORITY.normal,
         dueKey: ctx.dateKey,
         source: 'mobility-coach',
-        action: { type: 'view', view: 'flexibility', label: recoveryDay ? 'Récupérer' : 'Faire la routine' },
+        action: { type: 'mobility-routine', view: 'flexibility', label: recoveryDay ? 'Démarrer' : 'Commencer', payload: { routineId: routine.id || null } },
         metadata: {
           routineId: routine.id || null,
           duration,

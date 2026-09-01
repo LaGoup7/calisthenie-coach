@@ -23,7 +23,7 @@ const tests=`
   setAthleteProfile({...getAthleteProfile(),restDays:[today]});
   setPlannedEvents([]);setActivities([]);setFlexLogs([]);setMobilityTests([]);setTests([]);setBodyLogs([]);
   setReminderPrefs({...getReminderPrefs(),enabled:true,workout:false,activities:false,measurements:true,tests:false,mobility:false,recovery:false,visibility:'due-only'});
-  ok(window.KinetikDailyTasks.version==='1.3.0','Daily Tasks engine is not v1.3.0');
+  ok(window.KinetikDailyTasks.version==='1.4.0','Daily Tasks engine is not v1.4.0');
   ok(typeof window.KinetikDailyTasks.getAgendaTasks==='function','getAgendaTasks API missing');
   ok(typeof window.KinetikDailyTasks.agendaSummary==='function','agendaSummary API missing');
 

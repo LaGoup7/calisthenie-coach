@@ -63,11 +63,17 @@
    - consolidation des anciennes surfaces Aujourd’hui : suppression des doublons mobilité, activités planifiées et tests périodiques
    - contrôle qualité automatisé : 25 vérifications (`test-step6-runtime.js`) + non-régression étapes 3–5
 
-7. **Actions directes**
-   - Commencer
-   - Mesurer
-   - Tester
-   - Réaliser
+7. **Actions directes** — TERMINÉ / v10.121
+   - contrat d'action enrichi dans Daily Tasks Engine v1.4
+   - séance : ouvre directement le sélecteur Complète / Express
+   - activité planifiée : ouvre directement le formulaire prévu vs réalisé lié à l'événement
+   - poids / tour de taille : ouvre la saisie rapide et cible le champ demandé
+   - bilan complet / photos : ouvre directement le bon mode de saisie
+   - tests performance : ouvre directement le protocole KINETIK recommandé
+   - mobilité / récupération : démarre la routine exacte via `routineId`
+   - évaluation mobilité : ouvre la zone concernée et cible le test manquant / le plus ancien
+   - fallback `view` conservé pour les tâches terminées et la compatibilité
+   - contrôles qualité : 19 vérifications dédiées (`test-step7-runtime.js`) + non-régression étapes 3–6
 
 8. **États explicites**
    - fait
