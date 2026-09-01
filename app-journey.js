@@ -71,17 +71,46 @@ renderTodayUsefulActions=function(){
   return `<section class="card today-actions-card"><div class="section-head"><div><div class="kicker">Progression</div><h2>À surveiller</h2></div><span class="pill">${count}</span></div><div class="progress-watch-list">${x.recs?.length?`<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)}</small></div><b>Rangs →</b></button>`:''}</div></section>`;
 };
 
+function todayActivityShortcutMeta(){
+  const recent=getActivities().filter(x=>new Date(x.date).getTime()>=Date.now()-7*86400000&&x.type!=='mobility');
+  const minutes=recent.reduce((sum,x)=>sum+Number(x.duration||0),0);
+  return recent.length
+    ? {sessions:recent.length,minutes,subtitle:`${recent.length} session${recent.length>1?'s':''} · ${minutes} min sur 7 j`}
+    : {sessions:0,minutes:0,subtitle:'Course, natation, vélo, marche, boxe…'};
+}
+function renderTodayPrimaryShortcuts(){
+  const rank=getRankState();
+  const core=typeof coreTimerTodaySummary==='function'?coreTimerTodaySummary():{sets:0,seconds:0};
+  const activity=todayActivityShortcutMeta();
+  return `<button class="cockpit-card rank-cockpit" data-view="skills"><span>${uiIcon('award')}</span><strong>${esc(rank.displayName||rank.current.name)}</strong><small>${rank.next?`${Math.round(rank.readiness*100)}% vers ${esc(rank.next.name)}`:'Rang maximal'}</small></button><button class="cockpit-card today-action-card core-cockpit" type="button" data-open-core-timer="true"><span>${uiIcon('clock')}</span><strong>Gainage</strong><small>${core.sets?`${core.sets} maintien${core.sets>1?'s':''} · ${coreTimerFormat(core.seconds)} aujourd’hui`:'Chronomètre + routines personnalisées'}</small></button><button class="cockpit-card today-action-card today-add-session-card" type="button" data-open-activity="true" data-activity-type="running"><span>${uiIcon('sessions')}</span><strong>Ajouter une session</strong><small>${activity.subtitle}</small></button>`;
+}
+function removeFirstSectionByClass(html,className){
+  const rx=new RegExp(`<section[^>]*class="[^"]*${className}[^"]*"[^>]*>[\s\S]*?<\/section>`);
+  return html.replace(rx,'');
+}
+function replaceFirstSectionByClass(html,className,replacement){
+  const rx=new RegExp(`<section[^>]*class="[^"]*${className}[^"]*"[^>]*>[\s\S]*?<\/section>`);
+  return html.replace(rx,replacement);
+}
+function insertAfterHeroSection(html,fragment){
+  const heroMarker='<section id="todayWorkoutHero" class="card hero';
+  const start=html.indexOf(heroMarker);
+  if(start<0)return html;
+  const end=html.indexOf('</section>',start);
+  if(end<0)return html;
+  return html.slice(0,end+10)+fragment+html.slice(end+10);
+}
+
 const _renderTodayV10120=renderToday;
 renderToday=function(){
   let html=_renderTodayV10120();
   html=html.replace('<section class="card hero','<section id="todayWorkoutHero" class="card hero');
-  const marker='<section class="today-cockpit today-primary-actions';
-  if(html.includes(marker))html=html.replace(marker,renderTodayAgenda()+marker);
-  else{
-    const hero='<section id="todayWorkoutHero" class="card hero';
-    const pos=html.indexOf(hero);
-    if(pos>=0)html=html.slice(0,pos)+renderTodayAgenda()+html.slice(pos);
-  }
+  html=removeFirstSectionByClass(html,'today-agenda');
+  html=removeFirstSectionByClass(html,'today-core-timer');
+  const shortcuts=`<section class="today-cockpit today-primary-actions today-primary-shortcuts">${renderTodayPrimaryShortcuts()}</section>`;
+  html=replaceFirstSectionByClass(html,'today-cockpit today-primary-actions today-primary-shortcuts',shortcuts);
+  const agenda=renderTodayAgenda();
+  if(agenda)html=insertAfterHeroSection(html,agenda);
   return html;
 };
 

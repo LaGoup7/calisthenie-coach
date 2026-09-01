@@ -867,6 +867,8 @@ const state = {
   quickToast: null,
   quickBand: null,
   quickLoadKg: 0,
+  addHubOpen: false,
+  activityPresetType: null,
   undoSetSnapshot: null,
   stravaStatus: {checked:false,loading:false,connected:false,athlete:null,scope:""},
   stravaSyncing: false,
@@ -1850,6 +1852,15 @@ function renderQuickLogModal(){
     ${last?`<button class="btn btn-outline" id="undoQuickLog">↶ Annuler le dernier ajout · ${quickFamily(last.exercise)} +${last.value} ${quickUnit(last.type)}${last.band?' · '+bandByLabel(last.band).short:''}${last.loadKg?' · '+last.loadKg+' kg':''}</button>`:''}
   </section></div>`;
 }
+function addHubActivityTypes(){
+  return ['running','walking','cycling','swimming','boxing','mobility'];
+}
+function renderAddHubModal(){
+  if(!state.addHubOpen)return '';
+  const quickTypes=addHubActivityTypes().map(id=>activityType(id)).filter(Boolean);
+  return `<div class="quick-overlay add-hub-overlay"><section class="quick-sheet add-hub-sheet"><div class="quick-sheet-head add-hub-head"><div><div class="kicker">Ajouter</div><h2>Que veux-tu enregistrer ?</h2><p class="muted small">Un seul point d’entrée, puis KINETIK t’envoie vers l’écran le plus simple.</p></div><button class="icon-btn" id="closeAddHub" aria-label="Fermer">×</button></div><div class="add-hub-grid"><button type="button" class="add-hub-card" data-add-action="activity"><span>${activityUiIcon('running')}</span><div><strong>Activité</strong><small>Course, natation, vélo, marche, boxe…</small></div><b>Ouvrir</b></button><button type="button" class="add-hub-card" data-add-action="quick"><span>${uiIcon('spark','add-hub-svg')}</span><div><strong>Performance rapide</strong><small>Micro-série, tractions, pompes, grip…</small></div><b>Quick log</b></button><button type="button" class="add-hub-card" data-add-action="core"><span>${uiIcon('clock','add-hub-svg')}</span><div><strong>Gainage</strong><small>Lancer le chrono et sauver un maintien</small></div><b>Chrono</b></button><button type="button" class="add-hub-card" data-add-action="measure"><span>${uiIcon('measurements','add-hub-svg')}</span><div><strong>Mesure</strong><small>Poids, mensurations ou photos</small></div><b>Saisir</b></button></div><div class="add-hub-section"><div class="add-hub-section-head"><strong>Activité en 1 tap</strong><small>Ouvre directement le bon formulaire</small></div><div class="add-hub-chip-row">${quickTypes.map(x=>`<button type="button" class="add-hub-chip" data-add-activity-type="${x.id}"><span>${activityUiIcon(x.id)}</span>${esc(x.label)}</button>`).join('')}</div></div><p class="muted small add-hub-note">Astuce : le bouton Ajouter sert maintenant de hub. Tu choisis d’abord le type d’ajout, puis seulement les détails.</p></section></div>`;
+}
+
 function filterQuickExercisePicker(){
   const q=(document.getElementById('quickExerciseSearch')?.value||'').trim().toLowerCase();
   const active=document.querySelector('.quick-category.active')?.dataset.quickCategory||'Tous';
@@ -2511,7 +2522,8 @@ function uiIcon(name, cls="ui-icon") {
 function shell(content, activeTab=state.view) {
   const navTab=activeTab==='custom'?'week':['today','week','flexibility','progress'].includes(activeTab)?activeTab:'athlete';
   return `<main class="shell">${content}</main>
-  ${['today','week','flexibility','progress'].includes(activeTab)?`<button class="quick-fab quick-fab-add" id="openQuickLog" aria-label="Ajouter une performance"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`:''}
+  ${['today','week','flexibility','progress'].includes(activeTab)?`<button class="quick-fab quick-fab-add" id="openAddHub" aria-label="Ajouter quelque chose"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`:''}
+  ${renderAddHubModal()}
   ${renderQuickLogModal()}
   <nav class="bottom-nav bottom-nav-simple" aria-label="Navigation principale">
     <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>${uiIcon('today')}</span>Aujourd'hui</button>
@@ -4025,8 +4037,11 @@ function bindEvents(){
   if(activityTypeEl){activityTypeEl.onchange=syncActivityEditor;activityRpe.oninput=syncActivityEditor;activityDuration.oninput=syncActivityEditor;syncActivityEditor();}
   document.querySelectorAll('[data-progress-tab]').forEach(b=>b.onclick=()=>{state.progressTab=b.dataset.progressTab;state.selectedHistoryId=null;render();});
   document.querySelectorAll('[data-today-progress]').forEach(b=>b.onclick=()=>{state.view='progress';state.progressTab=b.dataset.todayProgress||'performance';state.selectedHistoryId=null;render();});
-  const openQuick=document.getElementById('openQuickLog');if(openQuick)openQuick.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();};
-  document.querySelectorAll('[data-open-quick-log]').forEach(b=>b.onclick=()=>{state.quickEditor=true;state.quickToast=null;render();});
+  const openAddHub=document.getElementById('openAddHub');if(openAddHub)openAddHub.onclick=()=>{state.addHubOpen=true;state.quickEditor=false;state.quickToast=null;render();};
+  const closeAddHub=document.getElementById('closeAddHub');if(closeAddHub)closeAddHub.onclick=()=>{state.addHubOpen=false;render();};
+  document.querySelectorAll('[data-add-action]').forEach(b=>b.onclick=()=>{const action=b.dataset.addAction;state.addHubOpen=false;if(action==='quick'){state.quickEditor=true;state.quickToast=null;render();return;}if(action==='activity'){state.activityPresetType=state.activityPresetType||'running';state.activityEditId=null;state.activityEditor=true;render();return;}if(action==='core'){state.coreTimerOpen=true;render();return;}if(action==='measure'){state.bodyEditor=true;state.bodyEditorMode='quick';render();return;}});
+  document.querySelectorAll('[data-add-activity-type]').forEach(b=>b.onclick=()=>{state.addHubOpen=false;state.activityEditId=null;state.activityPresetType=b.dataset.addActivityType||'running';state.activityEditor=true;render();});
+  document.querySelectorAll('[data-open-quick-log]').forEach(b=>b.onclick=()=>{state.addHubOpen=false;state.quickEditor=true;state.quickToast=null;render();});
   const closeQuick=document.getElementById('closeQuickLog');if(closeQuick)closeQuick.onclick=()=>{state.quickEditor=false;state.quickToast=null;render();};
   document.querySelectorAll('#syncStrava').forEach(b=>b.onclick=syncStravaActivities);
   const disconnectS=document.getElementById('disconnectStrava');if(disconnectS)disconnectS.onclick=()=>{if(confirm('Déconnecter Strava de KINETIK ?'))disconnectStrava();};
