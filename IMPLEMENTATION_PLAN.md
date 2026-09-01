@@ -2,7 +2,7 @@
 
 ## P0 — parcours quotidien
 
-1. **Moteur central Daily Tasks** — EN COURS / v10.115
+1. **Moteur central Daily Tasks** — TERMINÉ / v10.115
    - contrat de tâche unique
    - registre de providers
    - séance du jour
@@ -12,10 +12,11 @@
    - statut inféré depuis les données existantes
    - pont de compatibilité avec les rappels actuels
 
-2. **Unifier poids / taille**
+2. **Unifier poids / taille** — TERMINÉ / v10.116
    - taille = donnée de profil unique
    - poids actuel = dernière mesure corporelle
-   - supprimer les sources concurrentes
+   - migration automatique des anciennes valeurs
+   - suppression de `prefs.heightCm` et `athleteProfile.weight` comme sources concurrentes
 
 3. **Restaurer les réglages Mesures**
    - fréquences

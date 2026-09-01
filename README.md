@@ -158,3 +158,13 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Pont de compatibilité : les anciens rappels locaux consomment désormais le moteur central.
 - API développeur : `window.KinetikDailyTasks`, `getDailyTasks()` et `getDailyTaskSummary()`.
 - Plan complet du chantier disponible dans `IMPLEMENTATION_PLAN.md`.
+
+
+## v10.116 · Étape 2 — anthropométrie canonique
+
+- La taille courante est stockée uniquement dans le profil athlète (`athleteProfile.height`).
+- Le poids courant provient uniquement du dernier relevé `bodyLogs` contenant un poids.
+- L'ancien `athleteProfile.weight` est migré vers un relevé si aucun historique de poids n'existe.
+- L'ancien `prefs.heightCm` est migré vers le profil puis supprimé.
+- Les tailles présentes dans les anciens relevés restent des snapshots historiques pour reproduire les anciens calculs IMC / masse grasse.
+- Modifier le poids depuis Profil écrit désormais un relevé de Mesures au lieu d'une deuxième valeur indépendante.

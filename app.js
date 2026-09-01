@@ -892,6 +892,66 @@ function setHistory(v) { save(STORAGE.history, v); }
 function getPrefs() { return parse(STORAGE.prefs, { sound:true, vibration:true, smartProgression:true, keepAwake:true }); }
 function setPrefs(v) { save(STORAGE.prefs, v); }
 
+/* V10.116 · Canonical anthropometrics
+   - height: athlete profile is the single current source of truth
+   - weight: latest body measurement is the single current source of truth
+   Historic body-log height values remain snapshots so old BMI/body-fat calculations stay reproducible. */
+function positiveNumber(v){const n=Number(v);return Number.isFinite(n)&&n>0?n:null;}
+function latestBodyLogWith(key){
+  return getBodyLogs().filter(l=>positiveNumber(bodyValue(l,key))!=null).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;
+}
+function getCanonicalHeight(){
+  const raw=parse(STORAGE.athleteProfile,{}),prefs=getPrefs(),logs=getBodyLogs();
+  return positiveNumber(raw.height)||positiveNumber(prefs.heightCm)||positiveNumber(logs.find(l=>positiveNumber(l.height))?.height)||null;
+}
+function getCurrentWeight(){
+  const latest=latestBodyLogWith('weight');
+  if(latest)return positiveNumber(bodyValue(latest,'weight'));
+  // Legacy fallback only until migrateCanonicalAnthropometrics() has run.
+  return positiveNumber(parse(STORAGE.athleteProfile,{}).weight);
+}
+function upsertBodyValuesForDate(values,dateKey=localDateKey(),meta={}){
+  const clean=Object.fromEntries(Object.entries(values||{}).map(([k,v])=>[k,positiveNumber(v)]).filter(([,v])=>v!=null));
+  if(!Object.keys(clean).length)return null;
+  const arr=getBodyLogs(),idx=arr.findIndex(l=>localDateKey(new Date(l.date))===dateKey);
+  if(idx>=0){
+    arr[idx]={...arr[idx],...clean,...meta};
+  }else{
+    arr.push({id:Date.now(),date:new Date(`${dateKey}T12:00:00`).toISOString(),...clean,custom:{},note:'',measurementMode:'quick',...meta});
+  }
+  arr.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  setBodyLogs(arr.slice(0,1500));
+  return arr.find(l=>localDateKey(new Date(l.date))===dateKey)||null;
+}
+function setCanonicalHeight(value){
+  const height=positiveNumber(value),raw=parse(STORAGE.athleteProfile,{}),prefs=getPrefs();
+  if(height)raw.height=height;else delete raw.height;
+  delete raw.weight; // weight never belongs to the canonical profile anymore
+  setAthleteProfile(raw);
+  if(Object.prototype.hasOwnProperty.call(prefs,'heightCm')){delete prefs.heightCm;setPrefs(prefs);}
+  return height;
+}
+function recordCurrentWeight(value,source='profile'){
+  const weight=positiveNumber(value);if(!weight)return null;
+  const current=getCurrentWeight();
+  if(current!=null&&Math.abs(current-weight)<0.001)return latestBodyLogWith('weight');
+  return upsertBodyValuesForDate({weight},localDateKey(),{anthropometricSource:source});
+}
+function migrateCanonicalAnthropometrics(){
+  const raw=parse(STORAGE.athleteProfile,{}),prefs=getPrefs(),logs=getBodyLogs();
+  const height=positiveNumber(raw.height)||positiveNumber(prefs.heightCm)||positiveNumber(logs.find(l=>positiveNumber(l.height))?.height);
+  const legacyWeight=positiveNumber(raw.weight);
+  const hasMeasuredWeight=logs.some(l=>positiveNumber(bodyValue(l,'weight'))!=null);
+  let changedProfile=false,changedPrefs=false;
+  if(height&&positiveNumber(raw.height)!==height){raw.height=height;changedProfile=true;}
+  if(Object.prototype.hasOwnProperty.call(raw,'weight')){delete raw.weight;changedProfile=true;}
+  if(Object.prototype.hasOwnProperty.call(prefs,'heightCm')){delete prefs.heightCm;changedPrefs=true;}
+  if(changedProfile)setAthleteProfile(raw);
+  if(changedPrefs)setPrefs(prefs);
+  if(legacyWeight&&!hasMeasuredWeight)upsertBodyValuesForDate({weight:legacyWeight},localDateKey(),{anthropometricSource:'legacy-profile-migration',migrated:true});
+  return {height:height||null,weight:getCurrentWeight()};
+}
+
 const ATHLETE_DAY_NAMES=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const ATHLETE_SPORTS=[
   ['calisthenics','Calisthénie'],['strength','Musculation'],['running','Course'],['cycling','Vélo'],
@@ -900,15 +960,14 @@ const ATHLETE_SPORTS=[
 ];
 function getAthleteProfile(){
   const raw=parse(STORAGE.athleteProfile,{});
-  const body=getBodyLogs(),latest=body&&body.length?body[0]:{};
   const active=typeof getActiveTrainingCycle==='function'?getActiveTrainingCycle():null;
   const activeDays=active&&active.days?Object.entries(active.days).filter(([d,w])=>(w&&w.exercises&&w.exercises.length)).map(([d])=>Number(d)):[];
   const restDays=active&&active.days?Object.entries(active.days).filter(([d,w])=>!(w&&w.exercises&&w.exercises.length)).map(([d])=>Number(d)):[];
   return {
     name:String(raw.name||'').trim(),
     age:raw.age?Number(raw.age):null,
-    height:raw.height?Number(raw.height):null,
-    weight:raw.weight?Number(raw.weight):(latest&&latest.weight?Number(latest.weight):null),
+    height:getCanonicalHeight(),
+    weight:getCurrentWeight(),
     targetWeight:raw.targetWeight?Number(raw.targetWeight):null,
     experience:raw.experience||'Intermédiaire',
     yearsTraining:raw.yearsTraining?Number(raw.yearsTraining):null,
@@ -927,7 +986,7 @@ function getAthleteProfile(){
     notes:String(raw.notes||'').trim()
   };
 }
-function setAthleteProfile(v){save(STORAGE.athleteProfile,v);}
+function setAthleteProfile(v){const clean={...(v||{})};delete clean.weight;save(STORAGE.athleteProfile,clean);}
 function athleteInitials(name){
   const parts=String(name||'').trim().split(/\s+/).filter(Boolean);
   return parts.length?parts.slice(0,2).map(x=>x.charAt(0).toUpperCase()).join(''):'K';
@@ -973,6 +1032,7 @@ function getManualSkills() { return parse(STORAGE.skills, {}); }
 function setManualSkills(v) { save(STORAGE.skills, v); }
 function getBodyLogs() { return parse(STORAGE.body, []); }
 function setBodyLogs(v) { save(STORAGE.body, v); }
+try{migrateCanonicalAnthropometrics();}catch(e){console.warn('KINETIK anthropometric migration',e);}
 function getBodyConfig(){const raw=parse(STORAGE.bodyConfig,{});return mergeBodyConfig(raw);}
 function setBodyConfig(v){save(STORAGE.bodyConfig,v);}
 function getFlexLogs() { return parse(STORAGE.flexibility, []); }
@@ -2462,7 +2522,7 @@ function renderAthleteProfileEditor(){
       <label><span>Niveau actuel</span><select id="athleteExperience">${['Débutant','Intermédiaire','Avancé','Expert'].map(x=>`<option ${p.experience===x?'selected':''}>${x}</option>`).join('')}</select></label>
       <label><span>Âge <small>optionnel</small></span><input id="athleteAge" type="number" min="12" max="100" value="${p.age||''}" placeholder="—"></label>
       <label><span>Taille</span><div class="profile-input-unit"><input id="athleteHeight" type="number" min="100" max="230" value="${p.height||''}" placeholder="—"><b>cm</b></div></label>
-      <label><span>Poids actuel</span><div class="profile-input-unit"><input id="athleteWeight" type="number" min="30" max="250" step=".1" value="${p.weight||''}" placeholder="—"><b>kg</b></div></label>
+      <label><span>Poids actuel <small>enregistre une mesure</small></span><div class="profile-input-unit"><input id="athleteWeight" type="number" min="30" max="250" step=".1" value="${p.weight||''}" placeholder="—"><b>kg</b></div></label>
       <label><span>Années de pratique <small>optionnel</small></span><input id="athleteYears" type="number" min="0" max="60" step=".5" value="${p.yearsTraining||''}" placeholder="—"></label>
     </div></section>
 
@@ -3735,12 +3795,12 @@ function bodyFatForLog(log,cfg=getBodyConfig()){
   return estimateBodyFatByFormula(log,cfg.bodyFatFormula);
 }
 function estimateBodyFatByFormula(log,formula='male'){
-  const h=Number(log?.height||getPrefs().heightCm),w=Number(log?.waist),n=Number(log?.neck),hip=Number(log?.hips);if(!(h>0&&w>0&&n>0))return null;const inch=2.54;let result=null;
+  const h=Number(log?.height||getCanonicalHeight()),w=Number(log?.waist),n=Number(log?.neck),hip=Number(log?.hips);if(!(h>0&&w>0&&n>0))return null;const inch=2.54;let result=null;
   if(formula==='female'){if(!(hip>0&&w+hip>n))return null;result=163.205*Math.log10((w+hip-n)/inch)-97.684*Math.log10(h/inch)-78.387;}
   else {if(!(w>n))return null;result=86.010*Math.log10((w-n)/inch)-70.041*Math.log10(h/inch)+36.76;}
   return clamp(result,2,60);
 }
-function bodyDerived(log){if(!log)return{};const cfg=getBodyConfig(),weight=bodyValue(log,'weight'),waist=bodyValue(log,'waist'),height=Number(log.height||getPrefs().heightCm||0),bf=bodyFatForLog(log,cfg);return {bf,bmi:weight&&height?weight/((height/100)**2):null,whtr:waist&&height?waist/height:null,lean:weight&&bf!=null?weight*(1-bf/100):null};}
+function bodyDerived(log){if(!log)return{};const cfg=getBodyConfig(),weight=bodyValue(log,'weight'),waist=bodyValue(log,'waist'),height=Number(log.height||getCanonicalHeight()||0),bf=bodyFatForLog(log,cfg);return {bf,bmi:weight&&height?weight/((height/100)**2):null,whtr:waist&&height?waist/height:null,lean:weight&&bf!=null?weight*(1-bf/100):null};}
 function bodyGoalProgress(key,current){const cfg=getBodyConfig(),target=Number(cfg.goals?.[key]);if(!(target>0)||!(current>0))return null;let start=null;if(key==='bodyFat'){for(const l of [...getBodyLogs()].reverse()){const v=bodyFatForLog(l,cfg);if(v!=null){start=v;break;}}}else start=earliestBodyValue(getBodyLogs(),key)?.value;if(!(start>0)||Math.abs(start-target)<.01)return null;const pct=clamp(((start-current)/(start-target))*100,0,100);return {start,target,pct};}
 function bodySymmetry(logs,label,leftKey,rightKey){const l=latestBodyValue(logs,leftKey)?.value,r=latestBodyValue(logs,rightKey)?.value;if(!(l>0&&r>0))return null;const diff=Math.abs(l-r),pct=diff/((l+r)/2)*100;return {label,l,r,diff,pct};}
 function bodyDataQuality(){const logs=getBodyLogs(),now=Date.now(),within=d=>logs.filter(l=>new Date(l.date).getTime()>=now-d*86400000),m30=within(30);const weights=m30.filter(l=>bodyValue(l,'weight')).length,waists=m30.filter(l=>bodyValue(l,'waist')).length,complete=m30.filter(l=>BODY_FIELDS.filter(f=>!f.quick&&bodyValue(l,f.key)).length>=4).length,photos=m30.filter(l=>bodyPhotoId(l,'front')||bodyPhotoId(l,'side')||bodyPhotoId(l,'back')).length;const score=Math.round(clamp((Math.min(weights,8)/8)*35+(Math.min(waists,4)/4)*30+(Math.min(complete,2)/2)*20+(Math.min(photos,1))*15,0,100));const label=score>=80?'Très bon':score>=55?'Bon':score>=30?'À renforcer':'Insuffisant';return {score,label,weights,waists,complete,photos};}
@@ -3896,8 +3956,8 @@ function renderProfile(){const p=getPrefs();return shell(`<header class="topbar"
 
 
 function renderBodyChart(logs,key,unit){const def=bodyFieldDef(key),pts=(logs||[]).filter(x=>bodyValue(x,key)!=null).slice(0,30).reverse();if(pts.length<2)return'';const vals=pts.map(x=>bodyValue(x,key)),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.5,max-min);const coords=vals.map((v,i)=>{const x=(i/(vals.length-1))*100,y=88-((v-min)/range)*70;return `${x},${y}`}).join(' ');return `<div class="mini-chart"><div class="chart-head"><strong>${def?.label||key}</strong><span>${vals[0].toFixed(1).replace('.0','')} → ${vals[vals.length-1].toFixed(1).replace('.0','')} ${unit}</span></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Évolution ${esc(def?.label||key)}"><polyline points="${coords}" fill="none" vector-effect="non-scaling-stroke"/></svg></div>`;}
-function renderBodyEditor(){const p=getPrefs(),cfg=getBodyConfig(),mode=state.bodyEditorMode||'quick',groups=['Essentiels','Haut du corps','Bas du corps','Optionnel'];const fields=BODY_FIELDS.filter(f=>cfg.tracked[f.key]!==false&&(mode==='full'||f.quick));const custom=mode==='full'?cfg.customFields.filter(f=>f.visible!==false):[];return `<main class="shell"><section class="card editor-card body-editor-v94"><button class="back-btn" id="closeBody">← Mesures</button><div class="kicker">${mode==='full'?'Bilan complet':'Mesure rapide'}</div><h1>${mode==='full'?'Mensurations & photos':'Les essentiels'}</h1><div class="body-editor-mode"><button class="body-mode ${mode==='quick'?'active':''}" data-body-mode="quick">Rapide</button><button class="body-mode ${mode==='full'?'active':''}" data-body-mode="full">Complet</button></div>${groups.map(g=>{const list=fields.filter(f=>f.group===g);if(!list.length)return'';return `<div class="body-editor-group"><h3>${g}</h3><div class="field-grid">${list.map(f=>`<div><label class="field-label">${f.label} (${f.unit})</label><input class="big-input body-value-input" data-body-key="${f.key}" type="number" step="${f.step}" inputmode="decimal" placeholder="—"></div>`).join('')}</div></div>`;}).join('')}${custom.length?`<div class="body-editor-group"><h3>Champs personnalisés</h3><div class="field-grid">${custom.map(f=>`<div><label class="field-label">${esc(f.label)} (${esc(f.unit||'')})</label><input class="big-input body-value-input" data-body-key="${f.key}" data-custom="1" type="number" step="0.1" inputmode="decimal" placeholder="—"></div>`).join('')}</div></div>`:''}<div class="body-editor-group"><h3>Contexte</h3><div class="field-grid"><div><label class="field-label">Taille corporelle (cm)</label><input class="big-input" id="bodyHeight" type="number" step="0.1" inputmode="decimal" value="${p.heightCm||''}" placeholder="ex. 175"></div><div><label class="field-label">Date</label><input class="big-input" id="bodyDate" type="date" value="${localDateKey()}"></div></div></div>${mode==='full'?`<div class="body-editor-group"><h3>Photos de progression</h3><p class="muted small">Même distance, même lumière et posture détendue si possible.</p><div class="body-photo-inputs"><label><span>Face</span><input class="file-input" id="bodyPhotoFront" type="file" accept="image/*" capture="environment"></label><label><span>Profil</span><input class="file-input" id="bodyPhotoSide" type="file" accept="image/*" capture="environment"></label><label><span>Dos</span><input class="file-input" id="bodyPhotoBack" type="file" accept="image/*" capture="environment"></label></div></div>`:''}<label class="field-label">Note facultative</label><textarea class="textarea" id="bodyNote" placeholder="Sommeil, hydratation, contexte, sensations…"></textarea><div class="body-save-note">Cycle actif : <strong>${esc(getActiveTrainingCycle().name)}</strong></div><button class="btn btn-primary" id="saveBody">Enregistrer ${mode==='full'?'le bilan':'la mesure'}</button></section></main>`;}
-async function saveBody(){const values={},custom={};document.querySelectorAll('.body-value-input').forEach(el=>{const v=Number(el.value||0);if(v>0){if(el.dataset.custom)custom[el.dataset.bodyKey]=v;else values[el.dataset.bodyKey]=v;}});const height=Number(document.getElementById('bodyHeight')?.value||0),dateVal=document.getElementById('bodyDate')?.value||localDateKey();if(!Object.keys(values).length&&!Object.keys(custom).length)return;const photoIds={};for(const [pos,id] of [['front','bodyPhotoFront'],['side','bodyPhotoSide'],['back','bodyPhotoBack']]){const file=document.getElementById(id)?.files?.[0];if(file){try{const pid=`body-${pos}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,blob=await compressPhoto(file);if(blob){await putPhoto(pid,blob);photoIds[pos]=pid;}}catch(e){console.warn('Photo non enregistrée',pos,e);}}}const cycle=getActiveTrainingCycle(),arr=getBodyLogs(),date=new Date(`${dateVal}T12:00:00`);arr.unshift({id:Date.now(),date:date.toISOString(),...values,height:height||null,custom,photoIds:Object.keys(photoIds).length?photoIds:null,photoId:photoIds.front||null,note:document.getElementById('bodyNote')?.value||'',measurementMode:state.bodyEditorMode||'quick',trainingCycleId:String(cycle.id),trainingCycleName:cycle.name});arr.sort((a,b)=>new Date(b.date)-new Date(a.date));setBodyLogs(arr.slice(0,1500));if(height>0){const p=getPrefs();p.heightCm=height;setPrefs(p);}state.bodyEditor=false;state.view='measurements';render();}
+function renderBodyEditor(){const athlete=getAthleteProfile(),cfg=getBodyConfig(),mode=state.bodyEditorMode||'quick',groups=['Essentiels','Haut du corps','Bas du corps','Optionnel'];const fields=BODY_FIELDS.filter(f=>cfg.tracked[f.key]!==false&&(mode==='full'||f.quick));const custom=mode==='full'?cfg.customFields.filter(f=>f.visible!==false):[];return `<main class="shell"><section class="card editor-card body-editor-v94"><button class="back-btn" id="closeBody">← Mesures</button><div class="kicker">${mode==='full'?'Bilan complet':'Mesure rapide'}</div><h1>${mode==='full'?'Mensurations & photos':'Les essentiels'}</h1><div class="body-editor-mode"><button class="body-mode ${mode==='quick'?'active':''}" data-body-mode="quick">Rapide</button><button class="body-mode ${mode==='full'?'active':''}" data-body-mode="full">Complet</button></div>${groups.map(g=>{const list=fields.filter(f=>f.group===g);if(!list.length)return'';return `<div class="body-editor-group"><h3>${g}</h3><div class="field-grid">${list.map(f=>`<div><label class="field-label">${f.label} (${f.unit})</label><input class="big-input body-value-input" data-body-key="${f.key}" type="number" step="${f.step}" inputmode="decimal" placeholder="—"></div>`).join('')}</div></div>`;}).join('')}${custom.length?`<div class="body-editor-group"><h3>Champs personnalisés</h3><div class="field-grid">${custom.map(f=>`<div><label class="field-label">${esc(f.label)} (${esc(f.unit||'')})</label><input class="big-input body-value-input" data-body-key="${f.key}" data-custom="1" type="number" step="0.1" inputmode="decimal" placeholder="—"></div>`).join('')}</div></div>`:''}<div class="body-editor-group"><h3>Contexte</h3><div class="field-grid"><div><label class="field-label">Taille corporelle (cm) · synchronisée au profil</label><input class="big-input" id="bodyHeight" type="number" step="0.1" inputmode="decimal" value="${athlete.height||''}" placeholder="ex. 175"></div><div><label class="field-label">Date</label><input class="big-input" id="bodyDate" type="date" value="${localDateKey()}"></div></div></div>${mode==='full'?`<div class="body-editor-group"><h3>Photos de progression</h3><p class="muted small">Même distance, même lumière et posture détendue si possible.</p><div class="body-photo-inputs"><label><span>Face</span><input class="file-input" id="bodyPhotoFront" type="file" accept="image/*" capture="environment"></label><label><span>Profil</span><input class="file-input" id="bodyPhotoSide" type="file" accept="image/*" capture="environment"></label><label><span>Dos</span><input class="file-input" id="bodyPhotoBack" type="file" accept="image/*" capture="environment"></label></div></div>`:''}<label class="field-label">Note facultative</label><textarea class="textarea" id="bodyNote" placeholder="Sommeil, hydratation, contexte, sensations…"></textarea><div class="body-save-note">Cycle actif : <strong>${esc(getActiveTrainingCycle().name)}</strong></div><button class="btn btn-primary" id="saveBody">Enregistrer ${mode==='full'?'le bilan':'la mesure'}</button></section></main>`;}
+async function saveBody(){const values={},custom={};document.querySelectorAll('.body-value-input').forEach(el=>{const v=Number(el.value||0);if(v>0){if(el.dataset.custom)custom[el.dataset.bodyKey]=v;else values[el.dataset.bodyKey]=v;}});const height=Number(document.getElementById('bodyHeight')?.value||0),dateVal=document.getElementById('bodyDate')?.value||localDateKey();if(!Object.keys(values).length&&!Object.keys(custom).length)return;const photoIds={};for(const [pos,id] of [['front','bodyPhotoFront'],['side','bodyPhotoSide'],['back','bodyPhotoBack']]){const file=document.getElementById(id)?.files?.[0];if(file){try{const pid=`body-${pos}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,blob=await compressPhoto(file);if(blob){await putPhoto(pid,blob);photoIds[pos]=pid;}}catch(e){console.warn('Photo non enregistrée',pos,e);}}}const cycle=getActiveTrainingCycle(),arr=getBodyLogs(),date=new Date(`${dateVal}T12:00:00`);arr.unshift({id:Date.now(),date:date.toISOString(),...values,height:height||null,custom,photoIds:Object.keys(photoIds).length?photoIds:null,photoId:photoIds.front||null,note:document.getElementById('bodyNote')?.value||'',measurementMode:state.bodyEditorMode||'quick',trainingCycleId:String(cycle.id),trainingCycleName:cycle.name});arr.sort((a,b)=>new Date(b.date)-new Date(a.date));setBodyLogs(arr.slice(0,1500));if(height>0)setCanonicalHeight(height);state.bodyEditor=false;state.view='measurements';render();}
 function saveBodyConfigFromDom(){const cfg=getBodyConfig();cfg.bodyFatFormula=document.getElementById('bodyFatFormula')?.value||cfg.bodyFatFormula;cfg.bodyFatSource=document.getElementById('bodyFatSource')?.value||cfg.bodyFatSource;document.querySelectorAll('.body-freq').forEach(el=>cfg.frequencies[el.dataset.freq]=Math.max(1,Number(el.value||1)));document.querySelectorAll('.body-goal-input').forEach(el=>{const v=Number(el.value||0);cfg.goals[el.dataset.bodyGoal]=v>0?v:null;});document.querySelectorAll('.body-track-input').forEach(el=>cfg.tracked[el.dataset.bodyTrack]=el.checked);document.querySelectorAll('.body-track-custom').forEach(el=>{const f=cfg.customFields.find(x=>x.key===el.dataset.customTrack);if(f)f.visible=el.checked;});setBodyConfig(cfg);render();}
 function addCustomBodyField(){const label=prompt('Nom du champ personnalisé (ex. Ventre bas)');if(!label?.trim())return;const unit=prompt('Unité (ex. cm, kg, %)','cm')||'';const cfg=getBodyConfig(),key=`custom_${Date.now()}`;cfg.customFields.push({key,label:label.trim(),unit:unit.trim(),visible:true});setBodyConfig(cfg);render();}
 function removeCustomBodyField(key){const cfg=getBodyConfig();cfg.customFields=cfg.customFields.filter(f=>f.key!==key);setBodyConfig(cfg);render();}
@@ -3914,11 +3974,12 @@ function bindEvents(){
     const restDays=[0,1,2,3,4,5,6].filter(x=>!trainingDays.includes(x));
     const sports=[...document.querySelectorAll('.athlete-sport-check:checked')].map(x=>x.value);
     const locations=[...document.querySelectorAll('.athlete-location-check:checked')].map(x=>x.value);
+    const profileHeight=Number(document.getElementById('athleteHeight')?.value||0)||null;
+    const profileWeight=Number(document.getElementById('athleteWeight')?.value||0)||null;
     setAthleteProfile({...old,
       name:(document.getElementById('athleteName')?.value||'').trim(),
       age:Number(document.getElementById('athleteAge')?.value||0)||null,
-      height:Number(document.getElementById('athleteHeight')?.value||0)||null,
-      weight:Number(document.getElementById('athleteWeight')?.value||0)||null,
+      height:profileHeight,
       targetWeight:Number(document.getElementById('athleteTargetWeight')?.value||0)||null,
       yearsTraining:Number(document.getElementById('athleteYears')?.value||0)||null,
       experience:document.getElementById('athleteExperience')?.value||'Intermédiaire',
@@ -3932,6 +3993,8 @@ function bindEvents(){
       trainingDays,restDays,sports:sports.length?sports:['calisthenics'],locations:locations.length?locations:['home'],
       notes:(document.getElementById('athleteNotes')?.value||'').trim()
     });
+    setCanonicalHeight(profileHeight);
+    if(profileWeight)recordCurrentWeight(profileWeight,'profile-editor');
     const eq=getEquipmentSetup();document.querySelectorAll('.athlete-equipment-check').forEach(x=>eq[x.dataset.equipmentId]=x.checked);setEquipmentSetup(eq);
     state.athleteProfileEditor=false;render();
   };
