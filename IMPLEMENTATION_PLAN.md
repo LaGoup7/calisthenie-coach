@@ -100,12 +100,24 @@
    - Daily Tasks Engine v1.6.0
    - contrôle qualité automatisé : 31 vérifications (`test-step9-runtime.js`) + non-régression étapes 3–8
 
-## P1 — notifications locales intelligentes
+## P1 — notifications locales intelligentes — TERMINÉ / v10.124
 
-- heure préférée
-- snooze
-- relance d'une séance manquée
-- rappels de récupération / mobilité
+10. **Coordinateur de notifications locales** — TERMINÉ / v10.124
+   - nouveau module isolé `local-reminders.js`
+   - schéma de préférences Rappels v3, rétrocompatible avec P0
+   - permission Notification demandée uniquement après action explicite
+   - rappel principal à `preferredTime` tant que le runtime PWA reste actif
+   - aucune notification système redondante si KINETIK est déjà visible après l'heure cible
+   - snooze configurable : 15 / 30 / 60 / 120 min
+   - relance d'une séance toujours à faire : au plus tôt 18:00, plafond 21:30
+   - réveil tardif : une seule relance pertinente au lieu de deux notifications successives
+   - mobilité / récupération héritées directement du Daily Tasks Engine et de ses catégories
+   - confidentialité écran verrouillé : contenu discret par défaut, détail opt-in
+   - clic notification → ouverture / focus de l'agenda, sans démarrer automatiquement une action métier
+   - état de livraison local conservé 14 jours, supprimé par Reset mais exclu des sauvegardes
+   - `notificationclick` ajouté au Service Worker
+   - frontière P1 explicite : aucune promesse de livraison si la PWA est suspendue ou fermée
+   - contrôle qualité automatisé : 35 vérifications (`test-step10-runtime.js`) + non-régression étapes 3–9
 
 ## P2 — notifications système fiables
 

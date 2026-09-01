@@ -269,3 +269,20 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - `testDueSummary()` reste disponible pour les anciennes surfaces mais agrège désormais les échéances individuelles au lieu d’utiliser la date du dernier test global.
 - Cache PWA : `kinetik-v10-123-individual-assessments`.
 - Tests : `test-step9-runtime.js` (31 contrôles), plus non-régression étapes 3 (17), 4 (26), 5 (22), 6 (25), 7 (19) et 8 (30).
+
+
+## V10.124 · Étape 10 — Notifications locales intelligentes (P1)
+- Nouveau module **`local-reminders.js`** : la couche Notification consomme le Daily Tasks Engine au lieu de recréer des règles de séance / mesure / mobilité.
+- Les préférences Rappels passent au schéma **v3** avec activation locale, confidentialité, snooze et relance séance.
+- La permission navigateur n'est **jamais demandée automatiquement** : elle n'apparaît qu'après clic sur **Activer les notifications**.
+- Le rappel principal utilise l'heure préférée enregistrée depuis l'étape 4. Si KINETIK est déjà visible après cette heure, le rappel est marqué vu dans l'app et aucune notification système redondante n'est envoyée.
+- Snooze configurable : **15 min / 30 min / 1 h / 2 h**.
+- Une séance encore à faire peut générer une relance : `max(heure préférée + délai, 18:00)`, avec plafond à **21:30**.
+- Si le runtime se réveille tard, KINETIK envoie uniquement la relance utile et évite le doublon « rappel du matin + relance ».
+- Mobilité et récupération utilisent directement les catégories du Daily Tasks Engine ; aucune deuxième logique de rappel n'est créée.
+- Confidentialité : contenu **discret par défaut** sur l'écran verrouillé. Le détail exact des tâches est opt-in.
+- Le Service Worker gère maintenant `notificationclick` : ouverture/focus de l'agenda et action **Plus tard**. Un tap ne démarre jamais automatiquement une séance ou un test.
+- L'état de livraison `cc_local_notification_state_v1` est conservé 14 jours, supprimé par **Effacer toutes les données**, exclu des exports et purgé avant import afin de rester propre à l'appareil.
+- Cache PWA : `kinetik-v10-124-local-reminders` et nouvel asset offline `local-reminders.js?v=10.124`.
+- Limite volontaire : P1 fonctionne tant que le runtime PWA reste vivant. La livraison garantie app fermée reste **P2 Web Push + planification serveur**.
+- Tests : `test-step10-runtime.js` (35 contrôles), plus toutes les suites de non-régression P0.

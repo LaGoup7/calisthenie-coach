@@ -1,17 +1,14 @@
-const CACHE = 'kinetik-v10-123-individual-assessments';
-const ASSETS = ['./','./index.html','./styles.css?v=10.123','./app.js?v=10.123','./daily-tasks.js?v=10.123','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-124-local-reminders';
+const ASSETS = ['./','./index.html','./styles.css?v=10.124','./app.js?v=10.124','./daily-tasks.js?v=10.124','./local-reminders.js?v=10.124','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // Ignore browser-extension and other non-http(s) requests. Cache API rejects them.
   if (!['http:','https:'].includes(url.protocol)) return;
   if (url.origin !== self.location.origin) return;
-  // Never cache dynamic server/API responses (OAuth status, Strava activities, etc.).
-  // Cache-first here previously kept an old {connected:false} response after OAuth.
-  if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) return;
-  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/daily-tasks.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
+  if (url.pathname.startsWith('/api/')) return;
+  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/daily-tasks.js', '/local-reminders.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
   if (isCore) {
     e.respondWith(fetch(e.request).then(resp => {
       const copy = resp.clone(); caches.open(CACHE).then(c=>c.put(e.request, copy)); return resp;
@@ -21,4 +18,25 @@ self.addEventListener('fetch', e => {
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
     const copy = resp.clone(); caches.open(CACHE).then(c=>c.put(e.request, copy)); return resp;
   })));
+});
+
+/* P1 local notification interactions. No push subscription exists yet. */
+self.addEventListener('notificationclick', event => {
+  const data = event.notification?.data || {};
+  const action = event.action === 'snooze' ? 'snooze' : 'open';
+  event.notification?.close?.();
+  event.waitUntil((async()=>{
+    const windows = await self.clients.matchAll({ type:'window', includeUncontrolled:true });
+    const target = windows.find(client => 'focus' in client) || null;
+    if (target) {
+      await target.focus();
+      target.postMessage({ type:'kinetik-reminder-click', action, taskId:data.taskId || null, reason:data.reason || null });
+      return;
+    }
+    const url = new URL('./', self.location.href);
+    url.searchParams.set('kinetikReminder','1');
+    if (data.taskId) url.searchParams.set('task',String(data.taskId));
+    if (action === 'snooze') url.searchParams.set('snooze','1');
+    await self.clients.openWindow(url.href);
+  })());
 });

@@ -23,6 +23,7 @@ const STORAGE = {
   activities: "cc_activities_v1",
   athleteProfile: "kinetik_athlete_profile_v1",
   dailyTaskDecisions: "cc_daily_task_decisions_v1",
+  localNotificationState: "cc_local_notification_state_v1",
 };
 
 function ex(name, type, sets, target, rest, tip, opts={}) {
@@ -1361,7 +1362,7 @@ function blobToDataURL(blob){return new Promise((resolve,reject)=>{const r=new F
 function dataURLToBlob(dataURL){const [meta,data]=String(dataURL||'').split(',');if(!meta||!data)return null;const mime=(meta.match(/data:([^;]+)/)||[])[1]||'application/octet-stream';const bin=atob(data),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new Blob([bytes],{type:mime});}
 async function exportBackup(){
   const data={};
-  Object.entries(STORAGE).forEach(([name,key])=>{data[name]=parse(key,null);});
+  Object.entries(STORAGE).filter(([name])=>name!=='localNotificationState').forEach(([name,key])=>{data[name]=parse(key,null);});
   const photos={};
   for(const row of getBodyLogs()){
     if(!row.photoId||photos[row.photoId])continue;
@@ -1379,7 +1380,8 @@ async function importBackupFile(file){
   if(!backup||backup.app!=='KINETIK'||!backup.data||typeof backup.data!=='object'){alert('Ce fichier ne semble pas être une sauvegarde KINETIK valide.');return;}
   if(!confirm('Restaurer cette sauvegarde ? Les données actuelles de ce navigateur seront remplacées.'))return;
   try{
-    Object.entries(STORAGE).forEach(([name,key])=>{if(Object.prototype.hasOwnProperty.call(backup.data,name)){const value=backup.data[name];if(value===null||value===undefined)localStorage.removeItem(key);else save(key,value);}});
+    localStorage.removeItem(STORAGE.localNotificationState);
+    Object.entries(STORAGE).forEach(([name,key])=>{if(name==='localNotificationState')return;if(Object.prototype.hasOwnProperty.call(backup.data,name)){const value=backup.data[name];if(value===null||value===undefined)localStorage.removeItem(key);else save(key,value);}});
     await clearPhotos();
     if(backup.photos&&typeof backup.photos==='object'){
       for(const [id,dataURL] of Object.entries(backup.photos)){const blob=dataURLToBlob(dataURL);if(blob)await putPhoto(id,blob);}
@@ -10781,3 +10783,116 @@ renderAssessmentProtocolRow=function(protocol){
 window.assessmentProtocolStatuses=assessmentProtocolStatuses;
 window.protocolFreshness=protocolFreshness;
 window.protocolFreshnessDays=protocolFreshnessDays;
+
+
+/* ========================================================================== */
+/* KINETIK v10.124 · Step 10 · Local intelligent notifications               */
+/* P1 activates the preferred-time reminder while the PWA runtime is alive.   */
+/* Reliable closed-app scheduling remains explicitly reserved for Web Push.   */
+/* ========================================================================== */
+const V10124_LOCAL_REMINDER_DEFAULTS=Object.freeze({
+  localNotifications:false,
+  notificationDetail:'discreet',
+  snoozeMinutes:30,
+  workoutFollowup:true,
+  workoutFollowupDelay:120
+});
+const _getReminderPrefsV10124=getReminderPrefs;
+getReminderPrefs=function(){
+  const base=_getReminderPrefsV10124(),raw=parse(STORAGE.reminders,{});
+  const snooze=[15,30,60,120].includes(Number(raw.snoozeMinutes))?Number(raw.snoozeMinutes):V10124_LOCAL_REMINDER_DEFAULTS.snoozeMinutes;
+  const followDelay=[60,120,180,240].includes(Number(raw.workoutFollowupDelay))?Number(raw.workoutFollowupDelay):V10124_LOCAL_REMINDER_DEFAULTS.workoutFollowupDelay;
+  return {...base,version:3,
+    localNotifications:raw.localNotifications===true,
+    notificationDetail:raw.notificationDetail==='detailed'?'detailed':'discreet',
+    snoozeMinutes:snooze,
+    workoutFollowup:raw.workoutFollowup!==false,
+    workoutFollowupDelay:followDelay
+  };
+};
+setReminderPrefs=function(v){
+  const next={...getReminderPrefs(),...(v||{}),version:3};
+  next.upcomingDays=clamp(Math.round(Number(next.upcomingDays||REMINDER_DEFAULTS.upcomingDays)),1,14);
+  next.preferredMoment=['morning','afternoon','evening','custom'].includes(next.preferredMoment)?next.preferredMoment:REMINDER_DEFAULTS.preferredMoment;
+  next.preferredTime=normalizeReminderTime(next.preferredTime,reminderMomentTime(next.preferredMoment)||REMINDER_DEFAULTS.preferredTime);
+  next.visibility=['due-only','due-and-soon'].includes(next.visibility)?next.visibility:REMINDER_DEFAULTS.visibility;
+  next.localNotifications=next.localNotifications===true;
+  next.notificationDetail=next.notificationDetail==='detailed'?'detailed':'discreet';
+  next.snoozeMinutes=[15,30,60,120].includes(Number(next.snoozeMinutes))?Number(next.snoozeMinutes):V10124_LOCAL_REMINDER_DEFAULTS.snoozeMinutes;
+  next.workoutFollowup=next.workoutFollowup!==false;
+  next.workoutFollowupDelay=[60,120,180,240].includes(Number(next.workoutFollowupDelay))?Number(next.workoutFollowupDelay):V10124_LOCAL_REMINDER_DEFAULTS.workoutFollowupDelay;
+  save(STORAGE.reminders,next);
+  try{queueMicrotask(()=>window.KinetikLocalReminders?.refresh?.());}catch(_){try{setTimeout(()=>window.KinetikLocalReminders?.refresh?.(),0);}catch(__){}}
+  return next;
+};
+function v10124NotificationFallbackStatus(){
+  const supported=typeof Notification!=='undefined'&&'serviceWorker' in navigator,permission=typeof Notification!=='undefined'?(Notification.permission||'default'):'unsupported';
+  const standalone=!!(window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone);
+  const ios=/iPad|iPhone|iPod/.test(String(navigator.userAgent||''));
+  return {supported:supported&&!(ios&&!standalone),permission,standalone,requiresInstall:ios&&!standalone,nextLabel:null};
+}
+function v10124NotificationStatus(){return window.KinetikLocalReminders?.getStatus?.()||v10124NotificationFallbackStatus();}
+function v10124PermissionLabel(status){
+  if(status.requiresInstall)return ['À installer','Installe KINETIK sur l’écran d’accueil pour autoriser les notifications sur iPhone.'];
+  if(!status.supported)return ['Indisponible','Ce navigateur ne permet pas les notifications locales KINETIK.'];
+  if(status.permission==='granted')return ['Autorisées','Cet appareil peut afficher les rappels locaux.'];
+  if(status.permission==='denied')return ['Refusées','L’autorisation a été refusée. Elle doit être réactivée depuis les réglages du navigateur ou de l’appareil.'];
+  return ['À activer','KINETIK demandera l’autorisation uniquement après ton clic.'];
+}
+function renderLocalNotificationSettings(){
+  const p=getReminderPrefs(),status=v10124NotificationStatus(),[badge,note]=v10124PermissionLabel(status),granted=status.permission==='granted',enabled=granted&&p.localNotifications;
+  const next=status.nextLabel?`<div class="local-notification-next"><span>Prochaine échéance locale</span><strong>${esc(status.nextLabel)}</strong></div>`:'';
+  return `<div class="reminder-settings-block local-notification-settings"><div class="reminder-settings-title"><strong>Notifications locales</strong><span>Heure préférée, snooze et relance de séance</span></div>
+    <div class="local-notification-status"><div><span class="local-notification-dot ${granted?'is-on':status.permission==='denied'?'is-off':'is-idle'}"></span><div><strong>${esc(badge)}</strong><small>${esc(note)}</small></div></div><span class="pill">P1 local</span></div>
+    ${status.requiresInstall?`<p class="reminder-local-note">Sur iPhone/iPad, ajoute d’abord KINETIK à l’écran d’accueil puis ouvre la PWA installée avant d’activer les notifications.</p>`:''}
+    ${status.supported&&status.permission==='default'?`<button type="button" class="btn btn-primary local-notification-request" id="requestLocalNotifications">Activer les notifications</button>`:''}
+    ${status.permission==='denied'?`<p class="reminder-local-note">KINETIK ne peut pas redemander automatiquement une autorisation refusée. Réactive les notifications dans les réglages du navigateur/appareil puis recharge l’application.</p>`:''}
+    ${granted?`<div class="switchline local-notification-master"><div><strong>Rappels locaux sur cet appareil</strong><div class="small muted">Utilise l’heure préférée définie juste au-dessus.</div></div><input id="localNotificationsEnabled" type="checkbox" ${enabled?'checked':''}></div>
+      <div class="reminder-preference-grid local-notification-grid"><label><span>Snooze par défaut</span><select id="localReminderSnooze">${[[15,'15 min'],[30,'30 min'],[60,'1 h'],[120,'2 h']].map(([v,l])=>`<option value="${v}" ${p.snoozeMinutes===v?'selected':''}>${l}</option>`).join('')}</select></label><label><span>Relance séance</span><select id="localWorkoutFollowupDelay" ${p.workoutFollowup?'':'disabled'}>${[[60,'1 h'],[120,'2 h'],[180,'3 h'],[240,'4 h']].map(([v,l])=>`<option value="${v}" ${p.workoutFollowupDelay===v?'selected':''}>${l} après le rappel</option>`).join('')}</select></label></div>
+      <div class="switchline"><div><strong>Relancer une séance encore à faire</strong><div class="small muted">Au plus tôt à 18:00 et jamais après 21:30.</div></div><input id="localWorkoutFollowup" type="checkbox" ${p.workoutFollowup?'checked':''}></div>
+      <div class="switchline"><div><strong>Détails sur l’écran verrouillé</strong><div class="small muted">Désactivé par défaut : le contenu reste discret et n’affiche pas les noms de tes tâches.</div></div><input id="localNotificationDetail" type="checkbox" ${p.notificationDetail==='detailed'?'checked':''}></div>
+      <div class="local-notification-actions"><button type="button" class="btn btn-outline compact" id="testLocalNotification">Tester une notification</button>${next}</div>`:''}
+    <p class="reminder-local-note local-notification-limit"><strong>Limite P1 :</strong> ces rappels sont planifiés localement tant que KINETIK reste en cours d’exécution. iOS/Android peuvent suspendre une PWA fermée ou longtemps en arrière-plan. La livraison garantie app fermée sera ajoutée en P2 avec Web Push + planification serveur.</p>
+  </div>`;
+}
+const _renderReminderSettingsV10124=renderReminderSettings;
+renderReminderSettings=function(){
+  let html=_renderReminderSettingsV10124();
+  html=html.replace('KINETIK utilise ces préférences pour filtrer ce qui mérite ton attention lorsque tu ouvres l’app. Elles ne déclenchent pas encore de notification système lorsque l’iPhone est verrouillé.','KINETIK utilise ces préférences pour filtrer ton parcours quotidien et, si tu les actives ci-dessous, déclencher des rappels locaux tant que la PWA reste en cours d’exécution.');
+  html=html.replace('Préférence enregistrée pour la future couche de notifications','Heure utilisée par les rappels locaux de cet appareil');
+  html=html.replace('Pour l’instant, une tâche due reste visible dans l’app quelle que soit l’heure. Cette préférence sera réutilisée par la couche de notifications sans devoir te la redemander.','Une tâche due reste visible dans l’app quelle que soit l’heure. Si les notifications locales sont activées, cette heure sert de déclencheur principal.');
+  const block=renderLocalNotificationSettings(),historyMarker='<div class="reminder-settings-block daily-decision-history">';
+  if(html.includes(historyMarker))return html.replace(historyMarker,block+historyMarker);
+  return html.replace(/<\/section>\s*$/,block+'</section>');
+};
+function openTodayAgendaFromReminder(taskId=null){
+  state.view='today';state.selectedHistoryId=null;render();
+  const focus=()=>{
+    const selector=taskId?`[data-daily-task-card="${String(taskId).replace(/"/g,'\\"')}"]`:'.today-agenda';
+    const target=document.querySelector(selector)||document.querySelector('.today-agenda');
+    if(!target)return false;
+    target.classList?.add('local-reminder-target');target.scrollIntoView?.({behavior:'smooth',block:'start'});
+    if(taskId)setTimeout(()=>target.classList?.remove('local-reminder-target'),1800);
+    return true;
+  };
+  if(!focus()&&typeof requestAnimationFrame==='function')requestAnimationFrame(focus);
+  return true;
+}
+window.openTodayAgendaFromReminder=openTodayAgendaFromReminder;
+const _renderTodayAgendaTaskV10124=renderTodayAgendaTask;
+renderTodayAgendaTask=function(task){
+  const html=_renderTodayAgendaTaskV10124(task);
+  return html.replace('<article class="today-agenda-task',`<article data-daily-task-card="${esc(task.id)}" class="today-agenda-task`);
+};
+const _bindEventsV10124=bindEvents;
+bindEvents=function(){
+  _bindEventsV10124();
+  const manager=window.KinetikLocalReminders;
+  const request=document.getElementById('requestLocalNotifications');if(request)request.onclick=async()=>{await manager?.requestPermission?.();render();};
+  const enabled=document.getElementById('localNotificationsEnabled');if(enabled)enabled.onchange=async()=>{if(enabled.checked&&v10124NotificationStatus().permission!=='granted'){await manager?.requestPermission?.();}else if(manager?.setEnabled){manager.setEnabled(enabled.checked);}else{setReminderPrefs({...getReminderPrefs(),localNotifications:enabled.checked});}render();};
+  const snooze=document.getElementById('localReminderSnooze');if(snooze)snooze.onchange=()=>{setReminderPrefs({...getReminderPrefs(),snoozeMinutes:Number(snooze.value||30)});render();};
+  const follow=document.getElementById('localWorkoutFollowup');if(follow)follow.onchange=()=>{setReminderPrefs({...getReminderPrefs(),workoutFollowup:follow.checked});render();};
+  const delay=document.getElementById('localWorkoutFollowupDelay');if(delay)delay.onchange=()=>{setReminderPrefs({...getReminderPrefs(),workoutFollowupDelay:Number(delay.value||120)});render();};
+  const details=document.getElementById('localNotificationDetail');if(details)details.onchange=()=>{setReminderPrefs({...getReminderPrefs(),notificationDetail:details.checked?'detailed':'discreet'});render();};
+  const test=document.getElementById('testLocalNotification');if(test)test.onclick=async()=>{const ok=await manager?.testNotification?.();if(!ok)alert('Notification de test impossible sur cet appareil.');};
+};

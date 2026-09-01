@@ -22,7 +22,7 @@ const tests=`
   const failures=[];let checks=0;const ok=(cond,msg)=>{checks++;if(!cond)failures.push(msg);};
   localStorage.clear();
   let p=getReminderPrefs();
-  ok(p.version===2,'reminder prefs schema is not v2');
+  ok(p.version===3,'reminder prefs schema is not v3 after local notification upgrade');
   ok(p.enabled&&p.workout&&p.activities&&p.measurements&&p.tests&&p.mobility&&p.recovery,'default categories are not enabled');
   ok(p.visibility==='due-only'&&p.upcomingDays===3,'default reminder visibility is wrong');
   ok(p.preferredMoment==='morning'&&p.preferredTime==='08:00','default reminder moment is wrong');
