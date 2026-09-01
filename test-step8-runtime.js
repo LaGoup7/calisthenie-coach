@@ -18,7 +18,7 @@ const tests=`
  const now=new Date(),key=localDateKey(now),tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,12),tomorrowKey=localDateKey(tomorrow);
  setBodyLogs([]);setPlannedEvents([]);setActivities([]);setFlexLogs([]);setMobilityTests([]);setTests([]);
  setReminderPrefs({...getReminderPrefs(),enabled:true,workout:false,activities:false,measurements:true,tests:false,mobility:false,recovery:false,visibility:'due-only'});
- ok(window.KinetikDailyTasks.version==='1.5.0','Daily Tasks engine is not v1.5.0');
+ ok(window.KinetikDailyTasks.version==='1.6.0','Daily Tasks engine is not v1.6.0');
  ok(typeof window.KinetikDailyTasks.setTaskDecision==='function','setTaskDecision API missing');
  ok(typeof window.KinetikDailyTasks.clearTaskDecision==='function','clearTaskDecision API missing');
  ok(typeof window.KinetikDailyTasks.getTaskDecisions==='function','getTaskDecisions API missing');

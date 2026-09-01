@@ -10670,3 +10670,114 @@ function renderDailyTaskDecisionHistory(){
 }
 const _renderReminderSettingsV10122=renderReminderSettings;
 renderReminderSettings=function(){const html=_renderReminderSettingsV10122();const history=renderDailyTaskDecisionHistory();return history?html.replace('</section>',history+'</section>'):html;};
+
+/* ========================================================================== */
+/* KINETIK v10.123 · Step 9 · Individual assessment freshness                 */
+/* Each performance protocol owns its cadence and due date. Completing one    */
+/* protocol never refreshes the others.                                        */
+/* ========================================================================== */
+const V10123_PROTOCOL_FRESHNESS_DAYS = Object.freeze({
+  pullups:42,
+  dips:42,
+  dead_hang:42,
+  towel_hang:56,
+  one_arm_assisted_hang:56,
+  chest_to_bar:42,
+  muscle_up:56,
+  handstand_free:42,
+  l_sit:42,
+  front_lever:56,
+  human_flag:56,
+  hspu_free:56,
+  toes_to_bar:42,
+  cooper12:56,
+  run5k:56
+});
+function protocolFreshnessDays(protocol){
+  return Math.max(14,Math.min(180,Number(V10123_PROTOCOL_FRESHNESS_DAYS[protocol?.id]||42)));
+}
+function v10123LegacyProtocolReferences(protocol){
+  if(!protocol||protocol.kind!=='test'||!protocol.testId)return [];
+  return getTests().filter(row=>row.testId===protocol.testId&&(row.source==null||row.source===''||row.source==='kinetik')).map(row=>({
+    id:row.id,date:row.date,protocolId:protocol.id,evidenceLevel:3,source:row.source||'legacy-periodic',legacy:true
+  }));
+}
+protocolLastValidated=function(protocol){
+  if(!protocol)return null;
+  const assessmentRows=getAssessments().filter(row=>row.protocolId===protocol.id&&Number(row.evidenceLevel)>=3);
+  const rows=[...assessmentRows,...v10123LegacyProtocolReferences(protocol)].filter(row=>row?.date&&!Number.isNaN(new Date(row.date).getTime())).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  return rows[0]||null;
+};
+function protocolFreshness(protocol,now=new Date()){
+  const currentNow=now instanceof Date?now:new Date(now||Date.now()),freshnessDays=protocolFreshnessDays(protocol),last=protocolLastValidated(protocol);
+  if(!last){
+    return {state:'never',due:true,validatedToday:false,freshnessDays,lastDate:null,dueDate:null,daysUntil:0,overdueDays:0};
+  }
+  const lastMs=new Date(last.date).getTime(),dueMs=lastMs+freshnessDays*86400000,diff=(dueMs-currentNow.getTime())/86400000;
+  const daysUntil=Math.max(0,Math.ceil(diff)),overdueDays=diff<=0?Math.max(0,Math.floor(-diff)+1):0;
+  const key=value=>{try{return typeof localDateKey==='function'?localDateKey(value):new Date(value).toISOString().slice(0,10);}catch(_){return'';}};
+  const validatedToday=key(last.date)===key(currentNow);
+  return {
+    state:validatedToday?'fresh':diff<=0?'due':'fresh',
+    due:!validatedToday&&diff<=0,
+    validatedToday,
+    freshnessDays,
+    lastDate:last.date,
+    dueDate:new Date(dueMs).toISOString(),
+    daysUntil:validatedToday?freshnessDays:daysUntil,
+    overdueDays:validatedToday?0:overdueDays,
+    source:last.source||null,
+    legacy:!!last.legacy
+  };
+}
+function v10123ProtocolReminderPriority(protocol,freshness){
+  const goal=Math.max(0,Number(typeof protocolGoalWeight==='function'?protocolGoalWeight(protocol):0))*2;
+  const evidence=Math.max(0,Number(typeof protocolEvidence==='function'?protocolEvidence(protocol):0));
+  const evidenceNeed=evidence<2?3:evidence<3?1:0;
+  const never=freshness?.state==='never'?4:0;
+  const overdue=Math.min(5,Math.ceil(Number(freshness?.overdueDays||0)/14));
+  return Math.min(15,goal+evidenceNeed+never+overdue);
+}
+function assessmentProtocolStatuses(now=new Date()){
+  return ASSESSMENT_PROTOCOLS.map(protocol=>{
+    const freshness=protocolFreshness(protocol,now),current=protocolCurrent(protocol);
+    return {...protocol,current,evidence:protocolEvidence(protocol),freshness,reminderPriority:v10123ProtocolReminderPriority(protocol,freshness)};
+  });
+}
+protocolDue=function(protocol){return protocolFreshness(protocol,new Date()).due;};
+testDueSummary=function(now=new Date()){
+  const rows=assessmentProtocolStatuses(now),due=rows.filter(row=>row.freshness.due).sort((a,b)=>b.reminderPriority-a.reminderPriority||b.freshness.overdueDays-a.freshness.overdueDays),fresh=rows.filter(row=>!row.freshness.due).sort((a,b)=>a.freshness.daysUntil-b.freshness.daysUntil);
+  if(due.length){
+    const next=due[0];
+    return {overdue:true,label:`${next.name} à ${next.freshness.state==='never'?'confirmer':'re-tester'}`,dueCount:due.length,protocolId:next.id,days:0};
+  }
+  const next=fresh[0];
+  if(!next)return{overdue:false,label:'Batterie à jour',dueCount:0,protocolId:null,days:null};
+  return {overdue:false,label:`prochain re-test dans ${next.freshness.daysUntil} j`,dueCount:0,protocolId:next.id,days:next.freshness.daysUntil};
+};
+
+/* The full assessment library now exposes each protocol's own freshness. */
+renderAssessmentProtocolRow=function(protocol){
+  const current=protocolCurrent(protocol),verified=typeof v1089VerifiedBenchmark==='function'?v1089VerifiedBenchmark(protocol):null,freshness=protocolFreshness(protocol,new Date());
+  const status=freshness.validatedToday
+    ? 'Validé aujourd’hui'
+    : freshness.state==='never'
+      ? `À confirmer · cadence ${freshness.freshnessDays} j`
+      : freshness.due
+        ? `À re-tester${freshness.overdueDays?` · +${freshness.overdueDays} j`:''}`
+        : `À jour · re-test dans ${freshness.daysUntil} j`;
+  const tone=freshness.validatedToday?'done':freshness.due||freshness.state==='never'?'due':'fresh';
+  return `<div class="assessment-protocol-row assessment94-protocol-row assessment123-protocol-row">
+    <div class="assessment-row-main">
+      <strong>${esc(protocol.name)}</strong>
+      <span>${current.value?`${current.value} ${protocol.unit}${verified?` · confirmé ${verified.value} ${protocol.unit}`:''}`:'Pas encore mesuré'}</span>
+      <small class="assessment123-freshness is-${tone}">${esc(status)}</small>
+    </div>
+    <button class="assessment-start" data-assessment-start="${protocol.id}">${current.value?'Retester':'Tester'} →</button>
+  </div>`;
+};
+
+/* Expose read-only helpers for the Daily Tasks module and diagnostics. */
+window.assessmentProtocolStatuses=assessmentProtocolStatuses;
+window.protocolFreshness=protocolFreshness;
+window.protocolFreshnessDays=protocolFreshnessDays;

@@ -86,9 +86,19 @@
    - Daily Tasks Engine v1.5.0
    - contrôle qualité automatisé : 30 vérifications (`test-step8-runtime.js`) + non-régression étapes 3–7
 
-9. **Échéances individuelles des tests**
-   - chaque protocole possède sa propre fraîcheur
-   - ne plus repousser tous les tests lorsqu'un seul est réalisé
+9. **Échéances individuelles des tests** — TERMINÉ / v10.123
+   - les 15 protocoles performance possèdent une fraîcheur indépendante (42 ou 56 jours selon le protocole)
+   - une validation KINETIK ne repousse que le protocole réellement effectué
+   - migration des anciens tests périodiques vers la fraîcheur du protocole correspondant
+   - une donnée seulement déclarée ne rafraîchit pas un protocole standardisé
+   - Daily Tasks propose au maximum un test performance actif par jour pour éviter une batterie de tests successifs
+   - priorité selon objectif, ancienneté et qualité de preuve
+   - tâches individualisées : id, titre, échéance, CTA et décisions Fait / Reporté / Ignoré propres au protocole
+   - un report garde la priorité à la date choisie sans créer de doublon avec un autre test dû
+   - si le protocole reporté est finalement validé avant la date cible, il ne revient pas comme tâche en attente
+   - le Centre d’évaluation affiche l’état de fraîcheur propre à chaque protocole
+   - Daily Tasks Engine v1.6.0
+   - contrôle qualité automatisé : 31 vérifications (`test-step9-runtime.js`) + non-régression étapes 3–8
 
 ## P1 — notifications locales intelligentes
 

@@ -1,5 +1,5 @@
 /* ========================================================================== */
-/* KINETIK v10.122 · Daily Tasks Engine                                       */
+/* KINETIK v10.123 · Daily Tasks Engine                                       */
 /* Central source of truth for "what should I do today?".                    */
 /*                                                                            */
 /* Steps P0.1 + P0.5 + P0.6                                                  */
@@ -14,7 +14,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '1.5.0';
+  const VERSION = '1.6.0';
   const DAY_MS = 86400000;
   const providers = [];
   const DECISION_STORAGE_KEY = 'cc_daily_task_decisions_v1';
@@ -382,25 +382,72 @@
     id: 'tests',
     order: 40,
     getTasks(ctx) {
-      if (typeof testDueSummary !== 'function') return [];
-      const due = safeCall(() => testDueSummary(), null);
-      if (!due) return [];
-      const testsToday = safeCall(() => (typeof getTests === 'function' ? getTests() : []), []).filter((row) => dateKey(row.date) === ctx.dateKey);
-      const coreIds = safeCall(() => (typeof TEST_DEFS !== 'undefined' ? TEST_DEFS.map((x) => x.id).filter((id) => id !== 'cardio12') : []), []);
-      const completedToday = coreIds.length > 0 && coreIds.every((id) => testsToday.some((row) => row.testId === id));
-      const recommended = safeCall(() => typeof assessmentRecommended === 'function' ? assessmentRecommended()[0] : null, null);
+      if (typeof assessmentProtocolStatuses !== 'function') return [];
+      const protocols = safeCall(() => assessmentProtocolStatuses(ctx.now), []);
+      if (!protocols.length) return [];
+
+      const validatedToday = protocols.filter((row) => row.freshness?.validatedToday);
+      if (validatedToday.length) {
+        return validatedToday.map((row) => ({
+          id: `test:${row.id}:${ctx.dateKey}`,
+          kind: KIND.test,
+          category: 'assessment',
+          title: `${row.name} · fait`,
+          detail: `Test KINETIK validé aujourd’hui · prochaine réévaluation dans ${row.freshness.freshnessDays} j.`,
+          status: 'done',
+          priority: PRIORITY.high,
+          dueKey: ctx.dateKey,
+          source: 'assessment-protocol',
+          action: { type: 'view', view: 'assessment', label: 'Voir' },
+          metadata: {
+            protocolId: row.id,
+            recommendedProtocolId: row.id,
+            freshnessDays: row.freshness.freshnessDays,
+            lastValidated: row.freshness.lastDate || null,
+            dueDate: row.freshness.dueDate || null,
+            daysUntil: row.freshness.daysUntil,
+            validatedToday: true,
+          },
+        }));
+      }
+
+      const due = protocols.filter((row) => row.freshness?.due).sort((a, b) => b.reminderPriority - a.reminderPriority || a.name.localeCompare(b.name, 'fr'));
+      const upcoming = protocols.filter((row) => !row.freshness?.due && Number(row.freshness?.daysUntil) >= 0).sort((a, b) => Number(a.freshness.daysUntil) - Number(b.freshness.daysUntil) || b.reminderPriority - a.reminderPriority);
+      const selected = due[0] || (ctx.includeUpcoming ? upcoming[0] : null);
+      if (!selected) return [];
+
+      const f = selected.freshness || {};
+      const never = f.state === 'never';
+      const isDue = !!f.due;
+      const detail = isDue
+        ? (never
+          ? `Première validation · ≈ ${selected.duration || '—'} min · échéance indépendante.`
+          : `À re-tester${f.overdueDays > 0 ? ` · ${f.overdueDays} j de retard` : ''} · cadence ${f.freshnessDays} j.`)
+        : `À jour · prochain re-test dans ${f.daysUntil} j · cadence ${f.freshnessDays} j.`;
+
       return [{
-        id: `tests:periodic:${ctx.dateKey}`,
+        id: `test:${selected.id}:${ctx.dateKey}`,
         kind: KIND.test,
         category: 'assessment',
-        title: completedToday ? 'Bilan performance · fait' : (due.overdue ? 'Tests périodiques' : 'Prochain bilan performance'),
-        detail: completedToday ? `${coreIds.length} repères enregistrés aujourd’hui.` : (due.label || ''),
-        status: completedToday ? 'done' : (due.overdue ? 'pending' : 'upcoming'),
-        priority: due.overdue ? PRIORITY.high : PRIORITY.info,
+        title: never ? `Évaluer · ${selected.name}` : `Re-tester · ${selected.name}`,
+        detail,
+        status: isDue ? 'pending' : 'upcoming',
+        priority: isDue ? Math.min(95, PRIORITY.high + Math.max(0, Number(selected.reminderPriority || 0))) : PRIORITY.info,
         dueKey: ctx.dateKey,
-        source: 'performance-tests',
-        action: completedToday ? { type: 'view', view: 'assessment', label: 'Voir' } : { type: 'assessment-start', view: 'assessment', label: 'Faire le test', payload: { protocolId: recommended?.id || null } },
-        metadata: { completedToday, recommendedProtocolId: recommended?.id || null, overdue: !!due.overdue, daysUntil: due.overdue ? 0 : Number((String(due.label || '').match(/\d+/) || [999])[0]) },
+        source: 'assessment-protocol',
+        action: { type: 'assessment-start', view: 'assessment', label: never ? 'Faire le test' : 'Re-tester', payload: { protocolId: selected.id } },
+        metadata: {
+          protocolId: selected.id,
+          recommendedProtocolId: selected.id,
+          freshnessDays: f.freshnessDays,
+          lastValidated: f.lastDate || null,
+          dueDate: f.dueDate || null,
+          overdue: isDue,
+          overdueDays: Number(f.overdueDays || 0),
+          daysUntil: Number(f.daysUntil ?? 999),
+          freshnessState: f.state || null,
+          dueProtocolCount: due.length,
+        },
       }];
     },
   });
@@ -692,8 +739,16 @@
       return mobilityLogs().some((row) => dateKey(row.date) === key && (!testId || row.testId === testId));
     }
     if (snapshot.kind === KIND.test || action.type === 'assessment-start') {
-      const protocolId = payload.protocolId || meta.recommendedProtocolId || null;
-      return safeCall(() => (typeof getTests === 'function' ? getTests() : []), []).some((row) => dateKey(row.date) === key && (!protocolId || row.testId === protocolId || row.protocolId === protocolId));
+      const protocolId = payload.protocolId || meta.protocolId || meta.recommendedProtocolId || null;
+      const completedOnDate = safeCall(() => (typeof getTests === 'function' ? getTests() : []), []).some((row) => dateKey(row.date) === key && (!protocolId || row.testId === protocolId || row.protocolId === protocolId));
+      if (completedOnDate) return true;
+      if (protocolId && typeof assessmentProtocol === 'function' && typeof protocolFreshness === 'function') {
+        const protocol = safeCall(() => assessmentProtocol(protocolId), null);
+        const targetDate = new Date(`${key}T12:00:00`);
+        const freshness = protocol ? safeCall(() => protocolFreshness(protocol, targetDate), null) : null;
+        if (freshness && freshness.state !== 'never' && freshness.due === false) return true;
+      }
+      return false;
     }
     return false;
   }
@@ -771,6 +826,14 @@
     return 999;
   }
 
+  function limitAssessmentTasks(rows) {
+    const active = rows.filter((task) => task.kind === KIND.test && (task.status === 'pending' || task.status === 'upcoming'));
+    if (active.length <= 1) return rows;
+    const deferred = active.find((task) => task.metadata?.deferredFrom || task.source === 'daily-task-decision');
+    const keep = deferred || active.sort((a, b) => b.priority - a.priority || a.title.localeCompare(b.title, 'fr'))[0];
+    return rows.filter((task) => task.kind !== KIND.test || !['pending', 'upcoming'].includes(task.status) || task.id === keep.id);
+  }
+
   function getAgendaTasks(options) {
     const prefs = reminderPreferences();
     if (prefs.enabled === false) return [];
@@ -779,10 +842,11 @@
     const includeUpcoming = prefs.visibility === 'due-and-soon';
     const horizon = Math.max(1, Math.min(14, Number(prefs.upcomingDays || 3)));
     const base = getTodayTasks({ ...(options || {}), now, includeDone: true, includeUpcoming });
-    return applyTaskDecisions(base, { now, dateKey: dateKey(now) })
+    const decided = applyTaskDecisions(base, { now, dateKey: dateKey(now) })
       .filter((task) => includeDone || task.status !== 'done')
       .filter((task) => taskAllowedByReminderPreferences(task, prefs))
       .filter((task) => task.status !== 'upcoming' || (includeUpcoming && upcomingDistance(task) <= horizon));
+    return limitAssessmentTasks(decided);
   }
 
   function agendaSummary(tasks) {

@@ -3715,3 +3715,11 @@ body{
 @media(max-width:620px){.today-agenda-task-controls{grid-column:2;justify-content:flex-start}.today-agenda-task-menu-pop{left:0;right:auto}.today-agenda-action{grid-column:auto}.today-agenda-task-menu>summary{width:32px;height:32px}}
 @media(prefers-reduced-motion:reduce){.today-agenda-task-menu-pop{scroll-behavior:auto}}
 .daily-decision-history-list{display:grid;gap:4px}.daily-decision-history-list>div{display:grid;grid-template-columns:26px minmax(0,1fr);align-items:center;gap:7px;padding:7px 8px;border-radius:10px;background:var(--surface-2)}.daily-decision-history-list>div>span{font-weight:900;text-align:center;color:var(--muted)}.daily-decision-history-list>div>div{display:grid;gap:1px}.daily-decision-history-list strong{font-size:.6rem}.daily-decision-history-list small{font-size:.51rem;color:var(--muted)}
+
+/* KINETIK v10.123 · individual assessment freshness */
+.assessment123-protocol-row .assessment-row-main{gap:.18rem}
+.assessment123-freshness{display:block;width:max-content;max-width:100%;font-size:.72rem;font-weight:750;line-height:1.2;margin-top:.18rem;padding:.24rem .46rem;border-radius:999px;background:color-mix(in srgb,var(--surface-2,#1b1f26) 82%,transparent)}
+.assessment123-freshness.is-due{color:var(--warning,#d8a34a)}
+.assessment123-freshness.is-done{color:var(--success,#6abf86)}
+.assessment123-freshness.is-fresh{color:var(--muted,#8e98a8)}
+@media (max-width:640px){.assessment123-protocol-row{align-items:flex-start}.assessment123-protocol-row .assessment-start{white-space:nowrap}}

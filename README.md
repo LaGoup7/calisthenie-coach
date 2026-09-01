@@ -254,3 +254,18 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Correction de chargement : `daily-tasks.js` déclenche un rafraîchissement après son initialisation afin que le premier rendu d’Aujourd’hui dispose immédiatement du moteur.
 - Cache PWA : `kinetik-v10-122-task-decisions`.
 - Tests : `test-step8-runtime.js` (30 contrôles), plus non-régression étapes 3 (17), 4 (26), 5 (22), 6 (25) et 7 (19).
+
+
+## V10.123 · Étape 9 — Échéances individuelles des tests
+- Le Daily Tasks Engine passe en **v1.6.0** et supprime la tâche globale `tests:periodic`.
+- Les **15 protocoles** du Centre d’évaluation ont maintenant leur propre fraîcheur : 42 jours pour les repères fréquents (tractions, dips, dead hang, chest-to-bar, handstand, L-sit, toes-to-bar) et 56 jours pour les tests plus coûteux / avancés (towel hang, one-arm hang, muscle-up, front lever, human flag, HSPU, Cooper 12 min, 5 km).
+- Valider un protocole ne modifie plus l’échéance des autres. Exemple : tester les tractions ne repousse ni les dips ni le dead hang.
+- Les anciens `getTests()` issus du module historique Tests périodiques sont repris comme références de fraîcheur pour les protocoles correspondants ; une donnée seulement déclarée ne suffit pas à rafraîchir un Test KINETIK.
+- La page Aujourd’hui ne propose **qu’un seul test performance actif par jour**, même si plusieurs protocoles sont dus. Le choix donne la priorité à l’objectif utilisateur, aux données les plus anciennes et aux preuves les moins solides.
+- Les tâches sont désormais protocolaires (`test:dips:YYYY-MM-DD`, etc.) avec CTA direct vers le bon protocole et décisions Fait / Reporté / Ignoré indépendantes.
+- Un test reporté reste prioritaire à la date cible ; il est fusionné avec la tâche naturelle équivalente et empêche l’apparition simultanée d’un deuxième test maximal.
+- Si un protocole reporté est validé avant sa date cible, l’occurrence reportée est automatiquement considérée comme satisfaite et ne revient pas en attente.
+- Le Centre d’évaluation affiche maintenant pour chaque protocole : **À confirmer**, **À re-tester**, **Validé aujourd’hui** ou **À jour · re-test dans X j**.
+- `testDueSummary()` reste disponible pour les anciennes surfaces mais agrège désormais les échéances individuelles au lieu d’utiliser la date du dernier test global.
+- Cache PWA : `kinetik-v10-123-individual-assessments`.
+- Tests : `test-step9-runtime.js` (31 contrôles), plus non-régression étapes 3 (17), 4 (26), 5 (22), 6 (25), 7 (19) et 8 (30).
