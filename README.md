@@ -362,3 +362,13 @@ La route Strava de diagnostic a été fusionnée dans `/api/strava/status?diagno
 - Limite volontaire v1 : il n’existe pas encore d’email/passkey de récupération. Si tous les appareils membres sont perdus, le compte ne peut pas être récupéré automatiquement.
 - Cache PWA : `kinetik-v10-130-multidevice-account` avec `account-manager.js?v=10.130` disponible offline.
 - Tests : `test-step15-runtime.js` (**43 contrôles**) + toutes les suites historiques étapes 3–14.
+
+
+## V10.131 · Lot A — intégrité fonctionnelle & données
+
+- ancien éditeur de tests retiré des surfaces actives ; les validations standardisées passent par le Centre d’évaluation ;
+- export/import renforcé : trois positions photo sauvegardées et restauration réellement remplaçante ;
+- Zones à ménager et Apparence restaurées dans Réglages ;
+- ancien moteur Priorités de skills migré vers les objectifs du profil puis neutralisé ;
+- Déconnecter Strava restauré dans le profil ;
+- libellés de tour de taille désambiguïsés.

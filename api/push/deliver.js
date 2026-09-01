@@ -1,3 +1,4 @@
+const { isPushMuted }=require('../../lib/account-core');
 const crypto=require('crypto');
 const { json,readJson,safeId,dateKeyInTimezone,getDevice,putDevice,deleteDevice,claimDelivery,releaseDelivery,deleteSchedule,cancelMessage,deterministicScheduleId,withHealth,deliveryErrorCode,applyDeliveryFailure,clearDeliveryFailure,isBackoffActive,createReceiptToken }=require('../../lib/push-core');
 const { send }=require('../../lib/web-push-sender');
@@ -11,6 +12,7 @@ module.exports=async function handler(req,res){
     const body=await readJson(req),installationId=safeId(body.installationId);reason=['primary','workout-followup','snooze'].includes(body.reason)?body.reason:null;
     if(!installationId||!reason)return json(res,400,{ok:false,error:'invalid_delivery'});
     id=installationId;device=await getDevice(id);if(!device){await Promise.allSettled([deleteSchedule(deterministicScheduleId(id,'primary')),deleteSchedule(deterministicScheduleId(id,'followup'))]);return json(res,200,{ok:true,skipped:'device_missing',schedulesCleaned:true});}
+    if(await isPushMuted(id)){return json(res,200,{ok:true,skipped:'account_muted'});}
     if(isBackoffActive(device)){return json(res,200,{ok:true,skipped:'backoff_active',retryAt:device.health?.backoffUntil||null});}
     dateKey=(reason==='snooze'&&/^\d{4}-\d{2}-\d{2}$/.test(String(body.date||'')))?String(body.date):dateKeyInTimezone(new Date(),device.timezone);
     const sourceReason=reason==='snooze'?'primary':reason,item=device.manifest?.days?.[dateKey]?.[sourceReason];

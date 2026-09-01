@@ -1,5 +1,7 @@
+const { handleAccountRequest }=require('../../lib/account-core');
 const { json,readJson,safeId,safeSecret,getDevice,authDevice,healthSnapshot,hash }=require('../../lib/push-core');
 module.exports=async function handler(req,res){
+  if(String(req.query?.scope||'')==='account')return handleAccountRequest(req,res);
   if(req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   try{
     const body=await readJson(req),id=safeId(body.installationId),secret=safeSecret(body.deviceSecret);if(!id||!secret)return json(res,400,{ok:false,error:'invalid_device'});

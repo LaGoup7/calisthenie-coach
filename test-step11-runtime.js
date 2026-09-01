@@ -94,10 +94,10 @@ vm.runInContext(appSource+'\n'+dailySource+'\n'+localSource+'\n'+pushSource,sand
 
   const sw=fs.readFileSync(__dirname+'/sw.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8'),appText=loadAppSource(__dirname),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
   ok(sw.includes("addEventListener('push'")&&sw.includes('registration.showNotification'),'service worker push event is missing');
-  ok(sw.includes('web-push-manager.js?v=10.130')&&html.includes('web-push-manager.js?v=10.130'),'Web Push manager is not in PWA asset chain');
+  ok(sw.includes('web-push-manager.js?v=10.131')&&html.includes('web-push-manager.js?v=10.131'),'Web Push manager is not in PWA asset chain');
   ok(pkg.dependencies&&pkg.dependencies['web-push'],'server web-push dependency missing');
   ok(appText.includes('webPushDeviceState: "cc_web_push_device_v1"'),'device Web Push state not registered for reset');
-  ok(appText.includes("['localNotificationState','webPushDeviceState'].includes(name)"),'device push state would leak into user backup');
+  ok(appText.includes('function backupStorageEntries()')&&appText.includes("'localNotificationState','webPushDeviceState','skillPriorities'"),'device push state would leak into user backup');
   ok(appText.includes('await window.KinetikWebPush?.disable?.({unsubscribeBrowser:true,render:false})'),'backup import does not unregister previous server device');
   ok(fs.existsSync(__dirname+'/api/push/sync.js')&&fs.existsSync(__dirname+'/api/push/deliver.js'),'Web Push server endpoints missing');
 

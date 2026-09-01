@@ -1,4 +1,4 @@
-/* KINETIK v10.130 · Account & multi-device manager (local-first identity only). */
+/* KINETIK v10.131 · Account & multi-device manager (local-first identity only). */
 (function(global){
   'use strict';
   const VERSION='1.0.0';
@@ -15,7 +15,7 @@
   function defaultLabel(){const p=detectPlatform();return p==='ios'?'Mon iPhone / iPad':p==='android'?'Mon Android':p==='windows'?'Mon PC Windows':p==='macos'?'Mon Mac':p==='linux'?'Mon appareil Linux':'Cet appareil';}
   function label(){return String(parseState().label||defaultLabel()).trim().replace(/\s+/g,' ').slice(0,48)||defaultLabel();}
   function pushIdentity(){try{const p=JSON.parse(global.localStorage?.getItem('cc_web_push_device_v1')||'{}');return{installationId:p.installationId||null,deviceSecret:p.deviceSecret||null};}catch(_){return{installationId:null,deviceSecret:null};}}
-  function deviceMeta(){return{label:label(),platform:detectPlatform(),standalone:standalone(),appVersion:'10.130'};}
+  function deviceMeta(){return{label:label(),platform:detectPlatform(),standalone:standalone(),appVersion:'10.131'};}
   async function api(body){const r=await global.fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),data=await r.json().catch(()=>({}));if(!r.ok||data.ok===false)throw Object.assign(new Error(data.error||`HTTP ${r.status}`),{status:r.status,data});return data;}
   function basePayload(action){const s=parseState(),id=ensureIdentity(),push=pushIdentity();return{action,...id,accountId:s.accountId||null,device:deviceMeta(),pushInstallationId:push.installationId,pushDeviceSecret:push.deviceSecret};}
   function normalizeCode(value){const c=String(value||'').toUpperCase().replace(/[^A-Z2-9]/g,'').slice(0,8);return c.length>4?`${c.slice(0,4)}-${c.slice(4)}`:c;}

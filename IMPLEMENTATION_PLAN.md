@@ -207,3 +207,25 @@
 ## V10.130 · Étape 15 — Compte KINETIK & multi-appareils
 
 Le compte KINETIK regroupe uniquement les installations et leurs préférences de notifications. Il ne synchronise aucune donnée sportive. L’association d’un nouvel appareil utilise un code à usage unique valable 10 minutes. La couche serveur réutilise Upstash Redis et la fonction `/api/push/status` via rewrite afin de respecter la limite de 12 fonctions Vercel Hobby.
+
+
+## V10.131 · Lot A — intégrité fonctionnelle & données
+
+- ancien éditeur de tests retiré des surfaces actives ; les validations standardisées passent par le Centre d’évaluation ;
+- export/import renforcé : trois positions photo sauvegardées et restauration réellement remplaçante ;
+- Zones à ménager et Apparence restaurées dans Réglages ;
+- ancien moteur Priorités de skills migré vers les objectifs du profil puis neutralisé ;
+- Déconnecter Strava restauré dans le profil ;
+- libellés de tour de taille désambiguïsés.
+
+## Stabilisation pré-cloud — LOT A · TERMINÉ / v10.131
+
+- intégrité des tests standardisés ;
+- sauvegarde 3 photos + import replacement ;
+- retour Zones à ménager et Apparence ;
+- migration puis neutralisation des Priorités de skills historiques ;
+- retour Déconnecter Strava ;
+- désambiguïsation Tour de taille ;
+- 457 contrôles fonctionnels cumulés.
+
+Étape suivante recommandée : **LOT B — simplification UX**, puis LOT C — consolidation architecture pré-cloud.

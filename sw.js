@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-130-multidevice-account';
-const ASSETS = ['./','./index.html','./styles.css?v=10.130','./app.js?v=10.130','./app-adaptive.js?v=10.130','./app-planning.js?v=10.130','./app-progress.js?v=10.130','./app-body.js?v=10.130','./app-journey.js?v=10.130','./daily-tasks.js?v=10.130','./local-reminders.js?v=10.130','./web-push-manager.js?v=10.130','./account-manager.js?v=10.130','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-131-integrity-lot-a';
+const ASSETS = ['./','./index.html','./styles.css?v=10.131','./app.js?v=10.131','./app-adaptive.js?v=10.131','./app-planning.js?v=10.131','./app-progress.js?v=10.131','./app-body.js?v=10.131','./app-journey.js?v=10.131','./daily-tasks.js?v=10.131','./local-reminders.js?v=10.131','./web-push-manager.js?v=10.131','./account-manager.js?v=10.131','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {

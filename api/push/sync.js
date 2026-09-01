@@ -1,3 +1,4 @@
+const { isPushRevoked }=require('../../lib/account-core');
 const {
   envReady,json,readJson,safeId,safeSecret,hash,validateTimezone,normalizeTime,followupTime,cronAt,
   deterministicScheduleId,validateSubscription,sanitizeManifest,canonicalOrigin,getDevice,putDevice,
@@ -10,6 +11,7 @@ module.exports = async function handler(req,res){
   try{
     const body=await readJson(req),installationId=safeId(body.installationId),secret=safeSecret(body.deviceSecret),subscription=validateSubscription(body.subscription);
     if(!installationId||!secret||!subscription) return json(res,400,{ok:false,error:'invalid_device_or_subscription'});
+    if(await isPushRevoked(installationId)) return json(res,403,{ok:false,error:'account_device_revoked'});
     const existing=await getDevice(installationId);
     if(existing&&!authDevice(existing,secret)) return json(res,403,{ok:false,error:'device_auth_failed'});
     if(!existing&&!(await allowNewDevice(req))) return json(res,429,{ok:false,error:'registration_rate_limited'});

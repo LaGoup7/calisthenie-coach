@@ -42,3 +42,13 @@ Les couches historiques contiennent encore plusieurs wrappers intentionnels (`re
 `account-manager.js` reste séparé de `web-push-manager.js`. Le compte possède une identité appareil propre et ne dépend pas de l’activation des notifications. Lorsqu’un Web Push existe, son installation est seulement **liée** au membre après authentification de son secret Push.
 
 Côté serveur, `lib/account-core.js` partage Redis avec P2 mais ne lit ni n’écrit aucune donnée sportive. `/api/account` est un rewrite Vercel vers la fonction physique `api/push/status.js` avec `scope=account`, ce qui évite une 13e fonction serverless.
+
+
+## V10.131 · Lot A — intégrité fonctionnelle & données
+
+- ancien éditeur de tests retiré des surfaces actives ; les validations standardisées passent par le Centre d’évaluation ;
+- export/import renforcé : trois positions photo sauvegardées et restauration réellement remplaçante ;
+- Zones à ménager et Apparence restaurées dans Réglages ;
+- ancien moteur Priorités de skills migré vers les objectifs du profil puis neutralisé ;
+- Déconnecter Strava restauré dans le profil ;
+- libellés de tour de taille désambiguïsés.

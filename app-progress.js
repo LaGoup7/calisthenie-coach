@@ -1,4 +1,4 @@
-/* KINETIK v10.130 · Mobility, progression UX and product-coaching layers. */
+/* KINETIK v10.131 · Mobility, progression UX and product-coaching layers. */
 /* V10.79 · Mobility Visual Clarity                                           */
 /* Today → Profile → Assessment → Progression → Details                        */
 /* ========================================================================== */
@@ -164,15 +164,16 @@ renderProgressOverview=function(){
 };
 
 function v1080TestsBlock(){
-  const tests=getTests(),due=testDueSummary(),coverage=assessmentCoverage();
+  const due=testDueSummary(),coverage=assessmentCoverage();
   return `<details class="p80-tests">
-    <summary><div><div class="kicker">Évaluations</div><strong>${coverage.tested}/${coverage.total} repères renseignés</strong><span>${due.label} · les tests restent secondaires tant qu’ils ne sont pas nécessaires.</span></div><b>Voir les tests →</b></summary>
+    <summary><div><div class="kicker">Évaluations</div><strong>${coverage.tested}/${coverage.total} repères renseignés</strong><span>${due.label} · les validations standardisées passent par le Centre d’évaluation KINETIK.</span></div><b>Voir →</b></summary>
     <div class="p80-tests-body">
-      <div class="test-grid">${TEST_DEFS.map(t=>{const best=bestTestValue(t.id),last=tests.filter(x=>x.testId===t.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];return `<button class="test-tile edit-test" data-test="${t.id}"><span>${t.name}</span><strong>${best?best+' '+t.unit:'—'}</strong><small>${last?'Dernier '+formatShortDate(last.date):'À mesurer'}</small></button>`}).join('')}</div>
-      <button class="btn btn-outline compact" data-view="assessment">Centre d’évaluation KINETIK →</button>
+      <p class="p88-muted">Une performance enregistrée en séance ou en Quick Log reste une référence utile, mais seule une validation guidée KINETIK rafraîchit l’échéance d’un protocole standardisé.</p>
+      <button class="btn btn-primary compact" data-view="assessment">Ouvrir le Centre d’évaluation →</button>
     </div>
   </details>`;
 }
+
 function v1080PerformanceRecords(){
   const records=currentRecords().slice(0,12);
   return `<section class="p80-performance-records">
@@ -857,7 +858,7 @@ function v1088BodySummary(){
   const logs=getBodyLogs(),latest=logs[0],derived=latest?bodyDerived(latest):{};
   if(!latest)return `<button class="p88-data-row" data-view="measurements"><div><span>Données corporelles</span><strong>Aucun relevé</strong><small>Poids, mensurations et photos</small></div><b>Commencer →</b></button>`;
   const weight=bodyValue(latest,'weight'),waist=bodyValue(latest,'waist');
-  return `<button class="p88-data-row" data-view="measurements"><div><span>Données corporelles</span><strong>${weight?`${Number(weight).toFixed(1)} kg`:'Poids —'}${waist?` · taille ${Number(waist).toFixed(1)} cm`:''}</strong><small>Dernier relevé · ${formatDate(latest.date)}${derived.bf!=null?` · MG estimée ${derived.bf.toFixed(1)}%`:''}</small></div><b>Voir →</b></button>`;
+  return `<button class="p88-data-row" data-view="measurements"><div><span>Données corporelles</span><strong>${weight?`${Number(weight).toFixed(1)} kg`:'Poids —'}${waist?` · tour de taille ${Number(waist).toFixed(1)} cm`:''}</strong><small>Dernier relevé · ${formatDate(latest.date)}${derived.bf!=null?` · MG estimée ${derived.bf.toFixed(1)}%`:''}</small></div><b>Voir →</b></button>`;
 }
 function v1088ConnectionSection(){
   const st=state.stravaStatus,meta=getStravaMeta();
@@ -868,7 +869,7 @@ function v1088ConnectionSection(){
   </section>`;
   const athlete=st.athlete?`${st.athlete.firstname||''} ${st.athlete.lastname||''}`.trim():'';
   return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Connexions</div><h2>Services externes</h2></div></div>
-    <div class="p88-connection connected"><div><strong>Strava</strong><span>${athlete?esc(athlete)+' · ':''}${meta.lastSync?`synchro ${formatDate(meta.lastSync)}`:'connecté'}</span></div><button id="syncStrava">Synchroniser →</button></div>
+    <div class="p88-connection connected"><div><strong>Strava</strong><span>${athlete?esc(athlete)+' · ':''}${meta.lastSync?`synchro ${formatDate(meta.lastSync)}`:'connecté'}</span></div><div class="p88-connection-actions"><button id="syncStrava">Synchroniser →</button><button type="button" class="btn btn-ghost compact" id="disconnectStrava">Déconnecter</button></div></div>
     <div class="p88-connection disabled"><div><strong>Apple Santé</strong><span>Non disponible directement dans la PWA web</span></div><b>Plus tard</b></div>
   </section>`;
 }
@@ -935,6 +936,8 @@ renderProfile=function(){
       <div class="switchline"><div><strong>Progression intelligente</strong><div class="small muted">Analyse tes dernières séances et propose des ajustements. Les changements contextuels restent à valider.</div></div><input id="smartPref" type="checkbox" ${p.smartProgression!==false?'checked':''}></div>
     </section>
 
+    ${renderRestrictionSettings()}
+
     <section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Séance</div><h2>Timers & écran</h2></div></div>
       <div class="switchline"><div><strong>Son du timer</strong><div class="small muted">Signal à la fin d’un chrono.</div></div><input id="soundPref" type="checkbox" ${p.sound?'checked':''}></div>
       <div class="switchline"><div><strong>Garder l’écran actif</strong><div class="small muted">Évite la mise en veille pendant la séance quand le navigateur le permet.</div></div><input id="keepAwakePref" type="checkbox" ${p.keepAwake!==false?'checked':''}></div>
@@ -948,6 +951,8 @@ renderProfile=function(){
       <button class="p88-settings-action" id="manageTutorials"><div><strong>Tutoriels</strong><span>${tutorialStats().exact}/${tutorialStats().total} contenus validés</span></div><b>Gérer →</b></button>
       ${Object.entries(getExerciseChoices()).length?`<details class="p88-settings-details"><summary><div><strong>Variantes adoptées</strong><span>${Object.entries(getExerciseChoices()).length} choix actifs</span></div><b>↓</b></summary><div>${Object.entries(getExerciseChoices()).map(([base,chosen])=>`<div class="choice-row"><span>${esc(base)} → <strong>${esc(chosen)}</strong></span><button class="btn btn-outline compact reset-choice" data-base="${encodeURIComponent(base)}">Réinitialiser</button></div>`).join('')}</div></details>`:''}
     </section>
+
+    ${renderAppearanceSettings()}
 
     <section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Application</div><h2>Installation</h2></div></div>
       <p class="p88-muted">Android/Chrome : installation directe si disponible. iPhone/Safari : Partager → Ajouter à l’écran d’accueil.</p>

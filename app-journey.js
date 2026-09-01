@@ -1,4 +1,4 @@
-/* KINETIK v10.130 · Daily journey, reminders, actions and Web Push settings UI. */
+/* KINETIK v10.131 · Daily journey, reminders, actions and Web Push settings UI. */
 /* KINETIK v10.120 · Step 6 · Today Agenda                                   */
 /* One compact surface for the Daily Tasks Engine.                            */
 /* Completed tasks leave the active list and feed the daily progress.         */
