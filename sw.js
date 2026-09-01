@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-121-direct-actions';
-const ASSETS = ['./','./index.html','./styles.css?v=10.121','./app.js?v=10.121','./daily-tasks.js?v=10.121','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-122-task-decisions';
+const ASSETS = ['./','./index.html','./styles.css?v=10.122','./app.js?v=10.122','./daily-tasks.js?v=10.122','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {

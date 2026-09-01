@@ -1,5 +1,5 @@
 /* ========================================================================== */
-/* KINETIK v10.121 · Daily Tasks Engine                                       */
+/* KINETIK v10.122 · Daily Tasks Engine                                       */
 /* Central source of truth for "what should I do today?".                    */
 /*                                                                            */
 /* Steps P0.1 + P0.5 + P0.6                                                  */
@@ -9,14 +9,16 @@
 /* - Completion inferred from existing KINETIK data                           */
 /* - Legacy reminder adapter                                                  */
 /*                                                                            */
-/* Today UI consumes this API; Step 7 adds executable direct actions.          */
+/* Today UI consumes this API; Step 8 adds explicit user decisions.           */
 /* ========================================================================== */
 (function (global) {
   'use strict';
 
-  const VERSION = '1.4.0';
+  const VERSION = '1.5.0';
   const DAY_MS = 86400000;
   const providers = [];
+  const DECISION_STORAGE_KEY = 'cc_daily_task_decisions_v1';
+  const DECISION_RETENTION_DAYS = 180;
 
   const PRIORITY = Object.freeze({
     critical: 100,
@@ -71,9 +73,91 @@
     };
   }
 
+
+  function addDaysKey(key, days) {
+    const parts = String(key || dateKey()).split('-').map(Number);
+    const d = new Date(parts[0], Math.max(0, (parts[1] || 1) - 1), parts[2] || 1, 12, 0, 0);
+    d.setDate(d.getDate() + Number(days || 0));
+    return dateKey(d);
+  }
+
+  function decisionStorage() {
+    try {
+      const parsed = JSON.parse(global.localStorage?.getItem(DECISION_STORAGE_KEY) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { return []; }
+  }
+
+  function writeDecisionStorage(rows) {
+    try { global.localStorage?.setItem(DECISION_STORAGE_KEY, JSON.stringify(rows || [])); }
+    catch (error) { console.warn('[KINETIK DailyTasks] decision storage unavailable', error); }
+  }
+
+  function pruneDecisions(rows, now) {
+    const cutoff = now.getTime() - DECISION_RETENTION_DAYS * DAY_MS;
+    const today = dateKey(now);
+    return (rows || []).filter((row) => {
+      const decided = new Date(row?.decidedAt || 0).getTime();
+      const futureDeferred = row?.state === 'postponed' && String(row?.deferTo || '') >= today;
+      return futureDeferred || !Number.isFinite(decided) || decided >= cutoff;
+    });
+  }
+
+  function taskSnapshot(task) {
+    return {
+      id: String(task.id), kind: task.kind, category: task.category, title: task.title, detail: task.detail,
+      priority: task.priority, dueKey: task.dueKey, dueAt: task.dueAt, source: task.source,
+      action: normalizedAction(task.action), metadata: task.metadata && typeof task.metadata === 'object' ? task.metadata : {},
+    };
+  }
+
+  function semanticTaskKey(task) {
+    const action = task?.action || {}, payload = action.payload || {}, meta = task?.metadata || {};
+    if (task?.kind === KIND.measurement) return `measurement:${payload.metric || String(task.title || '').toLowerCase()}`;
+    if (action.type === 'planned-event') return `planned:${action.id || meta.plannedEventId || task.id}`;
+    if (task?.kind === KIND.workout) return `workout:${meta.workoutName || task.title || task.id}`;
+    if (action.type === 'assessment-start' || task?.kind === KIND.test) return `test:${payload.protocolId || meta.recommendedProtocolId || 'periodic'}`;
+    if (action.type === 'mobility-routine') return `mobility-routine:${payload.routineId || meta.routineId || task.kind}`;
+    if (action.type === 'mobility-assessment') return `mobility-assessment:${payload.zoneId || meta.zoneId || ''}:${payload.testId || ''}`;
+    return `${task?.kind || 'task'}:${task?.category || ''}:${task?.title || task?.id || ''}`;
+  }
+
+  function decisionForTask(taskId) {
+    return decisionStorage().find((row) => String(row.taskId) === String(taskId)) || null;
+  }
+
+  function getTaskDecisions(options) {
+    const rows = pruneDecisions(decisionStorage(), options?.now instanceof Date ? options.now : new Date());
+    if (options?.dateKey) return rows.filter((row) => row.occurrenceKey === options.dateKey || row.deferTo === options.dateKey);
+    return rows;
+  }
+
+  function storeTaskDecision(task, state, options) {
+    if (!task || !['done', 'postponed', 'ignored'].includes(state)) return null;
+    const now = options?.now instanceof Date ? options.now : new Date();
+    let deferTo = null;
+    if (state === 'postponed') {
+      deferTo = String(options?.deferTo || addDaysKey(dateKey(now), 1));
+      if (deferTo <= dateKey(now)) deferTo = addDaysKey(dateKey(now), 1);
+    }
+    let rows = pruneDecisions(decisionStorage(), now).filter((row) => String(row.taskId) !== String(task.id));
+    const record = {
+      id: `decision:${task.id}:${Date.now()}`,
+      taskId: String(task.id), occurrenceKey: String(task.dueKey || dateKey(now)), state,
+      decidedAt: now.toISOString(), deferTo, semanticKey: semanticTaskKey(task), snapshot: taskSnapshot(task),
+    };
+    rows.push(record); writeDecisionStorage(rows); return record;
+  }
+
+  function clearTaskDecision(taskId) {
+    const before = decisionStorage();
+    const after = before.filter((row) => String(row.taskId) !== String(taskId) && String(row.id) !== String(taskId));
+    writeDecisionStorage(after); return after.length !== before.length;
+  }
+
   function normalizeTask(raw, providerId) {
     const task = raw || {};
-    const status = ['pending', 'done', 'upcoming', 'blocked'].includes(task.status)
+    const status = ['pending', 'done', 'upcoming', 'blocked', 'postponed', 'ignored'].includes(task.status)
       ? task.status
       : 'pending';
     const priority = Number.isFinite(Number(task.priority)) ? Number(task.priority) : PRIORITY.normal;
@@ -589,6 +673,82 @@
     },
   });
 
+
+  function snapshotCompletedForDate(snapshot, key) {
+    if (!snapshot) return false;
+    const action = snapshot.action || {}, payload = action.payload || {}, meta = snapshot.metadata || {};
+    if (snapshot.kind === KIND.measurement) return measurementCompletedToday(snapshot.title, key);
+    if (snapshot.kind === KIND.workout) {
+      const history = safeCall(() => getHistory(), []);
+      return history.some((row) => dateKey(row.date) === key && (!meta.workoutName || String(row.name || '') === String(meta.workoutName)));
+    }
+    if (action.type === 'planned-event') {
+      const event = safeCall(() => typeof plannedEventById === 'function' ? plannedEventById(action.id || meta.plannedEventId) : null, null);
+      return !!(event && safeCall(() => typeof plannedEventActual === 'function' ? plannedEventActual(event) : null, null));
+    }
+    if (action.type === 'mobility-routine') return dedicatedFlexDoneForDate(key);
+    if (action.type === 'mobility-assessment') {
+      const testId = payload.testId || null;
+      return mobilityLogs().some((row) => dateKey(row.date) === key && (!testId || row.testId === testId));
+    }
+    if (snapshot.kind === KIND.test || action.type === 'assessment-start') {
+      const protocolId = payload.protocolId || meta.recommendedProtocolId || null;
+      return safeCall(() => (typeof getTests === 'function' ? getTests() : []), []).some((row) => dateKey(row.date) === key && (!protocolId || row.testId === protocolId || row.protocolId === protocolId));
+    }
+    return false;
+  }
+
+  function applyTaskDecisions(baseRows, ctx) {
+    const rows = baseRows.map((task) => ({ ...task, metadata: { ...(task.metadata || {}) } }));
+    const decisions = pruneDecisions(decisionStorage(), ctx.now);
+    const byTask = new Map(decisions.map((row) => [String(row.taskId), row]));
+
+    for (const task of rows) {
+      const decision = byTask.get(String(task.id));
+      if (!decision || decision.occurrenceKey !== task.dueKey) continue;
+      task.metadata.decisionId = decision.id;
+      task.metadata.decisionState = decision.state;
+      task.metadata.decisionAt = decision.decidedAt;
+      if (decision.state === 'done' && task.status !== 'done') {
+        task.status = 'done';
+        task.detail = 'Marqué fait manuellement · aucune donnée sportive ajoutée.';
+        task.metadata.manualCompletion = true;
+      } else if (decision.state === 'postponed') {
+        task.status = 'postponed'; task.metadata.deferTo = decision.deferTo;
+        task.detail = `Reporté au ${decision.deferTo}.`;
+      } else if (decision.state === 'ignored') {
+        task.status = 'ignored'; task.detail = 'Ignoré pour cette occurrence.';
+      }
+    }
+
+    const deferredToday = decisions.filter((row) => row.state === 'postponed' && row.deferTo === ctx.dateKey && row.occurrenceKey !== ctx.dateKey);
+    for (const decision of deferredToday) {
+      const snapshot = decision.snapshot || null;
+      if (!snapshot) continue;
+      const semantic = decision.semanticKey || semanticTaskKey(snapshot);
+      const natural = rows.find((task) => semanticTaskKey(task) === semantic && !['postponed', 'ignored'].includes(task.status));
+      if (natural) {
+        natural.metadata.deferredFrom = decision.occurrenceKey;
+        natural.metadata.deferredDecisionId = decision.id;
+        if (natural.status !== 'done') natural.detail = `Reporté du ${decision.occurrenceKey} · ${natural.detail || ''}`.trim();
+        continue;
+      }
+      const completed = snapshotCompletedForDate(snapshot, ctx.dateKey);
+      rows.push(normalizeTask({
+        ...snapshot,
+        id: `deferred:${decision.taskId}:${ctx.dateKey}`,
+        title: String(snapshot.title || 'Tâche').replace(/\s*·\s*fait$/i, ''),
+        detail: completed ? 'Réalisé aujourd’hui après report.' : `Reporté du ${decision.occurrenceKey} · ${snapshot.detail || ''}`,
+        status: completed ? 'done' : 'pending',
+        dueKey: ctx.dateKey,
+        dueAt: null,
+        source: 'daily-task-decision',
+        metadata: { ...(snapshot.metadata || {}), deferredFrom: decision.occurrenceKey, deferredDecisionId: decision.id, originalTaskId: decision.taskId },
+      }, 'daily-task-decision'));
+    }
+    return rows.sort((a, b) => b.priority - a.priority || a.title.localeCompare(b.title, 'fr'));
+  }
+
   function reminderPreferences() {
     const fallback = { enabled: true, workout: true, activities: true, measurements: true, tests: true, mobility: true, recovery: true, visibility: 'due-only', upcomingDays: 3 };
     if (typeof getReminderPrefs !== 'function') return fallback;
@@ -614,28 +774,36 @@
   function getAgendaTasks(options) {
     const prefs = reminderPreferences();
     if (prefs.enabled === false) return [];
+    const now = options?.now instanceof Date ? options.now : new Date();
     const includeDone = options?.includeDone !== false;
     const includeUpcoming = prefs.visibility === 'due-and-soon';
     const horizon = Math.max(1, Math.min(14, Number(prefs.upcomingDays || 3)));
-    return getTodayTasks({ ...(options || {}), includeDone, includeUpcoming })
+    const base = getTodayTasks({ ...(options || {}), now, includeDone: true, includeUpcoming });
+    return applyTaskDecisions(base, { now, dateKey: dateKey(now) })
+      .filter((task) => includeDone || task.status !== 'done')
       .filter((task) => taskAllowedByReminderPreferences(task, prefs))
       .filter((task) => task.status !== 'upcoming' || (includeUpcoming && upcomingDistance(task) <= horizon));
   }
 
   function agendaSummary(tasks) {
     const rows = Array.isArray(tasks) ? tasks : getAgendaTasks({ includeDone: true });
-    const dueRows = rows.filter((task) => task.status !== 'upcoming');
-    const done = dueRows.filter((task) => task.status === 'done').length;
-    const pending = dueRows.filter((task) => task.status === 'pending' || task.status === 'blocked').length;
+    const done = rows.filter((task) => task.status === 'done').length;
+    const pending = rows.filter((task) => task.status === 'pending' || task.status === 'blocked').length;
+    const postponed = rows.filter((task) => task.status === 'postponed').length;
+    const ignored = rows.filter((task) => task.status === 'ignored').length;
     const total = done + pending;
+    const adjusted = postponed + ignored;
     return {
       total,
       done,
       pending,
+      postponed,
+      ignored,
+      adjusted,
       upcoming: rows.filter((task) => task.status === 'upcoming').length,
       percent: total ? Math.round((done / total) * 100) : 100,
-      complete: total > 0 && pending === 0,
-      empty: total === 0,
+      complete: pending === 0 && (done > 0 || adjusted > 0),
+      empty: total === 0 && adjusted === 0,
     };
   }
 
@@ -665,6 +833,14 @@
     getAgendaTasks,
     getReminderPreferences: reminderPreferences,
     toLegacyReminderItems,
+    addDaysKey,
+    getTaskDecisions,
+    decisionForTask,
+    setTaskDecision(taskId, state, options) {
+      const task = getAgendaTasks({ now: options?.now instanceof Date ? options.now : new Date(), includeDone: true }).find((row) => String(row.id) === String(taskId));
+      return task ? storeTaskDecision(task, state, options || {}) : null;
+    },
+    clearTaskDecision,
     listProviders() {
       return providers.map((x) => ({ id: x.id, order: x.order }));
     },
@@ -685,4 +861,6 @@
   }
 
   console.info(`[KINETIK] Daily Tasks Engine v${VERSION} ready · ${providers.length} providers`);
+  // app.js is loaded first; refresh once the engine is actually available so the first Today render is complete.
+  try { if (typeof global.render === 'function') global.render(); } catch (error) { console.warn('[KINETIK DailyTasks] initial refresh failed', error); }
 })(window);

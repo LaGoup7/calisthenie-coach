@@ -75,11 +75,16 @@
    - fallback `view` conservé pour les tâches terminées et la compatibilité
    - contrôles qualité : 19 vérifications dédiées (`test-step7-runtime.js`) + non-régression étapes 3–6
 
-8. **États explicites**
-   - fait
-   - reporté
-   - ignoré
-   - historique des décisions
+8. **États explicites** — TERMINÉ / v10.122
+   - `Marquer fait` valide l’agenda sans créer de fausse donnée sportive
+   - `Reporter` : demain ou date personnalisée, avec report réel de l’occurrence
+   - fusion automatique avec une tâche naturelle équivalente à la date de report pour éviter les doublons
+   - `Ignorer aujourd’hui` masque uniquement l’occurrence courante
+   - toutes les décisions restent annulables depuis Aujourd’hui
+   - historique séparé des performances, conservé 180 jours dans Réglages > Rappels
+   - journal inclus dans Export / Import / Effacer toutes les données
+   - Daily Tasks Engine v1.5.0
+   - contrôle qualité automatisé : 30 vérifications (`test-step8-runtime.js`) + non-régression étapes 3–7
 
 9. **Échéances individuelles des tests**
    - chaque protocole possède sa propre fraîcheur

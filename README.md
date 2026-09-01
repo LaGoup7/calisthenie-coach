@@ -239,3 +239,18 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - API développeur : `window.executeTodayAgendaTask(task)` et `window.executeTodayAgendaTaskById(id)`.
 - Cache PWA : `kinetik-v10-121-direct-actions`.
 - Tests : `test-step7-runtime.js` (19 contrôles), plus non-régression étapes 3 (17), 4 (26), 5 (22) et 6 (25).
+
+
+## V10.122 · Étape 8 — Fait / Reporté / Ignoré
+- Le Daily Tasks Engine passe en **v1.5.0** et ajoute un journal séparé `cc_daily_task_decisions_v1`.
+- **Marquer fait** valide uniquement l’occurrence de l’agenda ; aucune séance, mesure ou performance artificielle n’est ajoutée aux historiques métier.
+- **Reporter à demain** ou vers une **date personnalisée** transporte l’occurrence. Si KINETIK génère déjà naturellement la même tâche à cette date (ex. poids toujours dû), les deux sont fusionnées pour éviter les doublons.
+- Une séance spécifique reportée reste distincte si nécessaire et conserve son action d’origine.
+- **Ignorer aujourd’hui** retire uniquement l’occurrence du jour sans désactiver la catégorie de rappel ni modifier sa fréquence.
+- Les tâches reportées / ignorées ne dégradent plus le pourcentage quotidien ; elles apparaissent dans une section repliable **ajustées aujourd’hui** avec bouton **Annuler**.
+- Les validations manuelles apparaissent dans les tâches terminées avec la mention **manuel** afin de distinguer une décision d’une donnée réellement enregistrée.
+- Un historique des décisions est visible dans **Réglages > Rappels**, conservé 180 jours et explicitement séparé des performances.
+- Le journal des décisions est maintenant inclus dans le registre `STORAGE`, donc dans **Exporter**, **Importer** et **Effacer toutes les données**.
+- Correction de chargement : `daily-tasks.js` déclenche un rafraîchissement après son initialisation afin que le premier rendu d’Aujourd’hui dispose immédiatement du moteur.
+- Cache PWA : `kinetik-v10-122-task-decisions`.
+- Tests : `test-step8-runtime.js` (30 contrôles), plus non-régression étapes 3 (17), 4 (26), 5 (22), 6 (25) et 7 (19).

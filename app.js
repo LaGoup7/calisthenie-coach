@@ -22,6 +22,7 @@ const STORAGE = {
   cycleProgressionStates: "cc_cycle_progression_states_v1",
   activities: "cc_activities_v1",
   athleteProfile: "kinetik_athlete_profile_v1",
+  dailyTaskDecisions: "cc_daily_task_decisions_v1",
 };
 
 function ex(name, type, sets, target, rest, tip, opts={}) {
@@ -10572,3 +10573,100 @@ bindEvents=function(){
   _bindEventsV10121();
   document.querySelectorAll('[data-daily-task-action]').forEach(button=>button.onclick=()=>executeTodayAgendaTaskById(button.dataset.dailyTaskAction));
 };
+
+/* ========================================================================== */
+/* KINETIK v10.122 · Step 8 · Explicit Daily Task Decisions                  */
+/* Manual completion, postponement and ignore are kept separate from sport   */
+/* history. A decision changes the agenda occurrence, never domain data.      */
+/* ========================================================================== */
+function v10122DecisionDateLabel(key){
+  try{const [y,m,d]=String(key||'').split('-').map(Number);return new Date(y,m-1,d,12).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});}catch(_){return String(key||'');}
+}
+function v10122DecisionMenu(task){
+  if(!task||!['pending','blocked'].includes(task.status))return '';
+  const engine=window.KinetikDailyTasks,tomorrow=engine?.addDaysKey?engine.addDaysKey(localDateKey(),1):localDateKey(new Date(Date.now()+86400000));
+  return `<details class="today-agenda-task-menu">
+    <summary aria-label="Plus d’options pour ${esc(task.title)}" title="Plus d’options">•••</summary>
+    <div class="today-agenda-task-menu-pop" role="group" aria-label="Modifier cette occurrence">
+      <button type="button" data-daily-task-decision="done" data-daily-task-id="${esc(task.id)}"><b>✓</b><span><strong>Marquer fait</strong><small>Valide l’agenda sans créer de performance.</small></span></button>
+      <button type="button" data-daily-task-decision="postponed" data-daily-task-id="${esc(task.id)}" data-defer-to="${tomorrow}"><b>↷</b><span><strong>Reporter à demain</strong><small>${esc(v10122DecisionDateLabel(tomorrow))}</small></span></button>
+      <div class="today-agenda-postpone-custom"><input type="date" min="${tomorrow}" value="${tomorrow}" data-daily-task-postpone-date aria-label="Nouvelle date"/><button type="button" data-daily-task-postpone-custom="${esc(task.id)}">Reporter</button></div>
+      <button type="button" class="is-muted" data-daily-task-decision="ignored" data-daily-task-id="${esc(task.id)}"><b>×</b><span><strong>Ignorer aujourd’hui</strong><small>Masque seulement cette occurrence.</small></span></button>
+    </div>
+  </details>`;
+}
+function v10122TaskControls(task){
+  const direct=todayAgendaAction(task),menu=v10122DecisionMenu(task);
+  return direct||menu?`<div class="today-agenda-task-controls">${direct}${menu}</div>`:'';
+}
+renderTodayAgendaTask=function(task){
+  const meta=todayAgendaTaskMeta(task),high=Number(task.priority||0)>=80;
+  const deferred=task?.metadata?.deferredFrom?`<em>Reporté du ${esc(v10122DecisionDateLabel(task.metadata.deferredFrom))}</em>`:'';
+  return `<article class="today-agenda-task kind-${esc(task.kind)} ${high?'is-priority':''} ${task.metadata?.deferredFrom?'is-deferred':''}">
+    <span class="today-agenda-task-icon" aria-hidden="true">${meta.icon}</span>
+    <div class="today-agenda-task-copy"><div class="today-agenda-task-meta"><span>${esc(meta.label)}</span>${high?'<b>Prioritaire</b>':''}${deferred}</div><strong>${esc(task.title)}</strong>${task.detail?`<small>${esc(task.detail)}</small>`:''}</div>
+    ${v10122TaskControls(task)}
+  </article>`;
+};
+function v10122AdjustedTaskRow(task){
+  const meta=todayAgendaTaskMeta(task),postponed=task.status==='postponed',decisionId=task.metadata?.decisionId||task.id;
+  const status=postponed?`Reporté · ${v10122DecisionDateLabel(task.metadata?.deferTo)}`:'Ignoré aujourd’hui';
+  return `<div class="today-agenda-adjusted-row"><span>${meta.icon}</span><div><strong>${esc(task.title)}</strong><small>${esc(status)}</small></div><button type="button" data-daily-task-clear="${esc(task.id)}">Annuler</button></div>`;
+}
+renderTodayAgenda=function(){
+  const engine=window.KinetikDailyTasks;
+  if(!engine?.getAgendaTasks||!engine?.agendaSummary)return '';
+  const prefs=engine.getReminderPreferences?engine.getReminderPreferences():{enabled:true};
+  if(prefs?.enabled===false){
+    return `<section class="card today-agenda today-agenda-disabled"><div class="today-agenda-head"><div><div class="kicker">Aujourd'hui</div><h2>Priorités masquées</h2><p>Les rappels sont désactivés dans tes réglages.</p></div><button class="btn btn-outline compact" data-view="settings">Réactiver</button></div></section>`;
+  }
+  const tasks=engine.getAgendaTasks({includeDone:true}),summary=engine.agendaSummary(tasks);
+  const pending=tasks.filter(t=>t.status==='pending'||t.status==='blocked');
+  const done=tasks.filter(t=>t.status==='done');
+  const adjusted=tasks.filter(t=>t.status==='postponed'||t.status==='ignored');
+  const upcoming=tasks.filter(t=>t.status==='upcoming');
+  const onlyAdjusted=summary.pending===0&&summary.done===0&&summary.adjusted>0;
+  const title=onlyAdjusted?'Journée ajustée':summary.complete?'Journée validée':summary.empty?'Rien d’obligatoire':'À faire aujourd’hui';
+  const subtitle=onlyAdjusted
+    ? `${summary.adjusted} tâche${summary.adjusted>1?'s':''} reportée${summary.adjusted>1?'s':''} ou ignorée${summary.adjusted>1?'s':''}.`
+    : summary.complete
+      ? `${summary.done} tâche${summary.done>1?'s':''} terminée${summary.done>1?'s':''}${summary.adjusted?` · ${summary.adjusted} ajustée${summary.adjusted>1?'s':''}`:''}.`
+      : summary.empty
+        ? 'Aucune priorité due pour le moment.'
+        : `${summary.pending} tâche${summary.pending>1?'s':''} restante${summary.pending>1?'s':''} · ${summary.done}/${summary.total} terminée${summary.done>1?'s':''}${summary.adjusted?` · ${summary.adjusted} ajustée${summary.adjusted>1?'s':''}`:''}`;
+  return `<section class="card today-agenda ${summary.complete?'is-complete':''} ${onlyAdjusted?'is-adjusted':''}">
+    <div class="today-agenda-head">
+      <div><div class="kicker">Parcours du jour</div><h2>${title}</h2><p>${subtitle}</p></div>
+      <div class="today-agenda-score" aria-label="${summary.percent}% terminé"><strong>${summary.percent}%</strong><span>${summary.done}/${summary.total||0}</span></div>
+    </div>
+    <div class="today-agenda-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${summary.percent}"><i style="width:${summary.percent}%"></i></div>
+    ${pending.length?`<div class="today-agenda-list">${pending.map(renderTodayAgendaTask).join('')}</div>`:summary.complete?`<div class="today-agenda-complete"><span>${onlyAdjusted?'↷':'✓'}</span><div><strong>${onlyAdjusted?'Agenda traité pour aujourd’hui':'Tout est fait pour aujourd’hui'}</strong><small>${onlyAdjusted?'Les occurrences ajustées restent annulables ci-dessous.':'Les tâches terminées sont automatiquement retirées de la liste active.'}</small></div></div>`:'<div class="today-agenda-empty"><span>✓</span><div><strong>Agenda libre</strong><small>Tu peux t’entraîner librement ou simplement récupérer.</small></div></div>'}
+    ${done.length?`<details class="today-agenda-done"><summary><span>✓ ${done.length} terminée${done.length>1?'s':''} aujourd’hui</span><b>⌄</b></summary><div>${done.map(t=>`<span>${todayAgendaTaskMeta(t).icon} ${esc(t.title.replace(/\s*·\s*fait$/i,''))}${t.metadata?.manualCompletion?' · manuel':''}</span>`).join('')}</div></details>`:''}
+    ${adjusted.length?`<details class="today-agenda-adjusted"><summary><span>↷ ${adjusted.length} ajustée${adjusted.length>1?'s':''} aujourd’hui</span><b>⌄</b></summary><div>${adjusted.map(v10122AdjustedTaskRow).join('')}</div></details>`:''}
+    ${upcoming.length?`<div class="today-agenda-upcoming"><div><span>Bientôt</span><small>Ne compte pas dans la progression du jour</small></div>${upcoming.slice(0,3).map(t=>`<span><b>${esc(t.title)}</b><small>${esc(t.detail)}</small></span>`).join('')}</div>`:''}
+  </section>`;
+};
+function setTodayTaskDecision(id,status,options={}){
+  const engine=window.KinetikDailyTasks;if(!engine?.setTaskDecision)return false;
+  const row=engine.setTaskDecision(id,status,options);if(!row)return false;render();return true;
+}
+function clearTodayTaskDecision(id){const engine=window.KinetikDailyTasks;if(!engine?.clearTaskDecision)return false;const ok=engine.clearTaskDecision(id);if(ok)render();return ok;}
+window.setTodayTaskDecision=setTodayTaskDecision;window.clearTodayTaskDecision=clearTodayTaskDecision;
+
+const _bindEventsV10122=bindEvents;
+bindEvents=function(){
+  _bindEventsV10122();
+  document.querySelectorAll('[data-daily-task-decision]').forEach(button=>button.onclick=e=>{e.preventDefault();e.stopPropagation();setTodayTaskDecision(button.dataset.dailyTaskId,button.dataset.dailyTaskDecision,{deferTo:button.dataset.deferTo||null});});
+  document.querySelectorAll('[data-daily-task-postpone-custom]').forEach(button=>button.onclick=e=>{e.preventDefault();e.stopPropagation();const root=button.closest?.('.today-agenda-task-menu-pop'),input=root?.querySelector?.('[data-daily-task-postpone-date]');if(input?.value)setTodayTaskDecision(button.dataset.dailyTaskPostponeCustom,'postponed',{deferTo:input.value});});
+  document.querySelectorAll('[data-daily-task-clear]').forEach(button=>button.onclick=()=>clearTodayTaskDecision(button.dataset.dailyTaskClear));
+};
+
+function renderDailyTaskDecisionHistory(){
+  const engine=window.KinetikDailyTasks;if(!engine?.getTaskDecisions)return '';
+  const rows=engine.getTaskDecisions({now:new Date()}).slice().sort((a,b)=>new Date(b.decidedAt)-new Date(a.decidedAt)).slice(0,12);
+  const label=row=>row.state==='done'?'Marqué fait':row.state==='postponed'?`Reporté au ${v10122DecisionDateLabel(row.deferTo)}`:'Ignoré';
+  const when=row=>{try{return new Date(row.decidedAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});}catch(_){return ''}};
+  return `<div class="reminder-settings-block daily-decision-history"><div class="reminder-settings-title"><strong>Historique des décisions</strong><span>Conservé 180 jours · séparé des performances</span></div>${rows.length?`<div class="daily-decision-history-list">${rows.map(row=>`<div><span>${row.state==='done'?'✓':row.state==='postponed'?'↷':'×'}</span><div><strong>${esc(row.snapshot?.title||'Tâche')}</strong><small>${esc(label(row))} · ${esc(when(row))}</small></div></div>`).join('')}</div>`:'<p class="reminder-local-note">Aucune décision manuelle enregistrée pour le moment.</p>'}</div>`;
+}
+const _renderReminderSettingsV10122=renderReminderSettings;
+renderReminderSettings=function(){const html=_renderReminderSettingsV10122();const history=renderDailyTaskDecisionHistory();return history?html.replace('</section>',history+'</section>'):html;};
