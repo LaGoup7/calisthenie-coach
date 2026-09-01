@@ -1,4 +1,4 @@
-/* KINETIK v10.133 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.135 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -869,6 +869,7 @@ const state = {
   quickLoadKg: 0,
   addHubOpen: false,
   activityPresetType: null,
+  activityPresetData: null,
   undoSetSnapshot: null,
   stravaStatus: {checked:false,loading:false,connected:false,athlete:null,scope:""},
   stravaSyncing: false,
@@ -1375,7 +1376,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.133',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.135',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1853,12 +1854,42 @@ function renderQuickLogModal(){
   </section></div>`;
 }
 function addHubActivityTypes(){
-  return ['running','walking','cycling','swimming','boxing','mobility'];
+  return ['running','walking','cycling','swimming','boxing','rowing','crossfit','hyrox','mobility','sport'];
+}
+function addHubRecentActivities(days=90){
+  const cutoff=Date.now()-Math.max(1,Number(days||90))*86400000;
+  return getActivities().filter(x=>new Date(x.date).getTime()>=cutoff);
+}
+function addHubPreferredActivityIds(limit=5){
+  const fallback=['running','walking','cycling','swimming','boxing'];
+  const counts=new Map();
+  addHubRecentActivities().forEach((x,i)=>{
+    if(x.type==='mobility')return;
+    const rec=counts.get(x.type)||{count:0,last:0};
+    rec.count+=1;rec.last=Math.max(rec.last,new Date(x.date).getTime()||0);counts.set(x.type,rec);
+  });
+  const ranked=[...counts.entries()].sort((a,b)=>b[1].count-a[1].count||b[1].last-a[1].last).map(x=>x[0]);
+  return [...new Set([...ranked,...fallback])].filter(id=>ACTIVITY_TYPES.some(x=>x.id===id)).slice(0,limit);
+}
+function addHubLastActivity(){return getActivities().find(x=>x.type!=='mobility')||null;}
+function addHubPreferredActivityType(){return addHubLastActivity()?.type||addHubPreferredActivityIds(1)[0]||'running';}
+function addHubActivitySummary(a){
+  if(!a)return '';
+  const type=activityType(a.type),parts=[`${Number(a.duration||0)} min`];
+  if(Number(a.distance||0)>0)parts.push(`${Number(a.distance)} ${type.metric||'km'}`);
+  if(Number(a.rpe||0)>0)parts.push(`RPE ${Number(a.rpe)}`);
+  return parts.join(' · ');
 }
 function renderAddHubModal(){
   if(!state.addHubOpen)return '';
-  const quickTypes=addHubActivityTypes().map(id=>activityType(id)).filter(Boolean);
-  return `<div class="quick-overlay add-hub-overlay"><section class="quick-sheet add-hub-sheet"><div class="quick-sheet-head add-hub-head"><div><div class="kicker">Ajouter</div><h2>Que veux-tu enregistrer ?</h2><p class="muted small">Un seul point d’entrée, puis KINETIK t’envoie vers l’écran le plus simple.</p></div><button class="icon-btn" id="closeAddHub" aria-label="Fermer">×</button></div><div class="add-hub-grid"><button type="button" class="add-hub-card" data-add-action="activity"><span>${activityUiIcon('running')}</span><div><strong>Activité</strong><small>Course, natation, vélo, marche, boxe…</small></div><b>Ouvrir</b></button><button type="button" class="add-hub-card" data-add-action="quick"><span>${uiIcon('spark','add-hub-svg')}</span><div><strong>Performance rapide</strong><small>Micro-série, tractions, pompes, grip…</small></div><b>Quick log</b></button><button type="button" class="add-hub-card" data-add-action="core"><span>${uiIcon('clock','add-hub-svg')}</span><div><strong>Gainage</strong><small>Lancer le chrono et sauver un maintien</small></div><b>Chrono</b></button><button type="button" class="add-hub-card" data-add-action="measure"><span>${uiIcon('measurements','add-hub-svg')}</span><div><strong>Mesure</strong><small>Poids, mensurations ou photos</small></div><b>Saisir</b></button></div><div class="add-hub-section"><div class="add-hub-section-head"><strong>Activité en 1 tap</strong><small>Ouvre directement le bon formulaire</small></div><div class="add-hub-chip-row">${quickTypes.map(x=>`<button type="button" class="add-hub-chip" data-add-activity-type="${x.id}"><span>${activityUiIcon(x.id)}</span>${esc(x.label)}</button>`).join('')}</div></div><p class="muted small add-hub-note">Astuce : le bouton Ajouter sert maintenant de hub. Tu choisis d’abord le type d’ajout, puis seulement les détails.</p></section></div>`;
+  const favoriteIds=addHubPreferredActivityIds(5),preferred=activityType(addHubPreferredActivityType()),last=addHubLastActivity();
+  const otherIds=addHubActivityTypes().filter(id=>!favoriteIds.includes(id));
+  return `<div class="quick-overlay add-hub-overlay"><section class="quick-sheet add-hub-sheet" role="dialog" aria-modal="true" aria-label="Ajouter"><div class="quick-sheet-head add-hub-head"><div><div class="kicker">Ajouter</div><h2>Enregistrer quelque chose</h2><p class="muted small">Choisis l’intention. KINETIK garde ensuite uniquement les champs utiles.</p></div><button class="icon-btn" id="closeAddHub" aria-label="Fermer">×</button></div>
+  ${last?`<button type="button" class="add-hub-resume" data-add-repeat-activity="${esc(last.id)}"><span class="add-hub-resume-icon">${activityUiIcon(last.type)}</span><div><small>Reprendre la dernière activité</small><strong>${esc(activityType(last.type).label)}</strong><span>${esc(addHubActivitySummary(last))}</span></div><b>Reprendre →</b></button>`:''}
+  <div class="add-hub-grid add-hub-grid-primary"><button type="button" class="add-hub-card add-hub-card-primary" data-add-action="activity" data-activity-type="${esc(preferred.id)}"><span>${activityUiIcon(preferred.id)}</span><div><strong>Activité sportive</strong><small>${esc(preferred.label)} par défaut · course, natation, vélo…</small></div><b>Ajouter</b></button><button type="button" class="add-hub-card" data-add-action="quick"><span>${uiIcon('spark','add-hub-svg')}</span><div><strong>Performance rapide</strong><small>Une série libre ou un exercice hors séance</small></div><b>Quick log</b></button><button type="button" class="add-hub-card" data-add-action="core"><span>${uiIcon('clock','add-hub-svg')}</span><div><strong>Gainage</strong><small>Chronomètre, routines et maintien</small></div><b>Chrono</b></button><button type="button" class="add-hub-card" data-add-action="measure"><span>${uiIcon('measurements','add-hub-svg')}</span><div><strong>Mesure</strong><small>Poids, tour de taille et suivi corporel</small></div><b>Saisir</b></button></div>
+  <div class="add-hub-section"><div class="add-hub-section-head"><div><strong>Sports rapides</strong><small>Les plus utilisés remontent automatiquement</small></div></div><div class="add-hub-chip-row">${favoriteIds.map(id=>{const x=activityType(id);return `<button type="button" class="add-hub-chip" data-add-activity-type="${x.id}"><span>${activityUiIcon(x.id)}</span>${esc(x.label)}</button>`}).join('')}</div>${otherIds.length?`<details class="add-hub-more"><summary>Plus d’activités <b>⌄</b></summary><div class="add-hub-chip-row">${otherIds.map(id=>{const x=activityType(id);return `<button type="button" class="add-hub-chip secondary" data-add-activity-type="${x.id}"><span>${activityUiIcon(x.id)}</span>${esc(x.label)}</button>`}).join('')}</div></details>`:''}</div>
+  <button type="button" class="add-hub-plan" data-add-action="plan"><span>${uiIcon('week','add-hub-svg')}</span><div><strong>Planifier au lieu d’enregistrer</strong><small>Ajouter une activité future au planning</small></div><b>Planning →</b></button>
+  </section></div>`;
 }
 
 function filterQuickExercisePicker(){
@@ -4039,8 +4070,10 @@ function bindEvents(){
   document.querySelectorAll('[data-today-progress]').forEach(b=>b.onclick=()=>{state.view='progress';state.progressTab=b.dataset.todayProgress||'performance';state.selectedHistoryId=null;render();});
   const openAddHub=document.getElementById('openAddHub');if(openAddHub)openAddHub.onclick=()=>{state.addHubOpen=true;state.quickEditor=false;state.quickToast=null;render();};
   const closeAddHub=document.getElementById('closeAddHub');if(closeAddHub)closeAddHub.onclick=()=>{state.addHubOpen=false;render();};
-  document.querySelectorAll('[data-add-action]').forEach(b=>b.onclick=()=>{const action=b.dataset.addAction;state.addHubOpen=false;if(action==='quick'){state.quickEditor=true;state.quickToast=null;render();return;}if(action==='activity'){state.activityPresetType=state.activityPresetType||'running';state.activityEditId=null;state.activityEditor=true;render();return;}if(action==='core'){state.coreTimerOpen=true;render();return;}if(action==='measure'){state.bodyEditor=true;state.bodyEditorMode='quick';render();return;}});
-  document.querySelectorAll('[data-add-activity-type]').forEach(b=>b.onclick=()=>{state.addHubOpen=false;state.activityEditId=null;state.activityPresetType=b.dataset.addActivityType||'running';state.activityEditor=true;render();});
+  document.querySelectorAll('[data-add-action]').forEach(b=>b.onclick=()=>{const action=b.dataset.addAction;state.addHubOpen=false;if(action==='quick'){state.quickEditor=true;state.quickToast=null;render();return;}if(action==='activity'){state.activityPresetData=null;state.activityPresetType=b.dataset.activityType||addHubPreferredActivityType();state.activityEditId=null;state.activityEditor=true;render();return;}if(action==='core'){state.coreTimerOpen=true;render();return;}if(action==='measure'){state.bodyEditor=true;state.bodyEditorMode='quick';render();return;}if(action==='plan'){state.planningEditor=true;state.planningEditId=null;state.planningEditorDate=localDateKey();state.view='week';render();return;}});
+  document.querySelectorAll('[data-add-activity-type]').forEach(b=>b.onclick=()=>{state.addHubOpen=false;state.activityEditId=null;state.activityPresetData=null;state.activityPresetType=b.dataset.addActivityType||'running';state.activityEditor=true;render();});
+  document.querySelectorAll('[data-add-repeat-activity]').forEach(b=>b.onclick=()=>{const a=(typeof activityById==='function'?activityById(b.dataset.addRepeatActivity):null)||getActivities().find(x=>String(x.id)===String(b.dataset.addRepeatActivity));if(!a)return;state.addHubOpen=false;state.activityEditId=null;state.activityPresetType=a.type;state.activityPresetData={type:a.type,duration:Number(a.duration||30),distance:Number(a.distance||0),rpe:Number(a.rpe||5)};state.activityEditor=true;render();});
+  const addHubOverlay=document.querySelector('.add-hub-overlay');if(addHubOverlay)addHubOverlay.onclick=e=>{if(e.target===addHubOverlay){state.addHubOpen=false;render();}};
   document.querySelectorAll('[data-open-quick-log]').forEach(b=>b.onclick=()=>{state.addHubOpen=false;state.quickEditor=true;state.quickToast=null;render();});
   const closeQuick=document.getElementById('closeQuickLog');if(closeQuick)closeQuick.onclick=()=>{state.quickEditor=false;state.quickToast=null;render();};
   document.querySelectorAll('#syncStrava').forEach(b=>b.onclick=syncStravaActivities);

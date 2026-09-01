@@ -24,9 +24,9 @@ const ui=vm.runInContext(`(()=>{
 
 // Today: one intent = one action surface.
 ok(ui.today.includes('today-primary-shortcuts'),'Today shortcuts container missing');
-ok(!ui.today.includes('today-action-card'),'duplicate Add/Activity cockpit cards still present');
-ok(ui.today.includes('id="openQuickLog"'),'global quick-log FAB missing from Today');
-ok((ui.today.match(/data-open-activity="true"/g)||[]).length===1,'Today exposes more than one manual Activity CTA');
+ok(ui.today.includes('core-cockpit')&&ui.today.includes('today-add-session-card'),'Rank/Gainage/Session shortcut row is incomplete');
+ok(ui.today.includes('id="openAddHub"'),'global Add hub FAB missing from Today');
+ok((ui.today.match(/today-add-session-card/g)||[]).length===1,'Today session shortcut is duplicated');
 ok(ui.workoutAction==='','workout agenda still duplicates the workout hero CTA');
 ok(ui.today.includes('id="startWorkout"'),'workout hero lost its primary start action');
 
@@ -51,9 +51,9 @@ ok(bodySource.includes("state.view==='settings'"),'install prompt does not targe
 
 // PWA/version and Vercel Hobby invariant.
 const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),sw=fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),pkg=JSON.parse(fs.readFileSync(path.join(__dirname,'package.json'),'utf8'));
-ok(html.includes('app.js?v=10.133')&&html.includes('account-manager.js?v=10.133'),'v10.133 asset chain missing');
-ok(sw.includes('kinetik-v10-133-today-hotfix')&&sw.includes('app-journey.js?v=10.133'),'v10.133 PWA cache missing');
-ok(pkg.version==='10.133.0','package version is not 10.133.0');
+ok(html.includes('app.js?v=10.135')&&html.includes('account-manager.js?v=10.135'),'v10.135 asset chain missing');
+ok(sw.includes('kinetik-v10-135-premium-add-hub')&&sw.includes('app-journey.js?v=10.135'),'v10.135 PWA cache missing');
+ok(pkg.version==='10.135.0','package version is not 10.135.0');
 ok(fs.readFileSync(path.join(__dirname,'styles.css'),'utf8').includes('v10.132 · Lot B'),'Lot B styles missing');
 const apiFiles=[];function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const full=path.join(dir,e.name);if(e.isDirectory())walk(full);else if(e.isFile()&&e.name.endsWith('.js'))apiFiles.push(full);}}walk(path.join(__dirname,'api'));
 ok(apiFiles.length===12,`Vercel Hobby function count changed: ${apiFiles.length}`);

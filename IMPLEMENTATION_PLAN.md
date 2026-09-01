@@ -250,3 +250,11 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - restauration de l’accès Gainage (chronomètre + routines) ;
 - sélecteurs d’injection du cockpit rendus robustes aux classes additionnelles ;
 - aucune modification des règles Daily Tasks / Planning / Progression.
+
+
+### V10.135 — Hub Ajouter premium
+- Hub Ajouter hiérarchisé autour de 4 intentions.
+- Sports fréquents remontés automatiquement.
+- Reprise de la dernière activité avec préremplissage.
+- Accès secondaire à toutes les disciplines.
+- Planification accessible depuis le même hub.

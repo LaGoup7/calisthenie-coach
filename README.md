@@ -387,3 +387,8 @@ La route Strava de diagnostic a été fusionnée dans `/api/strava/status?diagno
 ## V10.133 · Hotfix Aujourd’hui
 
 Correction ciblée après le LOT B : le cockpit Aujourd’hui possède désormais une classe supplémentaire (`today-primary-shortcuts`), mais plusieurs wrappers historiques recherchaient encore la chaîne HTML exacte précédente. Cela faisait passer l’Agenda avant le hero séance et empêchait l’injection du raccourci Gainage. Les sélecteurs utilisent maintenant le préfixe stable `today-cockpit today-primary-actions`. Ordre attendu : **hero séance → À faire aujourd’hui → raccourcis → Gainage**.
+
+
+## V10.135 · Hub Ajouter premium
+
+Le bouton flottant **Ajouter** devient un centre de saisie rapide : dernière activité à reprendre, sports favoris calculés automatiquement, Performance rapide, Gainage, Mesure et planification. Une reprise d’activité préremplit durée, distance et RPE sans transformer l’ancienne activité.
