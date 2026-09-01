@@ -1,11 +1,11 @@
 /* ========================================================================== */
-/* KINETIK v10.115 · Daily Tasks Engine                                       */
+/* KINETIK v10.119 · Daily Tasks Engine                                       */
 /* Central source of truth for "what should I do today?".                    */
 /*                                                                            */
-/* Step P0.1                                                                  */
+/* Steps P0.1 + P0.5                                                         */
 /* - Normalized task contract                                                 */
 /* - Provider registry                                                        */
-/* - Workout / planned activity / measurement / test providers                */
+/* - Workout / activity / measurement / test / mobility / recovery providers  */
 /* - Completion inferred from existing KINETIK data                           */
 /* - Legacy reminder adapter                                                  */
 /*                                                                            */
@@ -14,7 +14,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
   const DAY_MS = 86400000;
   const providers = [];
 
@@ -280,6 +280,253 @@
     },
   });
 
+
+  const MOBILITY_ASSESSMENT_DAYS = 28;
+
+  function mobilityDefinitions() {
+    return safeCall(() => (typeof MOBILITY_ZONES !== 'undefined' ? MOBILITY_ZONES : []), []);
+  }
+
+  function mobilityLogs() {
+    return safeCall(() => (typeof getMobilityTests === 'function' ? getMobilityTests() : []), []);
+  }
+
+  function flexLogs() {
+    return safeCall(() => (typeof getFlexLogs === 'function' ? getFlexLogs() : []), []);
+  }
+
+  function plannedEvents(key) {
+    if (typeof plannedEventsForDate !== 'function') return [];
+    return safeCall(() => plannedEventsForDate(key), []);
+  }
+
+  function eventTypeId(event) {
+    const type = typeof plannedEventType === 'function' ? safeCall(() => plannedEventType(event), null) : null;
+    return event?.type || type?.id || 'sport';
+  }
+
+  function dedicatedFlexDoneForDate(key) {
+    if (flexLogs().some((row) => dateKey(row.date) === key)) return true;
+    const activities = safeCall(() => (typeof getActivities === 'function' ? getActivities() : []), []);
+    return activities.some((row) => row?.type === 'mobility' && dateKey(row.date) === key);
+  }
+
+  function plannedMobilityExists(key) {
+    return plannedEvents(key).some((event) => eventTypeId(event) === 'mobility');
+  }
+
+  function plannedExternalSportExists(key) {
+    return plannedEvents(key).some((event) => eventTypeId(event) !== 'mobility');
+  }
+
+  function daysSinceLastFlex(now) {
+    const rows = flexLogs()
+      .map((x) => new Date(x.date).getTime())
+      .filter(Number.isFinite)
+      .sort((a, b) => b - a);
+    if (!rows.length) return Infinity;
+    return Math.max(0, (now.getTime() - rows[0]) / DAY_MS);
+  }
+
+  function daysRemainingInWeek(now) {
+    const mondayIndex = (now.getDay() + 6) % 7;
+    return 7 - mondayIndex;
+  }
+
+  function mobilityZoneFreshness(now) {
+    const rows = mobilityLogs();
+    const latestByTest = new Map();
+    for (const row of rows) {
+      const t = new Date(row.date).getTime();
+      if (!row.testId || !Number.isFinite(t)) continue;
+      const previous = latestByTest.get(row.testId) || 0;
+      if (t > previous) latestByTest.set(row.testId, t);
+    }
+    return mobilityDefinitions().map((zone) => {
+      const ids = Array.isArray(zone.tests) ? zone.tests : [];
+      const present = ids.map((id) => latestByTest.get(id)).filter(Number.isFinite);
+      const missing = ids.filter((id) => !latestByTest.has(id));
+      const oldest = present.length ? Math.min(...present) : null;
+      const ageDays = oldest == null ? Infinity : Math.max(0, Math.floor((now.getTime() - oldest) / DAY_MS));
+      const remainingDays = Number.isFinite(ageDays) ? Math.max(0, MOBILITY_ASSESSMENT_DAYS - ageDays) : 0;
+      return {
+        id: zone.id,
+        label: zone.label || zone.id,
+        tests: ids,
+        missing,
+        tested: ids.length - missing.length,
+        total: ids.length,
+        ageDays,
+        remainingDays,
+        stale: missing.length > 0 || ageDays >= MOBILITY_ASSESSMENT_DAYS,
+      };
+    });
+  }
+
+  function mobilityAssessmentCandidate(ctx) {
+    const zones = mobilityZoneFreshness(ctx.now);
+    if (!zones.length) return null;
+    const priority = typeof mobilityPriority === 'function' ? safeCall(() => mobilityPriority(ctx.now.getDay()), null) : null;
+    const priorityZone = zones.find((x) => x.id === priority?.id);
+    const isRelevant = (x) => x.missing.length > 0 || x.ageDays >= MOBILITY_ASSESSMENT_DAYS || x.remainingDays <= 14;
+    if (priorityZone && isRelevant(priorityZone)) return { ...priorityZone, isPriority: true };
+    const candidates = zones.filter(isRelevant).sort((a, b) => {
+      if (a.missing.length !== b.missing.length) return b.missing.length - a.missing.length;
+      return b.ageDays - a.ageDays;
+    });
+    return candidates[0] ? { ...candidates[0], isPriority: false } : null;
+  }
+
+  function mobilityWeekState(now) {
+    const cfg = typeof getFlexConfig === 'function' ? safeCall(() => getFlexConfig(), null) : null;
+    const balance = typeof weeklyFlexBalance === 'function' ? safeCall(() => weeklyFlexBalance(), null) : null;
+    if (!cfg || !balance) return null;
+    const targetSessions = Math.max(0, Number(cfg.sessionsTarget || 0));
+    const targetMinutes = Math.max(0, Number(cfg.weeklyMinutesTarget || 0));
+    const sessions = Math.max(0, Number(balance.dedicatedSessions || 0));
+    const minutes = Math.max(0, Number(balance.dedicatedMinutes || 0));
+    return {
+      targetSessions,
+      targetMinutes,
+      sessions,
+      minutes,
+      remainingSessions: Math.max(0, targetSessions - sessions),
+      remainingMinutes: Math.max(0, targetMinutes - minutes),
+      daysRemaining: daysRemainingInWeek(now),
+    };
+  }
+
+  function recoveryDayForContext(ctx) {
+    const profile = typeof getAthleteProfile === 'function' ? safeCall(() => getAthleteProfile(), {}) : {};
+    const explicitRest = Array.isArray(profile?.restDays) && profile.restDays.includes(ctx.now.getDay());
+    let hasWorkout = false;
+    if (typeof workoutTemplateForDay === 'function') {
+      const workout = safeCall(() => workoutTemplateForDay(ctx.now.getDay()), null);
+      hasWorkout = !!(workout && Array.isArray(workout.exercises) && workout.exercises.length);
+    }
+    // An external sport day is not treated as a pure recovery day even if KINETIK has no strength session.
+    const externalSport = plannedExternalSportExists(ctx.dateKey);
+    return (explicitRest || !hasWorkout) && !externalSport;
+  }
+
+  registerProvider({
+    id: 'mobility-assessment',
+    order: 45,
+    getTasks(ctx) {
+      const candidate = mobilityAssessmentCandidate(ctx);
+      if (!candidate) return [];
+      const missing = candidate.missing.length > 0;
+      const overdue = missing || candidate.ageDays >= MOBILITY_ASSESSMENT_DAYS;
+      const status = overdue ? 'pending' : 'upcoming';
+      const detail = missing
+        ? `${candidate.tested}/${candidate.total} tests enregistrés · complète ${candidate.label.toLowerCase()}.`
+        : overdue
+          ? `Mesure la plus ancienne : ${candidate.ageDays} j · repère conseillé ${MOBILITY_ASSESSMENT_DAYS} j.`
+          : `À refaire dans ${candidate.remainingDays} j · repère conseillé ${MOBILITY_ASSESSMENT_DAYS} j.`;
+      return [{
+        id: `mobility:assessment:${candidate.id}:${ctx.dateKey}`,
+        kind: KIND.mobility,
+        category: 'mobility-assessment',
+        title: missing ? `Compléter le bilan mobilité · ${candidate.label}` : `Réévaluer la mobilité · ${candidate.label}`,
+        detail,
+        status,
+        priority: overdue && candidate.isPriority ? PRIORITY.high : overdue ? PRIORITY.normal : PRIORITY.info,
+        dueKey: ctx.dateKey,
+        source: 'mobility-tests',
+        action: { type: 'view', view: 'flexibility', label: missing ? 'Évaluer' : 'Re-tester' },
+        metadata: {
+          zoneId: candidate.id,
+          assessment: true,
+          missingTests: candidate.missing,
+          ageDays: Number.isFinite(candidate.ageDays) ? candidate.ageDays : null,
+          remainingDays: candidate.remainingDays,
+          staleDays: MOBILITY_ASSESSMENT_DAYS,
+          isPriority: candidate.isPriority,
+        },
+      }];
+    },
+  });
+
+  registerProvider({
+    id: 'mobility-coaching',
+    order: 50,
+    getTasks(ctx) {
+      // A user-planned mobility event already has its own task through planned-activities.
+      if (plannedMobilityExists(ctx.dateKey)) return [];
+      if (typeof recommendedFlexRoutine !== 'function' || typeof mobilityPriority !== 'function') return [];
+
+      const recoveryDay = recoveryDayForContext(ctx);
+      const kind = recoveryDay ? KIND.recovery : KIND.mobility;
+      const done = dedicatedFlexDoneForDate(ctx.dateKey);
+      const routine = safeCall(() => recommendedFlexRoutine(ctx.now.getDay()), null);
+      if (!routine) return [];
+      const priorityZone = safeCall(() => mobilityPriority(ctx.now.getDay()), null);
+      const week = mobilityWeekState(ctx.now);
+      const duration = Math.max(0, Number(routine.duration || 0));
+
+      if (done) {
+        return [{
+          id: `mobility:routine:${ctx.dateKey}`,
+          kind,
+          category: recoveryDay ? 'recovery' : 'mobility',
+          title: recoveryDay ? 'Récupération mobilité terminée' : 'Mobilité terminée',
+          detail: `${routine.name || 'Routine'} · enregistrée aujourd’hui.`,
+          status: 'done',
+          priority: PRIORITY.normal,
+          dueKey: ctx.dateKey,
+          source: 'flexibility',
+          action: { type: 'view', view: 'flexibility', label: 'Voir' },
+          metadata: { routineId: routine.id || null, duration, mode: recoveryDay ? 'Recovery' : 'Progression', completedToday: true },
+        }];
+      }
+
+      if (!week) return [];
+      const weeklyNeed = week.remainingSessions > 0 || week.remainingMinutes > 0;
+      if (!weeklyNeed) return [];
+
+      const sinceFlex = daysSinceLastFlex(ctx.now);
+      const schedulePressure = week.remainingSessions > 0 && week.remainingSessions >= week.daysRemaining;
+      const spacingDue = sinceFlex >= 2;
+      const recoverySpacingDue = recoveryDay && sinceFlex >= 1;
+      const due = schedulePressure || spacingDue || recoverySpacingDue;
+      if (!due) return [];
+
+      const high = schedulePressure || (week.daysRemaining <= 2 && weeklyNeed);
+      const zoneLabel = priorityZone?.id ? priorityZone.label : null;
+      const progressBits = [];
+      if (week.targetSessions > 0) progressBits.push(`${week.sessions}/${week.targetSessions} routines cette semaine`);
+      if (week.targetMinutes > 0) progressBits.push(`${Math.round(week.minutes)}/${week.targetMinutes} min`);
+      const detail = recoveryDay
+        ? `${duration || '—'} min · récupération douce${zoneLabel ? ` · priorité ${zoneLabel.toLowerCase()}` : ''}.`
+        : `${duration || '—'} min${zoneLabel ? ` · priorité ${zoneLabel.toLowerCase()}` : ''}${progressBits.length ? ` · ${progressBits.join(' · ')}` : ''}.`;
+
+      return [{
+        id: `mobility:routine:${ctx.dateKey}`,
+        kind,
+        category: recoveryDay ? 'recovery' : 'mobility',
+        title: recoveryDay ? `Récupération · ${routine.name || 'Mobilité douce'}` : `Mobilité · ${routine.name || 'Routine recommandée'}`,
+        detail,
+        status: 'pending',
+        priority: high ? PRIORITY.high : PRIORITY.normal,
+        dueKey: ctx.dateKey,
+        source: 'mobility-coach',
+        action: { type: 'view', view: 'flexibility', label: recoveryDay ? 'Récupérer' : 'Faire la routine' },
+        metadata: {
+          routineId: routine.id || null,
+          duration,
+          mode: recoveryDay ? 'Recovery' : 'Progression',
+          zoneId: priorityZone?.id || null,
+          zoneLabel: zoneLabel || null,
+          remainingSessions: week.remainingSessions,
+          remainingMinutes: week.remainingMinutes,
+          daysRemaining: week.daysRemaining,
+          daysSinceLastFlex: Number.isFinite(sinceFlex) ? Math.round(sinceFlex * 10) / 10 : null,
+          schedulePressure,
+        },
+      }];
+    },
+  });
+
   function reminderPreferences() {
     const fallback = { enabled: true, workout: true, activities: true, measurements: true, tests: true, mobility: true, recovery: true, visibility: 'due-only', upcomingDays: 3 };
     if (typeof getReminderPrefs !== 'function') return fallback;
@@ -297,7 +544,7 @@
   }
 
   function upcomingDistance(task) {
-    if (task.kind === KIND.measurement) return Number(task.metadata?.remainingDays ?? 999);
+    if (task.metadata && task.metadata.remainingDays != null) return Number(task.metadata.remainingDays);
     if (task.kind === KIND.test) return Number(task.metadata?.daysUntil ?? 999);
     return 999;
   }

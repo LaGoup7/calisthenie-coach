@@ -42,10 +42,15 @@
    - les fréquences propres aux mensurations restent dans Réglages Mesures afin d'éviter un doublon de configuration
    - contrôle qualité automatisé : 26 vérifications (`test-step4-runtime.js`) + non-régression étape 3 (17 vérifications)
 
-5. **Ajouter Mobilité au moteur**
-   - routines recommandées
-   - tests de mobilité devenus anciens
-   - récupération / jour de repos
+5. **Ajouter Mobilité au moteur** — TERMINÉ / v10.119
+   - provider `mobility-assessment` : bilan incomplet, réévaluation après 28 jours, échéance « bientôt » compatible avec l'horizon des rappels
+   - provider `mobility-coaching` : routine recommandée selon priorité de zone et progression hebdomadaire
+   - distinction automatique `mobility` / `recovery` selon séance KINETIK, jour de repos et sport externe planifié
+   - cadence intelligente : objectifs hebdomadaires, espacement depuis la dernière routine et pression de fin de semaine
+   - une mobilité planifiée manuellement reste la tâche canonique et bloque le doublon automatique
+   - une activité mobilité enregistrée manuellement valide la tâche et compte dans le volume / nombre de séances hebdomadaires
+   - métadonnées prêtes pour l'étape 7 : `routineId`, `zoneId`, mode Progression/Recovery, durée et état hebdomadaire
+   - contrôle qualité automatisé : 22 vérifications (`test-step5-runtime.js`) + non-régression étapes 3–4
 
 6. **Intégration complète sur Aujourd'hui**
    - bloc À faire aujourd'hui

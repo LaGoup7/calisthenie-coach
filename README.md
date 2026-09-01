@@ -195,3 +195,17 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Limite volontaire : l'heure préférée ne programme pas encore de notification quand l'app est fermée ; elle prépare P1/P2 et n'empêche jamais une tâche due d'apparaître dans l'app.
 - Cache PWA : `kinetik-v10-118-reminder-settings`.
 - Tests : `test-step4-runtime.js` (26 contrôles) + suite étape 3 (17 contrôles).
+
+
+## V10.119 · Étape 5 — Mobilité & Récupération dans Daily Tasks
+- Le Daily Tasks Engine passe en **v1.2.0** avec deux nouveaux providers : `mobility-assessment` et `mobility-coaching`.
+- Les tests de mobilité sont suivis par zone ; un bilan incomplet est proposé à compléter et une zone devient à réévaluer après **28 jours**.
+- Entre J-14 et l'échéance, la réévaluation peut apparaître en « bientôt » si cette option est activée dans les réglages de rappels.
+- Une seule zone de mobilité est proposée à réévaluer à la fois, en donnant la priorité à la zone la plus utile pour l'objectif / la séance du jour.
+- Les routines automatiques respectent les objectifs `weeklyMinutesTarget` et `sessionsTarget`, l'espacement depuis la dernière routine et la pression de fin de semaine.
+- Les jours sans séance KINETIK deviennent des tâches **Récupération** ; un sport externe planifié empêche de classer à tort la journée comme repos pur.
+- Une mobilité planifiée manuellement conserve la priorité et supprime la recommandation automatique du même jour.
+- Une activité `mobility` enregistrée depuis le journal multisport compte désormais dans le volume et le nombre de séances mobilité de la semaine, et valide le rappel automatique du jour.
+- Les tâches exposent déjà `routineId`, `zoneId`, durée et mode Progression/Recovery pour les actions directes de l'étape 7.
+- Cache PWA : `kinetik-v10-119-mobility-recovery`.
+- Tests : `test-step5-runtime.js` (22 contrôles), plus non-régression étape 3 (17) et étape 4 (26).
