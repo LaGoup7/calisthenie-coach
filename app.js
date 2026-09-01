@@ -9147,7 +9147,7 @@ v1095RenderProgressOverview=function(){
             <span><i class="tone-good"></i>Solide</span>
             <span><i class="tone-great"></i>Avancé</span>
           </div>
-          ${display==='3d'?`<p class="body3d-note">Rotation libre à 360° · vue davantage dézoomée pour mieux voir l’ensemble du corps.</p>`:''}
+          ${display==='3d'?`<p class="body3d-note">Rotation libre à 360° · cadrage complet du corps par défaut.</p>`:''}
         </div>
       </div>
     </section>
@@ -9746,7 +9746,9 @@ v10107InitBody3D=function(){
   renderer.domElement.className='body3d-canvas';
 
   const camera=new THREE.PerspectiveCamera(29,1,.1,50);
-  camera.position.set(0,-0.06,9.55);
+  // V10.114: true default framing. The authoritative renderer is now
+  // genuinely farther back so the whole silhouette fits without manual zoom.
+  camera.position.set(0,-0.12,9.85);
 
   scene.add(new THREE.HemisphereLight(0xffffff,0xb9c3d3,2.05));
   const key=new THREE.DirectionalLight(0xffffff,3.0); key.position.set(3.4,5.4,5.8); scene.add(key);
@@ -9843,7 +9845,7 @@ v10107InitBody3D=function(){
   renderer.domElement.addEventListener('pointermove',ev=>{ if(!dragging)return; const dx=ev.clientX-lastX, dy=ev.clientY-lastY; if(Math.hypot(ev.clientX-downX,ev.clientY-downY)>5)moved=true; body.rotation.y+=dx*.012; body.rotation.x=Math.max(-.24,Math.min(.24,body.rotation.x+dy*.0045)); lastX=ev.clientX; lastY=ev.clientY; state.progressBody3DYaw=body.rotation.y; state.progressBody3DPitch=body.rotation.x; });
   const endPointer=ev=>{ if(!dragging)return; dragging=false; renderer.domElement.releasePointerCapture?.(ev.pointerId); if(!moved)pick(ev); };
   renderer.domElement.addEventListener('pointerup',endPointer); renderer.domElement.addEventListener('pointercancel',()=>{dragging=false;});
-  renderer.domElement.addEventListener('wheel',ev=>{ ev.preventDefault(); camera.position.z=Math.max(8.7,Math.min(12.6,camera.position.z+ev.deltaY*.003)); },{passive:false});
+  renderer.domElement.addEventListener('wheel',ev=>{ ev.preventDefault(); camera.position.z=Math.max(8.8,Math.min(13.0,camera.position.z+ev.deltaY*.003)); },{passive:false});
   const resizeObserver=new ResizeObserver(resize); resizeObserver.observe(host); resize();
   const inst={renderer,scene,camera,body,resizeObserver,stopped:false}; v10107Body3DInstance=inst;
   function loop(){ if(inst.stopped)return; if(!host.isConnected){v10107DisposeBody3D();return;} renderer.render(scene,camera); requestAnimationFrame(loop); }

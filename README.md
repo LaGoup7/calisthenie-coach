@@ -142,3 +142,10 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Recul supplémentaire de la caméra sur la vue 3D.
 - Recentrage vertical léger pour garder la silhouette entière plus lisible.
 - Molette de zoom ajustée pour rester cohérente avec le nouveau cadrage.
+
+
+## V10.114 — Body 3D framing
+- Correctif sur le renderer 3D réellement autoritaire.
+- Modèle réellement plus dézoomé par défaut (caméra Z 9.85).
+- Recentrage vertical léger pour afficher tête et pieds avec davantage de marge.
+- Limites de zoom molette recalibrées autour du nouveau cadrage.
