@@ -1,8 +1,8 @@
 {
   "name": "kinetik-pwa",
-  "version": "10.127.0",
+  "version": "10.128.0",
   "private": true,
-  "description": "KINETIK PWA with Web Push observability, adaptive backoff and privacy-safe diagnostics",
+  "description": "KINETIK PWA with modularized application UI, Web Push observability, adaptive backoff and privacy-safe diagnostics",
   "engines": {
     "node": ">=20"
   },

@@ -1,6 +1,7 @@
 const fs=require('fs');
+const {loadAppSource}=require('./test-app-source');
 const vm=require('vm');
-const source=fs.readFileSync(__dirname+'/app.js','utf8');
+const source=loadAppSource(__dirname);
 const dailySource=fs.readFileSync(__dirname+'/daily-tasks.js','utf8');
 const localReminderSource=fs.readFileSync(__dirname+'/local-reminders.js','utf8');
 const store=new Map();
@@ -128,7 +129,7 @@ vm.runInContext(source+'\n'+dailySource+'\n'+localReminderSource,sandbox,{filena
   // Service worker click contract and PWA assets are validated statically here.
   const sw=fs.readFileSync(__dirname+'/sw.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8');
   ok(sw.includes("notificationclick")&&sw.includes("kinetik-reminder-click")&&sw.includes("snooze"),'service worker notification interaction contract is missing');
-  ok(sw.includes('local-reminders.js?v=10.127')&&html.includes('local-reminders.js?v=10.127'),'local reminder module is not part of the PWA asset chain');
+  ok(sw.includes('local-reminders.js?v=10.128')&&html.includes('local-reminders.js?v=10.128'),'local reminder module is not part of the PWA asset chain');
 
   if(failures.length){console.error('STEP10_RUNTIME_FAIL',failures);process.exitCode=1;}else console.log('STEP10_RUNTIME_OK '+checks+' checks');
 })().catch(e=>{console.error('STEP10_RUNTIME_CRASH',e);process.exitCode=1;});

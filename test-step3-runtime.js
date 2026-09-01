@@ -1,6 +1,7 @@
 const fs=require('fs');
+const {loadAppSource}=require('./test-app-source');
 const vm=require('vm');
-const source=fs.readFileSync(__dirname+'/app.js','utf8');
+const source=loadAppSource(__dirname);
 const dailySource=fs.readFileSync(__dirname+'/daily-tasks.js','utf8');
 const store=new Map();
 const localStorage={

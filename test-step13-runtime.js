@@ -1,4 +1,5 @@
 const fs=require('fs');
+const {loadAppSource}=require('./test-app-source');
 const vm=require('vm');
 process.env.PUSH_DELIVERY_SECRET='step13_test_delivery_secret_1234567890';
 const core=require('./api/_lib/push-core');
@@ -84,7 +85,7 @@ const core=require('./api/_lib/push-core');
   ok(focused===true,'notification click no longer focuses app');
 
   // Manager support diagnostic must be intentionally privacy-safe.
-  const appSource=fs.readFileSync(__dirname+'/app.js','utf8'),dailySource=fs.readFileSync(__dirname+'/daily-tasks.js','utf8'),localSource=fs.readFileSync(__dirname+'/local-reminders.js','utf8'),pushSource=fs.readFileSync(__dirname+'/web-push-manager.js','utf8');
+  const appSource=loadAppSource(__dirname),dailySource=fs.readFileSync(__dirname+'/daily-tasks.js','utf8'),localSource=fs.readFileSync(__dirname+'/local-reminders.js','utf8'),pushSource=fs.readFileSync(__dirname+'/web-push-manager.js','utf8');
   const store=new Map(),localStorage={getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)};
   const sessionStorage={getItem:()=>null,setItem(){},removeItem(){}};
   const appNode={innerHTML:'',dataset:{},classList:{add(){},remove(){},toggle(){}},querySelectorAll(){return[]}};
@@ -94,7 +95,7 @@ const core=require('./api/_lib/push-core');
   const serviceWorker={ready:Promise.resolve({pushManager:{getSubscription:async()=>sub,subscribe:async()=>sub}}),addEventListener(){}};
   const fetchMock=async(url,options={})=>{
     if(String(url).includes('/api/push/public-key'))return {ok:true,status:200,json:async()=>({ok:true,configured:true,publicKey:Buffer.alloc(65,7).toString('base64url')})};
-    if(String(url).includes('/api/push/status'))return {ok:true,status:200,json:async()=>({ok:true,exists:true,serverNow:'2026-09-01T12:00:00Z',device:{label:'iPhone',platform:'ios',standalone:true,appVersion:'10.127'},subscription:{fingerprint:'serverfp'},timezone:'Europe/Berlin',preferredTime:'08:00',manifestDays:12,schedules:{primary:true,followup:true,snooze:false},health:{lastDeliveryAcceptedAt:'2026-09-01T08:00:00Z',lastReceivedAt:'2026-09-01T08:00:01Z',lastOpenedAt:'2026-09-01T08:05:00Z',lastOpenDelayMs:300000,backoffUntil:null,consecutiveFailures:0}})};
+    if(String(url).includes('/api/push/status'))return {ok:true,status:200,json:async()=>({ok:true,exists:true,serverNow:'2026-09-01T12:00:00Z',device:{label:'iPhone',platform:'ios',standalone:true,appVersion:'10.128'},subscription:{fingerprint:'serverfp'},timezone:'Europe/Berlin',preferredTime:'08:00',manifestDays:12,schedules:{primary:true,followup:true,snooze:false},health:{lastDeliveryAcceptedAt:'2026-09-01T08:00:00Z',lastReceivedAt:'2026-09-01T08:00:01Z',lastOpenedAt:'2026-09-01T08:05:00Z',lastOpenDelayMs:300000,backoffUntil:null,consecutiveFailures:0}})};
     if(String(url).includes('/api/push/sync'))return {ok:true,status:200,json:async()=>({ok:true,syncedAt:'2026-09-01T12:00:00Z',manifestDays:12,timezone:'Europe/Berlin',health:{}})};
     return {ok:true,status:200,json:async()=>({ok:true})};
   };
@@ -104,7 +105,7 @@ const core=require('./api/_lib/push-core');
   await sandbox.KinetikWebPush.loadConfig(true);sandbox.KinetikWebPush.activate && await sandbox.KinetikWebPush.activate();await sandbox.KinetikWebPush.checkHealth({force:true,render:false});
   const diagnostic=sandbox.KinetikWebPush.supportDiagnostic();const text=JSON.stringify(diagnostic);
   ok(diagnostic.schema==='kinetik-support-diagnostic-v1','support diagnostic schema missing');
-  ok(diagnostic.appVersion==='10.127'&&diagnostic.webPushManager==='1.2.0','diagnostic version metadata incorrect');
+  ok(diagnostic.appVersion==='10.128'&&diagnostic.webPushManager==='1.2.0','diagnostic version metadata incorrect');
   ok(diagnostic.privacy.deviceSecretIncluded===false&&diagnostic.privacy.pushEndpointIncluded===false,'diagnostic privacy declaration incorrect');
   ok(!text.includes('private-endpoint'),'support diagnostic leaked Push endpoint');
   const rawState=JSON.parse(store.get('cc_web_push_device_v1')||'{}');
@@ -114,7 +115,7 @@ const core=require('./api/_lib/push-core');
   ok(/Exporter diagnostic support/.test(sandbox.renderWebPushSettings()),'support diagnostic export UI missing');
 
   // Static integration / packaging contracts.
-  const deliver=fs.readFileSync(__dirname+'/api/push/deliver.js','utf8'),testApi=fs.readFileSync(__dirname+'/api/push/test.js','utf8'),receiptApi=fs.readFileSync(__dirname+'/api/push/receipt.js','utf8'),syncApi=fs.readFileSync(__dirname+'/api/push/sync.js','utf8'),appText=fs.readFileSync(__dirname+'/app.js','utf8'),managerText=fs.readFileSync(__dirname+'/web-push-manager.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8'),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
+  const deliver=fs.readFileSync(__dirname+'/api/push/deliver.js','utf8'),testApi=fs.readFileSync(__dirname+'/api/push/test.js','utf8'),receiptApi=fs.readFileSync(__dirname+'/api/push/receipt.js','utf8'),syncApi=fs.readFileSync(__dirname+'/api/push/sync.js','utf8'),appText=loadAppSource(__dirname),managerText=fs.readFileSync(__dirname+'/web-push-manager.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8'),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
   ok(deliver.includes('isBackoffActive')&&deliver.includes("skipped:'backoff_active'"),'delivery endpoint does not enforce backoff');
   ok(deliver.includes('push_backend_not_configured')&&deliver.includes('!process.env.PUSH_DELIVERY_SECRET'),'delivery endpoint does not reject missing delivery secret');
   ok(deliver.includes('createReceiptToken')&&testApi.includes('createReceiptToken'),'server notifications do not carry signed receipt tokens');
@@ -123,9 +124,9 @@ const core=require('./api/_lib/push-core');
   ok(swSource.includes("kinetikSendPushReceipt(options.data,'received')")&&swSource.includes("kinetikSendPushReceipt(data,'opened')"),'service worker receipt telemetry missing');
   ok(managerText.includes('supportDiagnostic')&&managerText.includes('deviceSecretIncluded:false'),'privacy-safe diagnostic generator missing');
   ok(appText.includes('web-push-observability-flow')&&appText.includes('web-push-backoff'),'step13 observability/backoff UI missing');
-  ok(html.includes('web-push-manager.js?v=10.127')&&swSource.includes('web-push-manager.js?v=10.127'),'v10.127 manager missing from PWA asset chain');
-  ok(swSource.includes("kinetik-v10-127-push-observability"),'v10.127 cache missing');
-  ok(pkg.version==='10.127.0','package version is not 10.127.0');
+  ok(html.includes('web-push-manager.js?v=10.128')&&swSource.includes('web-push-manager.js?v=10.128'),'v10.128 manager missing from PWA asset chain');
+  ok(swSource.includes("kinetik-v10-128-app-modularization"),'v10.128 cache missing');
+  ok(pkg.version==='10.128.0','package version is not 10.128.0');
 
   if(failures.length){console.error(`STEP13_RUNTIME_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`STEP13_RUNTIME_OK ${checks} checks`);
 })().catch(error=>{console.error(error);process.exit(1)});

@@ -335,3 +335,8 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - UI : parcours **Acceptée → Reçue → Ouverte**, délai d’ouverture et état de protection/backoff.
 - Cache PWA : `kinetik-v10-127-push-observability` et assets `?v=10.127`.
 - Tests : `test-step13-runtime.js` (**40 contrôles**) + toutes les suites étapes 3–12.
+
+
+## V10.128 · Maintenance — modularisation de app.js
+
+Le runtime historique a été découpé sans modification fonctionnelle : `app.js` contient désormais le noyau (~4,3 k lignes) et cinq modules de domaine sont chargés dans l'ordre (`app-adaptive.js`, `app-planning.js`, `app-progress.js`, `app-body.js`, `app-journey.js`). Les modules font partie du précache PWA. `APP_ARCHITECTURE.md` décrit les responsabilités et les règles pour éviter que `app.js` redevienne monolithique. La suite `test-step14-runtime.js` vérifie en plus le chargement script-par-script tel qu'il se produit réellement dans le navigateur.

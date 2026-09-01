@@ -167,9 +167,20 @@
    - `web-push-manager.js` v1.2.0
    - contrôle qualité automatisé : 40 vérifications (`test-step13-runtime.js`) + toutes les non-régressions étapes 3–12
 
+## Maintenance architecture — TERMINÉ / v10.128
+
+14. **Nettoyage et modularisation de `app.js`** — TERMINÉ / v10.128
+   - réduction du noyau `app.js` de ~11 044 à ~4 276 lignes
+   - extraction par domaine : `app-adaptive.js`, `app-planning.js`, `app-progress.js`, `app-body.js`, `app-journey.js`
+   - suppression des déclarations mortes réellement dupliquées dans le noyau
+   - ordre de chargement explicite et précache PWA de tous les modules
+   - suites historiques adaptées via `test-app-source.js`
+   - nouveau test d'exécution séparée des scripts, identique au mode de chargement navigateur
+   - architecture et règles de contribution documentées dans `APP_ARCHITECTURE.md`
+
 ## Suite recommandée
 
-14. **Identité utilisateur & multi-appareils** — À FAIRE
+15. **Identité utilisateur & multi-appareils** — À FAIRE
    - authentification explicite avant toute découverte cross-device
    - rattachement de plusieurs installations à un même compte
    - révocation d’un appareil perdu depuis un autre appareil
