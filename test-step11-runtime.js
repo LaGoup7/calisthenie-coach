@@ -1,7 +1,7 @@
 const fs=require('fs');
 const {loadAppSource}=require('./test-app-source');
 const vm=require('vm');
-const core=require('./api/_lib/push-core');
+const core=require('./lib/push-core');
 const appSource=loadAppSource(__dirname);
 const dailySource=fs.readFileSync(__dirname+'/daily-tasks.js','utf8');
 const localSource=fs.readFileSync(__dirname+'/local-reminders.js','utf8');
@@ -94,7 +94,7 @@ vm.runInContext(appSource+'\n'+dailySource+'\n'+localSource+'\n'+pushSource,sand
 
   const sw=fs.readFileSync(__dirname+'/sw.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8'),appText=loadAppSource(__dirname),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
   ok(sw.includes("addEventListener('push'")&&sw.includes('registration.showNotification'),'service worker push event is missing');
-  ok(sw.includes('web-push-manager.js?v=10.128')&&html.includes('web-push-manager.js?v=10.128'),'Web Push manager is not in PWA asset chain');
+  ok(sw.includes('web-push-manager.js?v=10.129')&&html.includes('web-push-manager.js?v=10.129'),'Web Push manager is not in PWA asset chain');
   ok(pkg.dependencies&&pkg.dependencies['web-push'],'server web-push dependency missing');
   ok(appText.includes('webPushDeviceState: "cc_web_push_device_v1"'),'device Web Push state not registered for reset');
   ok(appText.includes("['localNotificationState','webPushDeviceState'].includes(name)"),'device push state would leak into user backup');

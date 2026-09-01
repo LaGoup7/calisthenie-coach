@@ -1,6 +1,6 @@
 const crypto=require('crypto');
-const { json,readJson,safeId,getDevice,putDevice,deleteDevice,deleteSchedule,cancelMessage,authDevice,withHealth,healthSnapshot,deliveryErrorCode,applyDeliveryFailure,clearDeliveryFailure,createReceiptToken }=require('../_lib/push-core');
-const { send }=require('../_lib/web-push-sender');
+const { json,readJson,safeId,getDevice,putDevice,deleteDevice,deleteSchedule,cancelMessage,authDevice,withHealth,healthSnapshot,deliveryErrorCode,applyDeliveryFailure,clearDeliveryFailure,createReceiptToken }=require('../../lib/push-core');
+const { send }=require('../../lib/web-push-sender');
 module.exports=async function handler(req,res){
   if(req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   let device=null,id=null;

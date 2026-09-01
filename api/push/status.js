@@ -1,4 +1,4 @@
-const { json,readJson,safeId,safeSecret,getDevice,authDevice,healthSnapshot,hash }=require('../_lib/push-core');
+const { json,readJson,safeId,safeSecret,getDevice,authDevice,healthSnapshot,hash }=require('../../lib/push-core');
 module.exports=async function handler(req,res){
   if(req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   try{

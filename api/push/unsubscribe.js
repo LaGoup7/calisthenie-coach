@@ -1,4 +1,4 @@
-const { json,readJson,safeId,getDevice,deleteDevice,deleteSchedule,cancelMessage,authDevice }=require('../_lib/push-core');
+const { json,readJson,safeId,getDevice,deleteDevice,deleteSchedule,cancelMessage,authDevice }=require('../../lib/push-core');
 module.exports=async function handler(req,res){
   if(req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   try{

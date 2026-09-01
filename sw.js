@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-128-app-modularization';
-const ASSETS = ['./','./index.html','./styles.css?v=10.128','./app.js?v=10.128','./app-adaptive.js?v=10.128','./app-planning.js?v=10.128','./app-progress.js?v=10.128','./app-body.js?v=10.128','./app-journey.js?v=10.128','./daily-tasks.js?v=10.128','./local-reminders.js?v=10.128','./web-push-manager.js?v=10.128','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-129-vercel-hobby-hotfix';
+const ASSETS = ['./','./index.html','./styles.css?v=10.129','./app.js?v=10.129','./app-adaptive.js?v=10.129','./app-planning.js?v=10.129','./app-progress.js?v=10.129','./app-body.js?v=10.129','./app-journey.js?v=10.129','./daily-tasks.js?v=10.129','./local-reminders.js?v=10.129','./web-push-manager.js?v=10.129','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {

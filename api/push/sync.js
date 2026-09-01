@@ -2,7 +2,7 @@ const {
   envReady,json,readJson,safeId,safeSecret,hash,validateTimezone,normalizeTime,followupTime,cronAt,
   deterministicScheduleId,validateSubscription,sanitizeManifest,canonicalOrigin,getDevice,putDevice,
   upsertSchedule,deleteSchedule,publishOneOff,cancelMessage,allowNewDevice,authDevice,sanitizeDeviceMeta,healthSnapshot
-}=require('../_lib/push-core');
+}=require('../../lib/push-core');
 
 module.exports = async function handler(req,res){
   if(req.method!=='POST') return json(res,405,{ok:false,error:'method_not_allowed'});

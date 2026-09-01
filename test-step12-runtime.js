@@ -1,7 +1,7 @@
 const fs=require('fs');
 const {loadAppSource}=require('./test-app-source');
 const vm=require('vm');
-const core=require('./api/_lib/push-core');
+const core=require('./lib/push-core');
 const appSource=loadAppSource(__dirname);
 const dailySource=fs.readFileSync(__dirname+'/daily-tasks.js','utf8');
 const localSource=fs.readFileSync(__dirname+'/local-reminders.js','utf8');
@@ -27,7 +27,7 @@ async function fetchMock(url,options={}){
   const path=String(url),body=options.body?JSON.parse(options.body):null;calls.push({url:path,method:options.method||'GET',body});
   if(path.includes('/api/push/public-key'))return {ok:true,status:200,json:async()=>({ok:true,configured:true,publicKey:vapidPublic})};
   if(path.includes('/api/push/sync')){syncCalls++;serverExists=true;serverHealth={...serverHealth,lastClientSyncAt:'2026-09-01T10:00:00.000Z'};return {ok:true,status:200,json:async()=>({ok:true,active:true,syncedAt:'2026-09-01T10:00:00.000Z',timezone:'Europe/Berlin',manifestDays:30,device:body.device,health:serverHealth})};}
-  if(path.includes('/api/push/status')){statusCalls++;if(statusAuthFailed)return {ok:false,status:403,json:async()=>({ok:false,error:'device_auth_failed'})};return {ok:true,status:200,json:async()=>serverExists?({ok:true,exists:true,serverNow:'2026-09-01T10:01:00.000Z',device:{label:'Mon iPhone',platform:'ios',standalone:true,appVersion:'10.128'},subscription:{fingerprint:'abc123'},timezone:'Europe/Berlin',preferredTime:'08:00',manifestDays:30,schedules:{primary:true,followup:true,snooze:false},health:serverHealth}):({ok:true,exists:false,serverNow:'2026-09-01T10:01:00.000Z'})};}
+  if(path.includes('/api/push/status')){statusCalls++;if(statusAuthFailed)return {ok:false,status:403,json:async()=>({ok:false,error:'device_auth_failed'})};return {ok:true,status:200,json:async()=>serverExists?({ok:true,exists:true,serverNow:'2026-09-01T10:01:00.000Z',device:{label:'Mon iPhone',platform:'ios',standalone:true,appVersion:'10.129'},subscription:{fingerprint:'abc123'},timezone:'Europe/Berlin',preferredTime:'08:00',manifestDays:30,schedules:{primary:true,followup:true,snooze:false},health:serverHealth}):({ok:true,exists:false,serverNow:'2026-09-01T10:01:00.000Z'})};}
   if(path.includes('/api/push/test')){serverHealth={...serverHealth,lastTestAcceptedAt:'2026-09-01T10:02:00.000Z'};return {ok:true,status:200,json:async()=>({ok:true,sent:true,health:serverHealth})};}
   if(path.includes('/api/push/unsubscribe'))return {ok:true,status:200,json:async()=>({ok:true,removed:true})};
   return {ok:false,status:404,json:async()=>({ok:false,error:'not_found'})};
@@ -51,7 +51,7 @@ vm.createContext(sandbox);vm.runInContext(appSource+'\n'+dailySource+'\n'+localS
   const syncPayload=calls.find(c=>c.url.includes('/api/push/sync'))?.body;
   ok(syncPayload?.device?.platform==='ios','device platform metadata missing');
   ok(syncPayload?.device?.standalone===true,'PWA standalone metadata missing');
-  ok(syncPayload?.device?.appVersion==='10.128','device app version missing');
+  ok(syncPayload?.device?.appVersion==='10.129','device app version missing');
 
   await manager.checkHealth({force:true,render:false});
   let status=manager.getStatus();
@@ -102,7 +102,7 @@ vm.createContext(sandbox);vm.runInContext(appSource+'\n'+dailySource+'\n'+localS
   const tested=await manager.test();ok(tested===true,'server test failed');
   ok(manager.getStatus().serverHealth?.lastTestAcceptedAt,'server test health timestamp not stored');
 
-  ok(core.sanitizeDeviceMeta({label:'  iPhone   Perso  ',platform:'ios',standalone:1,appVersion:'10.128'}).label==='iPhone Perso','device metadata label sanitization failed');
+  ok(core.sanitizeDeviceMeta({label:'  iPhone   Perso  ',platform:'ios',standalone:1,appVersion:'10.129'}).label==='iPhone Perso','device metadata label sanitization failed');
   ok(core.sanitizeDeviceMeta({platform:'evil'}).platform==='other','unknown platform was accepted');
   ok(core.deliveryErrorCode({statusCode:410})==='subscription_expired','410 error classification failed');
   ok(core.deliveryErrorCode({status:429})==='push_rate_limited','429 error classification failed');
@@ -118,9 +118,9 @@ vm.createContext(sandbox);vm.runInContext(appSource+'\n'+dailySource+'\n'+localS
   ok(syncApi.includes('sanitizeDeviceMeta')&&syncApi.includes('lastClientSyncAt'),'device metadata/client sync health missing');
   ok(appText.includes('renderWebPushHealth')&&appText.includes('repairWebPush'),'health/repair settings UI not wired');
   ok(appText.includes('Nom de l’appareil')&&appText.includes('Multi-appareils'),'current-device management UI missing');
-  ok(html.includes('web-push-manager.js?v=10.128')&&sw.includes('web-push-manager.js?v=10.128'),'v10.128 Web Push manager not in PWA asset chain');
-  ok(sw.includes("kinetik-v10-128-app-modularization"),'v10.128 cache name missing');
-  ok(pkg.version==='10.128.0','package version not updated');
+  ok(html.includes('web-push-manager.js?v=10.129')&&sw.includes('web-push-manager.js?v=10.129'),'v10.129 Web Push manager not in PWA asset chain');
+  ok(sw.includes("kinetik-v10-129-vercel-hobby-hotfix"),'v10.129 cache name missing');
+  ok(pkg.version==='10.129.0','package version not updated');
 
   if(failures.length){console.error(`STEP12_RUNTIME_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`STEP12_RUNTIME_OK ${checks} checks`);
 })().catch(error=>{console.error(error);process.exit(1)});

@@ -186,3 +186,11 @@
    - révocation d’un appareil perdu depuis un autre appareil
    - préférences de notification par appareil
    - aucune synchronisation des données sportives tant que le modèle cloud n’est pas validé
+
+
+## Hotfix déploiement — v10.129
+
+- **Hotfix Vercel Hobby** — TERMINÉ / v10.129
+  - réduction de 13 à 12 fonctions publiques ;
+  - fusion diagnostic Strava dans `/api/strava/status?diagnostic=1` ;
+  - Node.js épinglé à `24.x`.

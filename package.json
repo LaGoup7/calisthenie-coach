@@ -1,10 +1,10 @@
 {
   "name": "kinetik-pwa",
-  "version": "10.128.0",
+  "version": "10.129.0",
   "private": true,
-  "description": "KINETIK PWA with modularized application UI, Web Push observability, adaptive backoff and privacy-safe diagnostics",
+  "description": "KINETIK PWA v10.129 Vercel Hobby deployment hotfix with modularized UI and Web Push",
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "dependencies": {
     "web-push": "^3.6.7"
