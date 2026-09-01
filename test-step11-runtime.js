@@ -39,7 +39,7 @@ vm.runInContext(appSource+'\n'+dailySource+'\n'+localSource+'\n'+pushSource,sand
   const failures=[];let checks=0;const ok=(cond,msg)=>{checks++;if(!cond)failures.push(msg);};
   const manager=sandbox.KinetikWebPush;
   await manager.loadConfig(true);
-  ok(manager&&manager.version==='1.2.0','Web Push manager missing or wrong version');
+  ok(manager&&manager.version==='1.3.0','Web Push manager missing or wrong version');
   ok(permissionRequests===0,'notification permission was requested without user action');
   ok(manager.getStatus().configured===true,'server VAPID configuration was not detected');
   ok(manager.getStatus().active===false,'Web Push should not be active before opt-in');
@@ -94,7 +94,7 @@ vm.runInContext(appSource+'\n'+dailySource+'\n'+localSource+'\n'+pushSource,sand
 
   const sw=fs.readFileSync(__dirname+'/sw.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8'),appText=loadAppSource(__dirname),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
   ok(sw.includes("addEventListener('push'")&&sw.includes('registration.showNotification'),'service worker push event is missing');
-  ok(sw.includes('web-push-manager.js?v=10.129')&&html.includes('web-push-manager.js?v=10.129'),'Web Push manager is not in PWA asset chain');
+  ok(sw.includes('web-push-manager.js?v=10.130')&&html.includes('web-push-manager.js?v=10.130'),'Web Push manager is not in PWA asset chain');
   ok(pkg.dependencies&&pkg.dependencies['web-push'],'server web-push dependency missing');
   ok(appText.includes('webPushDeviceState: "cc_web_push_device_v1"'),'device Web Push state not registered for reset');
   ok(appText.includes("['localNotificationState','webPushDeviceState'].includes(name)"),'device push state would leak into user backup');

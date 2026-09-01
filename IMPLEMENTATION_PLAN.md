@@ -180,12 +180,20 @@
 
 ## Suite recommandée
 
-15. **Identité utilisateur & multi-appareils** — À FAIRE
-   - authentification explicite avant toute découverte cross-device
-   - rattachement de plusieurs installations à un même compte
-   - révocation d’un appareil perdu depuis un autre appareil
-   - préférences de notification par appareil
-   - aucune synchronisation des données sportives tant que le modèle cloud n’est pas validé
+15. **Identité utilisateur & multi-appareils** — TERMINÉ / v10.130
+   - compte KINETIK local-first sans email : identité pseudonyme contrôlée par les appareils liés
+   - code d’association aléatoire à usage unique, valable 10 minutes, avec rate-limit serveur
+   - rattachement jusqu’à 8 installations à un même compte
+   - chaque appareil conserve son propre secret ; seul son hash SHA-256 est stocké côté serveur
+   - liste cross-device authentifiée : nom, plateforme, PWA/navigateur, dernière présence et état Push minimal
+   - révocation d’un appareil perdu depuis un autre appareil ; suppression immédiate de son record Push et de ses schedules
+   - marqueur serveur empêchant un appareil révoqué de recréer automatiquement son ancien Web Push
+   - suspension / réactivation des rappels par appareil, appliquée côté livraison sans modifier les données sportives
+   - association Push au compte vérifiée avec le secret du device Push ; impossible de rattacher arbitrairement un endpoint deviné
+   - aucune nouvelle Vercel Function : `/api/account` est un rewrite vers `/api/push/status?scope=account`, donc le total Hobby reste à 12
+   - aucun historique sportif, mesure, photo, performance ou note synchronisé
+   - identité compte exclue des exports sportifs ; `Effacer toutes les données` dissocie proprement l’appareil avant nettoyage
+   - limite explicite de cette première identité : sans email/passkey, perdre tous les appareils liés signifie perdre l’accès au compte
 
 
 ## Hotfix déploiement — v10.129
@@ -194,3 +202,8 @@
   - réduction de 13 à 12 fonctions publiques ;
   - fusion diagnostic Strava dans `/api/strava/status?diagnostic=1` ;
   - Node.js épinglé à `24.x`.
+
+
+## V10.130 · Étape 15 — Compte KINETIK & multi-appareils
+
+Le compte KINETIK regroupe uniquement les installations et leurs préférences de notifications. Il ne synchronise aucune donnée sportive. L’association d’un nouvel appareil utilise un code à usage unique valable 10 minutes. La couche serveur réutilise Upstash Redis et la fonction `/api/push/status` via rewrite afin de respecter la limite de 12 fonctions Vercel Hobby.

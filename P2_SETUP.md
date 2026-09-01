@@ -209,3 +209,12 @@ Dans **Réglages → Rappels & priorités → Santé des notifications**, `Expor
 - mensurations, photos, performances et notes.
 
 Le fichier contient seulement versions, plateforme, état permission/abonnement, booléens de schedules, dates de santé, codes d’erreur et paramètres de rappel nécessaires au diagnostic.
+
+
+## Compte KINETIK multi-appareils — v10.130
+
+Aucune nouvelle variable d’environnement n’est nécessaire. Le compte KINETIK réutilise `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` et `PUSH_DELIVERY_SECRET` déjà configurés pour P2.
+
+Le endpoint public `/api/account` est un rewrite défini dans `vercel.json` vers la fonction physique `/api/push/status?scope=account`. Cela permet de rester à 12 Vercel Functions sur Hobby.
+
+Le compte stocke uniquement l’identité pseudonyme du compte, les hashes des secrets appareil, les métadonnées minimales d’appareil, le lien éventuel vers une installation Push et le flag de suspension des notifications. Aucune séance, mesure, photo, performance ou note n’est envoyée au compte.

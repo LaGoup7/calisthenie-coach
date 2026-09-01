@@ -19,3 +19,8 @@ Le build pouvait donc se terminer correctement puis échouer pendant `Deploying 
 ## Invariant
 
 Seuls les 12 fichiers `api/push/*.js` et `api/strava/*.js` sont des entrypoints Vercel. Les helpers partagés vivent désormais hors de `api/`, dans `lib/`.
+
+
+## Invariant v10.130
+
+L’étape multi-appareils n’ajoute aucune fonction physique. `/api/account` utilise un rewrite vers `api/push/status.js`, donc le total reste à 12. `lib/account-core.js` vit hors de `api/`.

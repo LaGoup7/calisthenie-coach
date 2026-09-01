@@ -4,7 +4,7 @@
 /* ========================================================================== */
 (function(global){
   'use strict';
-  const VERSION='1.2.0';
+  const VERSION='1.3.0';
   const STATE_KEY='cc_web_push_device_v1';
   const MANIFEST_DAYS=60;
   const SYNC_DEBOUNCE_MS=1200;
@@ -71,7 +71,7 @@
   function sanitizeLabel(value){const text=String(value||'').trim().replace(/\s+/g,' ');return (text||defaultDeviceLabel()).slice(0,48);}
   function deviceMetadata(){
     const state=parseState();
-    return {label:sanitizeLabel(state.deviceLabel),platform:detectPlatform(),standalone:isStandalone(),appVersion:'10.129'};
+    return {label:sanitizeLabel(state.deviceLabel),platform:detectPlatform(),standalone:isStandalone(),appVersion:'10.130'};
   }
   function capability(){
     const local=global.KinetikLocalReminders?.getCapability?.()||{};
@@ -152,10 +152,13 @@
       lastSyncError=null;
       saveState({enabled:true,subscribed:true,repairReason:null,serverExists:true,lastSyncAt:data.syncedAt||new Date().toISOString(),lastManifestDays:data.manifestDays||0,timezone:data.timezone||timezone(),lastFingerprint:fp,subscriptionEndpointFp:endpointFp,lastError:null,serverHealth:data.health||previous.serverHealth||null,lastHealthAt:new Date().toISOString(),deviceLabel:sanitizeLabel(payload.device.label)});
       try{global.KinetikLocalReminders?.refresh?.();}catch(_){}
+      try{global.KinetikAccount?.scheduleSync?.(true);}catch(_){}
       if(options.render!==false)try{global.render?.();}catch(_){}
       return true;
     }catch(error){
       lastSyncError=error.message||'sync_failed';
+      const serverCode=error.data?.error||lastSyncError;
+      if(serverCode==='account_device_revoked'){try{const current=await currentSubscription();await current?.unsubscribe?.();}catch(_){}saveState({enabled:false,subscribed:false,lastError:'account_device_revoked',repairReason:'account_device_revoked',serverExists:false});try{global.KinetikAccount?.scheduleSync?.(true);}catch(_){}if(options.render!==false)try{global.render?.();}catch(_){}return false;}
       const repairReason=error.status===403?'device_auth_failed':error.status===404?'server_missing':null;
       saveState({lastError:lastSyncError,...(repairReason?{repairReason,serverExists:repairReason!=='server_missing'}:{})});
       if(options.render!==false)try{global.render?.();}catch(_){}
@@ -258,7 +261,7 @@
   function supportDiagnostic(){
     const st=status(),cap=capability(),p=prefs(),health=st.serverHealth||{},server=st.serverInfo||{};
     return {
-      schema:'kinetik-support-diagnostic-v1',generatedAt:new Date().toISOString(),appVersion:'10.129',webPushManager:VERSION,
+      schema:'kinetik-support-diagnostic-v1',generatedAt:new Date().toISOString(),appVersion:'10.130',webPushManager:VERSION,
       runtime:{platform:st.devicePlatform||'other',standalone:!!st.deviceStandalone,timezone:st.timezone||timezone(),notificationPermission:st.permission||'default',pushSupported:!!cap.pushSupported,serviceWorkerSupported:!!global.navigator?.serviceWorker},
       webPush:{configured:!!st.configured,enabled:!!st.enabled,active:!!st.active,subscribed:!!st.subscribed,repairReason:st.repairReason||null,serverExists:!!st.serverExists,lastSyncAt:st.lastSyncAt||null,lastHealthAt:st.lastHealthAt||null,manifestDays:Number(st.lastManifestDays||0),installationSuffix:st.installationSuffix||null,subscriptionFingerprint:st.subscriptionEndpointFp||null},
       server:{schedules:server.schedules?{primary:!!server.schedules.primary,followup:!!server.schedules.followup,snooze:!!server.schedules.snooze}:null,manifestDays:Number(server.manifestDays||0),preferredTime:server.preferredTime||null,subscriptionFingerprint:server.subscription?.fingerprint||null,serverNow:server.serverNow||null},

@@ -48,10 +48,10 @@ try{
 
 const html=fs.readFileSync(__dirname+'/index.html','utf8');
 let last=-1;
-for(const file of APP_SOURCE_FILES){const pos=html.indexOf(`${file}?v=10.129`);ok(pos>=0,`${file} missing from index.html`);ok(pos>last,`${file} is out of load order`);last=pos;}
+for(const file of APP_SOURCE_FILES){const pos=html.indexOf(`${file}?v=10.130`);ok(pos>=0,`${file} missing from index.html`);ok(pos>last,`${file} is out of load order`);last=pos;}
 const sw=fs.readFileSync(__dirname+'/sw.js','utf8');
-for(const file of APP_SOURCE_FILES)ok(sw.includes(`./${file}?v=10.129`),`${file} missing from service-worker precache`);
-ok(sw.includes("kinetik-v10-129-vercel-hobby-hotfix"),'v10.129 modularization cache missing');
-const pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));ok(pkg.version==='10.129.0','package version is not 10.129.0');
+for(const file of APP_SOURCE_FILES)ok(sw.includes(`./${file}?v=10.130`),`${file} missing from service-worker precache`);
+ok(sw.includes("kinetik-v10-130-multidevice-account"),'v10.130 modularization cache missing');
+const pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));ok(pkg.version==='10.130.0','package version is not 10.130.0');
 
 if(failures.length){console.error(`STEP14_RUNTIME_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`STEP14_RUNTIME_OK ${checks} checks`);

@@ -1,4 +1,4 @@
-# KINETIK · Architecture JavaScript v10.128
+# KINETIK · Architecture JavaScript v10.130
 
 ## Pourquoi ce refactor
 
@@ -17,6 +17,7 @@ La v10.128 conserve le comportement mais découpe le runtime en scripts classiqu
 7. `daily-tasks.js` — moteur Daily Tasks
 8. `local-reminders.js` — fallback notifications locales
 9. `web-push-manager.js` — Web Push P2
+10. `account-manager.js` — identité local-first, association et état multi-appareils
 
 Les scripts restent des scripts classiques `defer` afin de préserver l'environnement global historique et l'ordre des patches existants.
 
@@ -28,7 +29,16 @@ Les scripts restent des scripts classiques `defer` afin de préserver l'environn
 - Éviter les nouvelles redéfinitions successives de `renderX` / `bindEvents`; préférer une fonction canonique ou un helper dédié dans le module concerné.
 - Toute nouvelle extraction doit conserver l'ordre de chargement et passer `test-step14-runtime.js`, qui exécute les fichiers séparément comme le navigateur.
 - Toute nouvelle ressource JS obligatoire doit être ajoutée à `index.html` et au précache du Service Worker.
+- Les fonctions Vercel physiques sous `api/` doivent rester à **12 maximum** sur le plan Hobby actuel. Préférer les rewrites vers une fonction existante ou consolider des routes avant d’ajouter un nouvel entrypoint.
+- Les données de compte/appareils ne doivent jamais être mélangées au stockage sportif local (`STORAGE`) sans décision explicite de migration cloud.
 
 ## Dette restante connue
 
 Les couches historiques contiennent encore plusieurs wrappers intentionnels (`renderToday`, `renderProgressOverview`, `bindEvents`, Body Map, etc.). Ils ne sont plus concentrés dans `app.js` et sont désormais isolés par domaine. Leur consolidation peut se faire progressivement lorsque chaque domaine est retravaillé, avec les tests de non-régression existants comme filet de sécurité.
+
+
+## Couche identité v10.130
+
+`account-manager.js` reste séparé de `web-push-manager.js`. Le compte possède une identité appareil propre et ne dépend pas de l’activation des notifications. Lorsqu’un Web Push existe, son installation est seulement **liée** au membre après authentification de son secret Push.
+
+Côté serveur, `lib/account-core.js` partage Redis avec P2 mais ne lit ni n’écrit aucune donnée sportive. `/api/account` est un rewrite Vercel vers la fonction physique `api/push/status.js` avec `scope=account`, ce qui évite une 13e fonction serverless.

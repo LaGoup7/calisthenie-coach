@@ -1,4 +1,4 @@
-/* KINETIK v10.129 · Daily journey, reminders, actions and Web Push settings UI. */
+/* KINETIK v10.130 · Daily journey, reminders, actions and Web Push settings UI. */
 /* KINETIK v10.120 · Step 6 · Today Agenda                                   */
 /* One compact surface for the Daily Tasks Engine.                            */
 /* Completed tasks leave the active list and feed the daily progress.         */
@@ -552,10 +552,10 @@ function v10126HealthDate(value){
   return d.toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
 }
 function v10126RepairLabel(reason){
-  return ({permission_denied:'Notifications bloquées',subscription_missing:'Abonnement Push perdu',subscription_changed:'Abonnement Push modifié',vapid_key_changed:'Clé Push renouvelée',server_missing:'Appareil absent du serveur',device_auth_failed:'Identité appareil désynchronisée',repair_failed:'Réparation incomplète'})[reason]||'Connexion Push à réparer';
+  return ({permission_denied:'Notifications bloquées',subscription_missing:'Abonnement Push perdu',subscription_changed:'Abonnement Push modifié',vapid_key_changed:'Clé Push renouvelée',server_missing:'Appareil absent du serveur',device_auth_failed:'Identité appareil désynchronisée',account_device_revoked:'Appareil révoqué du compte',repair_failed:'Réparation incomplète'})[reason]||'Connexion Push à réparer';
 }
 function v10126ErrorLabel(code){
-  return ({subscription_expired:'Abonnement expiré',push_auth_failed:'Authentification Push refusée',push_rate_limited:'Service Push temporairement limité',push_service_unavailable:'Service Push indisponible',push_timeout:'Délai Push dépassé',push_network_error:'Erreur réseau Push',delivery_failed:'Échec de remise',subscription_missing:'Abonnement Push perdu',vapid_key_changed:'Clé Push renouvelée',permission_denied:'Notifications bloquées',device_auth_failed:'Identité appareil désynchronisée',server_missing:'Appareil absent du serveur'})[code]||String(code||'—').replace(/_/g,' ');
+  return ({subscription_expired:'Abonnement expiré',push_auth_failed:'Authentification Push refusée',push_rate_limited:'Service Push temporairement limité',push_service_unavailable:'Service Push indisponible',push_timeout:'Délai Push dépassé',push_network_error:'Erreur réseau Push',delivery_failed:'Échec de remise',subscription_missing:'Abonnement Push perdu',vapid_key_changed:'Clé Push renouvelée',permission_denied:'Notifications bloquées',device_auth_failed:'Identité appareil désynchronisée',account_device_revoked:'Appareil révoqué du compte',server_missing:'Appareil absent du serveur'})[code]||String(code||'—').replace(/_/g,' ');
 }
 function v10126NotificationHealthBadge(status){
   const h=status.serverHealth||{};
@@ -578,7 +578,7 @@ function renderWebPushHealth(){
     ${(health.lastDeliveryError||status.lastError)?`<div class="web-push-health-alert"><strong>Dernier incident</strong><span>${esc(lastError)}${Number(health.consecutiveFailures||0)>0?` · ${Number(health.consecutiveFailures)} échec${Number(health.consecutiveFailures)>1?'s':''} consécutif${Number(health.consecutiveFailures)>1?'s':''}`:''}</span></div>`:''}
     ${canRepair?`<button type="button" class="btn btn-primary" id="repairWebPush">Réparer Web Push</button>`:''}
     <p class="reminder-local-note"><strong>Diagnostic :</strong> « Dernière remise Push » signifie que le service Push a accepté la notification côté serveur ; ce n’est pas une preuve que l’utilisateur l’a ouverte.</p>
-    <p class="reminder-local-note"><strong>Multi-appareils :</strong> chaque installation possède déjà son identité et son état séparés. Une liste de tous les appareils ne sera ajoutée qu’avec une authentification utilisateur/cloud, afin qu’un appareil ne puisse jamais découvrir ceux d’un autre utilisateur.</p>`:''}
+    <p class="reminder-local-note"><strong>Multi-appareils :</strong> la liste et la révocation des appareils sont maintenant gérées dans la section Compte & appareils des Réglages.</p>`:''}
   </div>`;
 }
 const _renderWebPushSettingsV10126=renderWebPushSettings;
@@ -629,4 +629,59 @@ bindEvents=function(){
   _bindEventsV10127();
   const manager=window.KinetikWebPush,exportBtn=document.getElementById('exportWebPushDiagnostic');
   if(exportBtn)exportBtn.onclick=()=>{const ok=manager?.downloadSupportDiagnostic?.();if(!ok){const data=manager?.supportDiagnostic?.();if(data)prompt('Diagnostic KINETIK (copier le JSON)',JSON.stringify(data,null,2));}};
+};
+
+/* ========================================================================== */
+/* KINETIK v10.130 · Step 15 · Account identity & multi-device                */
+/* Local-first account groups installations only. Sports data stays local.    */
+/* ========================================================================== */
+function v10130AccountStatus(){return window.KinetikAccount?.getStatus?.()||{linked:false,members:[],loading:false,lastError:null,deviceLabel:'Cet appareil'};}
+function v10130AccountError(code){return ({rate_limited:'Trop de tentatives. Réessaie plus tard.',pairing_code_invalid:'Code d’association invalide ou expiré.',device_limit_reached:'Limite de 8 appareils atteinte.',member_auth_failed:'Cet appareil a été révoqué du compte.',account_not_found:'Compte introuvable.',account_unavailable:'Compte temporairement indisponible.',pairing_failed:'Association impossible.',device_revoked:'Cet appareil a été révoqué.'})[code]||String(code||'').replace(/_/g,' ');}
+function v10130AccountDate(value){if(!value)return '—';const d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
+function v10130DeviceIcon(platform){return platform==='ios'?'◫':platform==='android'?'▯':platform==='windows'?'▣':platform==='macos'?'◇':'▤';}
+function renderAccountSettings(){
+  const s=v10130AccountStatus();
+  if(!s.linked){
+    return `<section class="p88-settings-section account-settings"><div class="p88-section-head"><div><div class="kicker">Compte & appareils</div><h2>Identité KINETIK</h2></div><span class="pill">Local-first</span></div>
+      <p class="p88-muted">Crée une identité KINETIK pour rattacher iPhone, PC, iPad ou autre appareil. <strong>Aucune séance, mesure, photo ou performance n’est synchronisée.</strong></p>
+      ${s.revokedAt?`<div class="account-alert"><strong>Appareil révoqué</strong><span>Cet appareil n’est plus membre de son ancien compte. Tu peux créer ou rejoindre un compte à nouveau.</span></div>`:''}
+      ${s.lastError?`<div class="account-alert"><strong>Association</strong><span>${esc(v10130AccountError(s.lastError))}</span></div>`:''}
+      <div class="account-onboarding-grid"><button class="account-choice" id="createKinetikAccount"><span>＋</span><div><strong>Créer mon compte KINETIK</strong><small>Crée une identité privée et rattache cet appareil.</small></div></button>
+      <div class="account-join"><div><strong>Rejoindre un compte existant</strong><small>Saisis le code affiché sur un appareil déjà connecté.</small></div><div class="account-code-entry"><input id="kinetikPairCodeInput" inputmode="text" autocomplete="one-time-code" maxlength="9" placeholder="ABCD-EFGH"><button class="btn btn-primary compact" id="joinKinetikAccount">Associer</button></div></div></div>
+      <p class="reminder-local-note"><strong>Pas d’email requis :</strong> pour cette première version, l’identité est contrôlée par les appareils déjà liés. Si tous les appareils sont perdus, le compte n’est pas récupérable automatiquement.</p>
+    </section>`;
+  }
+  const members=Array.isArray(s.members)?s.members:[];
+  const devices=members.map(m=>`<div class="account-device ${m.current?'is-current':''}"><div class="account-device-main"><span class="account-device-icon">${v10130DeviceIcon(m.platform)}</span><div><strong>${esc(m.label||'Cet appareil')}${m.current?' · cet appareil':''}</strong><small>${esc(m.platform||'other')}${m.standalone?' · PWA':' · navigateur'} · …${esc(m.deviceIdSuffix||'—')}</small><small>Vu ${esc(v10130AccountDate(m.lastSeenAt))}${m.pushLinked?` · Push …${esc(m.pushInstallationSuffix||'—')}`:' · Push non lié'}</small></div></div><div class="account-device-actions"><button type="button" class="btn ${m.notificationsMuted?'btn-outline':'btn-ghost'} compact account-device-mute" data-device="${esc(m.deviceId)}" data-muted="${m.notificationsMuted?'1':'0'}">${m.notificationsMuted?'Réactiver rappels':'Suspendre rappels'}</button>${!m.current?`<button type="button" class="btn btn-danger compact account-device-revoke" data-device="${esc(m.deviceId)}" data-label="${esc(m.label||'Cet appareil')}">Révoquer</button>`:''}</div></div>`).join('');
+  const pairValid=s.pairCode&&(!s.pairExpiresAt||new Date(s.pairExpiresAt).getTime()>Date.now());
+  return `<section class="p88-settings-section account-settings is-linked"><div class="p88-section-head"><div><div class="kicker">Compte & appareils</div><h2>Compte KINETIK · …${esc(s.accountSuffix||'—')}</h2></div><span class="pill">${members.length}/${s.maxDevices||8} appareils</span></div>
+    <p class="p88-muted">Ce compte synchronise uniquement l’<strong>identité des appareils et leurs préférences de notifications</strong>. Ton historique sportif reste local sur chaque appareil.</p>
+    ${s.lastError?`<div class="account-alert"><strong>Compte</strong><span>${esc(v10130AccountError(s.lastError))}</span></div>`:''}
+    <div class="account-current-label"><label for="kinetikAccountDeviceLabel">Nom de cet appareil</label><div><input id="kinetikAccountDeviceLabel" maxlength="48" value="${esc(s.deviceLabel||'Cet appareil')}"><button class="btn btn-ghost compact" id="saveKinetikAccountLabel">Enregistrer</button></div></div>
+    <div class="account-devices"><div class="account-subhead"><div><strong>Appareils liés</strong><span>${members.length} installation${members.length>1?'s':''}</span></div><button class="btn btn-outline compact" id="refreshKinetikAccount">Actualiser</button></div>${devices||'<p class="p88-muted">Chargement des appareils…</p>'}</div>
+    <div class="account-pairing"><div><strong>Ajouter un appareil</strong><small>Génère un code à saisir sur le nouvel appareil. Il expire après 10 minutes et ne fonctionne qu’une fois.</small></div>${pairValid?`<div class="account-pair-code"><code>${esc(s.pairCode)}</code><button class="btn btn-outline compact" id="copyKinetikPairCode">Copier</button><span>expire ${esc(v10130AccountDate(s.pairExpiresAt))}</span></div>`:`<button class="btn btn-primary" id="createKinetikPairCode">Générer un code d’association</button>`}</div>
+    <div class="account-danger"><button class="btn btn-ghost" id="leaveKinetikAccount">Dissocier cet appareil du compte</button></div>
+  </section>`;
+}
+const _renderProfileV10130=renderProfile;
+renderProfile=function(){
+  let html=_renderProfileV10130(),block=renderAccountSettings();
+  const marker='<section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Coaching</div>';
+  return html.includes(marker)?html.replace(marker,block+marker):html.replace(/<\/header>/,'</header>'+block);
+};
+const _bindEventsV10130=bindEvents;
+bindEvents=function(){
+  _bindEventsV10130();
+  const manager=window.KinetikAccount;
+  const create=document.getElementById('createKinetikAccount');if(create)create.onclick=async()=>{create.disabled=true;const ok=await manager?.create?.();if(!ok)alert('Création du compte KINETIK impossible.');render();};
+  const join=document.getElementById('joinKinetikAccount');if(join)join.onclick=async()=>{const input=document.getElementById('kinetikPairCodeInput');join.disabled=true;const ok=await manager?.join?.(input?.value||'');if(!ok)alert('Code invalide, expiré ou association impossible.');render();};
+  const codeInput=document.getElementById('kinetikPairCodeInput');if(codeInput){codeInput.oninput=()=>{const pos=codeInput.selectionStart;codeInput.value=manager?.normalizeCode?.(codeInput.value)||codeInput.value;try{codeInput.setSelectionRange(pos,pos);}catch(_){}};codeInput.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();join?.click();}};}
+  const pair=document.getElementById('createKinetikPairCode');if(pair)pair.onclick=async()=>{pair.disabled=true;const code=await manager?.createPairCode?.();if(!code)alert('Impossible de générer le code d’association.');render();};
+  const copy=document.getElementById('copyKinetikPairCode');if(copy)copy.onclick=async()=>{const code=v10130AccountStatus().pairCode||'';try{await navigator.clipboard.writeText(code);copy.textContent='Copié ✓';}catch(_){prompt('Code d’association',code);}};
+  const saveLabel=document.getElementById('saveKinetikAccountLabel');if(saveLabel)saveLabel.onclick=async()=>{const input=document.getElementById('kinetikAccountDeviceLabel');saveLabel.disabled=true;await manager?.rename?.(input?.value||'Cet appareil');render();};
+  document.querySelectorAll('.account-device-mute').forEach(btn=>btn.onclick=async()=>{btn.disabled=true;await manager?.setMuted?.(btn.dataset.device,btn.dataset.muted!=='1');render();});
+  document.querySelectorAll('.account-device-revoke').forEach(btn=>btn.onclick=async()=>{if(!confirm(`Révoquer « ${btn.dataset.label||'cet appareil'} » ? Ses notifications serveur seront supprimées et il devra être associé à nouveau.`))return;btn.disabled=true;await manager?.revoke?.(btn.dataset.device);render();});
+  const refresh=document.getElementById('refreshKinetikAccount');if(refresh)refresh.onclick=async()=>{refresh.disabled=true;await manager?.refresh?.({force:true});render();};
+  const leave=document.getElementById('leaveKinetikAccount');if(leave)leave.onclick=async()=>{if(!confirm('Dissocier cet appareil du compte KINETIK ? Les données sportives locales resteront sur cet appareil.'))return;leave.disabled=true;await manager?.leave?.();render();};
+  const clear=document.getElementById('clearAllData');if(clear)clear.onclick=async()=>{if(confirm('Effacer historique, tests, skills, mesures, compte appareil, rappels serveur et photos ?')){await manager?.clearAll?.();await window.KinetikWebPush?.disable?.({unsubscribeBrowser:true,render:false});Object.values(STORAGE).forEach(k=>localStorage.removeItem(k));await clearPhotos();render();}};
 };

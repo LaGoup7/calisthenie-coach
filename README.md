@@ -345,3 +345,20 @@ Le runtime historique a été découpé sans modification fonctionnelle : `app.j
 ## V10.129 · Hotfix déploiement Vercel Hobby
 
 La route Strava de diagnostic a été fusionnée dans `/api/strava/status?diagnostic=1` afin de rester à 12 Vercel Functions sur le plan Hobby. Voir `VERCEL_DEPLOYMENT_FIX.md`.
+
+
+## V10.130 · Étape 15 — Identité KINETIK & vrai multi-appareils
+- Nouveau module client **`account-manager.js`** : identité local-first séparée des données sportives.
+- Un appareil peut **Créer un compte KINETIK** sans email, puis générer un **code d’association à usage unique valable 10 minutes** pour rattacher un second appareil.
+- Le compte accepte jusqu’à **8 appareils**. Chaque installation possède son propre `deviceSecret`; seul son hash est enregistré dans Redis.
+- La liste des appareils affiche uniquement : nom, plateforme, PWA/navigateur, dernière présence, suffixes d’identifiants et présence éventuelle de Web Push.
+- **Suspendre les rappels** agit par appareil : `/api/push/deliver` vérifie l’état du membre avant toute remise programmée.
+- **Révoquer** un autre appareil supprime son abonnement serveur, ses schedules QStash et pose un marqueur empêchant une resynchronisation Push automatique avec l’ancienne installation.
+- Un appareil révoqué qui rouvre KINETIK est dissocié localement et son Push navigateur est désactivé.
+- Le rattachement d’un Push au compte est authentifié avec le secret Push existant : un `installationId` arbitraire ne suffit pas.
+- Aucun nouveau endpoint serverless physique : **`/api/account` est réécrit vers `/api/push/status?scope=account`**, donc KINETIK reste à **12 Vercel Functions** sur Hobby.
+- Les données suivantes restent strictement locales : séances, Quick Logs, mensurations, photos, performances, mobilité, notes et historique.
+- Le compte n’est pas inclus dans l’export JSON sportif. **Effacer toutes les données** quitte d’abord le compte, puis désactive Web Push et nettoie le stockage local.
+- Limite volontaire v1 : il n’existe pas encore d’email/passkey de récupération. Si tous les appareils membres sont perdus, le compte ne peut pas être récupéré automatiquement.
+- Cache PWA : `kinetik-v10-130-multidevice-account` avec `account-manager.js?v=10.130` disponible offline.
+- Tests : `test-step15-runtime.js` (**43 contrôles**) + toutes les suites historiques étapes 3–14.

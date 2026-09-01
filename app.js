@@ -1,4 +1,4 @@
-/* KINETIK v10.129 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.130 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",

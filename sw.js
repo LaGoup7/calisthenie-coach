@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-129-vercel-hobby-hotfix';
-const ASSETS = ['./','./index.html','./styles.css?v=10.129','./app.js?v=10.129','./app-adaptive.js?v=10.129','./app-planning.js?v=10.129','./app-progress.js?v=10.129','./app-body.js?v=10.129','./app-journey.js?v=10.129','./daily-tasks.js?v=10.129','./local-reminders.js?v=10.129','./web-push-manager.js?v=10.129','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-130-multidevice-account';
+const ASSETS = ['./','./index.html','./styles.css?v=10.130','./app.js?v=10.130','./app-adaptive.js?v=10.130','./app-planning.js?v=10.130','./app-progress.js?v=10.130','./app-body.js?v=10.130','./app-journey.js?v=10.130','./daily-tasks.js?v=10.130','./local-reminders.js?v=10.130','./web-push-manager.js?v=10.130','./account-manager.js?v=10.130','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {
@@ -8,7 +8,7 @@ self.addEventListener('fetch', e => {
   if (!['http:','https:'].includes(url.protocol)) return;
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
-  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/app-adaptive.js', '/app-planning.js', '/app-progress.js', '/app-body.js', '/app-journey.js', '/daily-tasks.js', '/local-reminders.js', '/web-push-manager.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
+  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/app-adaptive.js', '/app-planning.js', '/app-progress.js', '/app-body.js', '/app-journey.js', '/daily-tasks.js', '/local-reminders.js', '/web-push-manager.js', '/account-manager.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
   if (isCore) {
     e.respondWith(fetch(e.request).then(resp => {
       const copy = resp.clone(); caches.open(CACHE).then(c=>c.put(e.request, copy)); return resp;
