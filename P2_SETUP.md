@@ -1,0 +1,151 @@
+# KINETIK · P2 Web Push — configuration serveur
+
+La v10.125 contient tout le code P2, mais aucun secret n'est inclus dans le ZIP. Le backend reste volontairement **inactif** tant que les variables ci-dessous ne sont pas configurées sur le projet Vercel.
+
+## 1. Installer les dépendances
+
+Vercel exécute automatiquement `npm install` lors du déploiement grâce au `package.json` fourni.
+
+Pour générer les secrets localement :
+
+```bash
+npm install
+npm run push:secrets
+```
+
+Le script affiche :
+
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `PUSH_DELIVERY_SECRET`
+- un exemple `VAPID_SUBJECT`
+
+Les clés VAPID doivent être générées **une seule fois** puis conservées. Changer de paire invaliderait les abonnements Push existants.
+
+## 2. Créer le stockage Upstash Redis
+
+Dans Vercel Marketplace, ajouter **Upstash Redis** au projet. Les deux variables suivantes doivent être disponibles en Production :
+
+```text
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+```
+
+KINETIK y stocke uniquement :
+
+- identifiant technique d'installation ;
+- hash du secret appareil ;
+- `PushSubscription` chiffrée par le protocole Web Push ;
+- fuseau horaire ;
+- préférences de notification nécessaires ;
+- manifeste de rappels à venir.
+
+Aucune photo, mensuration, note de séance ou performance n'est envoyée au serveur.
+
+## 3. Créer / connecter QStash
+
+Ajouter dans Vercel :
+
+```text
+QSTASH_TOKEN
+```
+
+QStash déclenche deux schedules récurrents maximum par appareil :
+
+1. rappel principal à l'heure préférée ;
+2. éventuelle relance séance.
+
+Les expressions utilisent `CRON_TZ=<fuseau IANA>`, ce qui permet de suivre automatiquement l'heure locale et les changements heure d'été / hiver.
+
+Le snooze utilise un message QStash ponctuel.
+
+## 4. Ajouter les variables Vercel
+
+Variables Production nécessaires :
+
+```text
+PUBLIC_APP_URL=https://ton-domaine-production
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:ton-email
+PUSH_DELIVERY_SECRET=...
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+QSTASH_TOKEN=...
+```
+
+`PUBLIC_APP_URL` doit être l'URL HTTPS canonique de KINETIK. Il est utilisé comme destination QStash (`/api/push/deliver`).
+
+Ne jamais exposer dans le navigateur :
+
+- `VAPID_PRIVATE_KEY`
+- `PUSH_DELIVERY_SECRET`
+- `UPSTASH_REDIS_REST_TOKEN`
+- `QSTASH_TOKEN`
+
+Seule `VAPID_PUBLIC_KEY` est publiquement retournée par `/api/push/public-key`.
+
+## 5. Déployer puis activer sur l'appareil
+
+Dans KINETIK :
+
+```text
+Réglages
+→ Rappels & priorités
+→ Notifications fiables
+→ Activer Web Push
+```
+
+Sur iPhone/iPad, KINETIK doit être ajoutée à l'écran d'accueil. L'autorisation Push doit être déclenchée par le bouton utilisateur.
+
+Après activation, le panneau doit afficher :
+
+```text
+Actif
+P2 Web Push
+60 jours synchronisés
+```
+
+Puis utiliser **Tester depuis le serveur**.
+
+## 6. Vérification app fermée
+
+1. Activer Web Push.
+2. Cliquer sur `Tester depuis le serveur`.
+3. Fermer complètement KINETIK.
+4. Vérifier qu'une notification serveur apparaît.
+5. Pour le test horaire réel, définir une heure préférée quelques minutes dans le futur puis cliquer sur `Synchroniser`.
+
+## Architecture
+
+```text
+PWA KINETIK
+  ↓ PushManager.subscribe(VAPID public)
+/api/push/sync
+  ↓
+Upstash Redis ─── manifeste minimal 60 jours
+  ↓
+QStash (CRON_TZ)
+  ↓
+/api/push/deliver
+  ↓ web-push + VAPID private
+Push service Apple / Google / Mozilla
+  ↓
+Service Worker KINETIK
+  ↓
+Notification système
+```
+
+## Sécurité / nettoyage
+
+- Un secret appareil aléatoire est créé localement ; le serveur ne stocke que son SHA-256.
+- Une installation existante ne peut être modifiée sans ce secret.
+- Les nouvelles inscriptions sont limitées par IP.
+- Un endpoint Push expiré (`404/410`) supprime automatiquement l'appareil et ses schedules.
+- Un appareil expiré du stockage fait supprimer ses schedules au prochain passage QStash.
+- `Effacer toutes les données` et l'import d'une sauvegarde désabonnent d'abord le serveur.
+- L'état appareil P2 n'entre jamais dans les exports JSON.
+
+## Limite volontaire
+
+Le navigateur calcule et synchronise un manifeste de **60 jours**. Si KINETIK n'est jamais ouverte pendant plus de 60 jours, le serveur finit par ne plus avoir de tâche future à envoyer. La prochaine ouverture régénère automatiquement le manifeste.

@@ -286,3 +286,21 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Cache PWA : `kinetik-v10-124-local-reminders` et nouvel asset offline `local-reminders.js?v=10.124`.
 - Limite volontaire : P1 fonctionne tant que le runtime PWA reste vivant. La livraison garantie app fermée reste **P2 Web Push + planification serveur**.
 - Tests : `test-step10-runtime.js` (35 contrôles), plus toutes les suites de non-régression P0.
+
+## V10.125 · Étape 11 — Web Push fiable + planification serveur (P2)
+- Nouveau module client **`web-push-manager.js`** : abonnement Push API standard via la clé publique VAPID retournée par `/api/push/public-key`.
+- Le Service Worker gère maintenant l'événement **`push`** ; le navigateur peut donc réveiller KINETIK pour afficher une notification même sans fenêtre ouverte.
+- Le Daily Tasks Engine reste la seule source de vérité : le client calcule un manifeste minimal des rappels sur **60 jours** et le synchronise au serveur.
+- Confidentialité par défaut : en mode discret, le manifeste ne contient ni nom de tâche ni `taskId` exact ; seulement le nombre de priorités et les informations techniques nécessaires au déclenchement.
+- Backend Vercel sous `api/push/` : configuration publique, synchronisation, livraison, test serveur et désabonnement.
+- Stockage serveur : **Upstash Redis REST**, uniquement pour l'abonnement appareil, le fuseau, les préférences nécessaires et le calendrier de rappels. Les données sportives restent locales.
+- Planification : **QStash** utilise `CRON_TZ=<timezone>` pour suivre l'heure locale et les changements DST sans dépendre de la fréquence des Cron Jobs Vercel.
+- Deux schedules maximum par appareil : rappel principal et éventuelle relance séance. Le snooze crée un message QStash ponctuel.
+- Sécurité : secret appareil aléatoire, hash SHA-256 côté serveur, endpoint de livraison protégé, nouvelles inscriptions limitées par IP et déduplication des livraisons.
+- Nettoyage : un endpoint Push expiré 404/410 supprime abonnement + schedules ; un appareil disparu du Redis provoque également le nettoyage de ses schedules.
+- Le fallback P1 de v10.124 est automatiquement silencieux tant que P2 est actif, et reprend si le backend est indisponible/offline.
+- `Effacer toutes les données` et Import désabonnent le serveur avant nettoyage local. `cc_web_push_device_v1` est exclu des exports JSON.
+- Manifest PWA : ajout de `id: "/"` et correction de `short_name` vers **KINETIK**.
+- Configuration : voir **`P2_SETUP.md`** et **`.env.example`**.
+- Cache PWA : `kinetik-v10-125-web-push` avec `web-push-manager.js?v=10.125` disponible offline.
+- Tests : `test-step11-runtime.js` (44 contrôles) + toutes les suites étapes 3–10.

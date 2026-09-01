@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-124-local-reminders';
-const ASSETS = ['./','./index.html','./styles.css?v=10.124','./app.js?v=10.124','./daily-tasks.js?v=10.124','./local-reminders.js?v=10.124','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-125-web-push';
+const ASSETS = ['./','./index.html','./styles.css?v=10.125','./app.js?v=10.125','./daily-tasks.js?v=10.125','./local-reminders.js?v=10.125','./web-push-manager.js?v=10.125','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {
@@ -8,7 +8,7 @@ self.addEventListener('fetch', e => {
   if (!['http:','https:'].includes(url.protocol)) return;
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
-  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/daily-tasks.js', '/local-reminders.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
+  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/daily-tasks.js', '/local-reminders.js', '/web-push-manager.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
   if (isCore) {
     e.respondWith(fetch(e.request).then(resp => {
       const copy = resp.clone(); caches.open(CACHE).then(c=>c.put(e.request, copy)); return resp;
@@ -20,7 +20,27 @@ self.addEventListener('fetch', e => {
   })));
 });
 
-/* P1 local notification interactions. No push subscription exists yet. */
+
+/* P2 reliable Web Push. The service worker is started by the browser even when
+   the KINETIK window is closed. */
+self.addEventListener('push', event => {
+  event.waitUntil((async()=>{
+    let payload={};
+    try { payload=event.data?.json?.() || {}; } catch (_) { try { payload={body:event.data?.text?.()||''}; } catch(__){} }
+    const title=payload.title || 'KINETIK';
+    const options={
+      body:payload.body || 'Une priorité t’attend dans KINETIK.',
+      icon:'./icons/icon-192.png', badge:'./icons/icon-192.png',
+      tag:payload.tag || 'kinetik-web-push',
+      data:{...(payload.data||{}),source:'web-push'},
+      actions:Array.isArray(payload.actions)?payload.actions:[{action:'snooze',title:'Plus tard'},{action:'open',title:'Ouvrir'}],
+    };
+    try { await self.registration.showNotification(title,options); }
+    catch (_) { const {actions,...fallback}=options; await self.registration.showNotification(title,fallback); }
+  })());
+});
+
+/* P1/P2 notification interactions. */
 self.addEventListener('notificationclick', event => {
   const data = event.notification?.data || {};
   const action = event.action === 'snooze' ? 'snooze' : 'open';

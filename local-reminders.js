@@ -143,9 +143,13 @@
     return candidate <= 21 * 60 + 30 ? candidate : null;
   }
 
+  function remotePushActive() {
+    try { return !!global.KinetikWebPush?.getStatus?.().active; } catch (_) { return false; }
+  }
+
   function nextOccurrence(now = new Date()) {
     const p = prefs(), cap = capability();
-    if (!p.enabled || !p.localNotifications || cap.permission !== 'granted') return null;
+    if (remotePushActive() || !p.enabled || !p.localNotifications || cap.permission !== 'granted') return null;
     const tasks = pendingTasks(now);
     if (!tasks.length) return null;
     const { day } = dayState(now);
@@ -228,7 +232,7 @@
     ticking = true;
     try {
       const p = prefs(), cap = capability();
-      if (!p.enabled || !p.localNotifications || cap.permission !== 'granted') return false;
+      if (remotePushActive() || !p.enabled || !p.localNotifications || cap.permission !== 'granted') return false;
       const tasks = pendingTasks(now);
       if (!tasks.length) {
         const { day } = dayState(now);

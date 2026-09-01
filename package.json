@@ -1,0 +1,15 @@
+{
+  "name": "kinetik-pwa",
+  "version": "10.125.0",
+  "private": true,
+  "description": "KINETIK PWA with reliable Web Push reminders",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  },
+  "scripts": {
+    "push:secrets": "node scripts/generate-push-secrets.js"
+  }
+}

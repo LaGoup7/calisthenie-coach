@@ -119,8 +119,32 @@
    - frontière P1 explicite : aucune promesse de livraison si la PWA est suspendue ou fermée
    - contrôle qualité automatisé : 35 vérifications (`test-step10-runtime.js`) + non-régression étapes 3–9
 
-## P2 — notifications système fiables
+## P2 — notifications système fiables — TERMINÉ / v10.125
 
-- Web Push
-- planification serveur
-- gestion permission et appareils
+11. **Web Push + planification serveur** — TERMINÉ / v10.125
+   - abonnement Push API standard lié au Service Worker et à une paire VAPID
+   - permission toujours demandée après action explicite ; compatibilité Home Screen iOS/iPadOS
+   - nouveau module isolé `web-push-manager.js`
+   - manifeste minimal de rappels calculé depuis Daily Tasks sur 60 jours
+   - confidentialité : contenu générique et aucun `taskId` exact en mode discret
+   - Upstash Redis REST pour l'abonnement/appareil et le manifeste, sans synchroniser les données sportives
+   - QStash pour deux schedules timezone-aware maximum : rappel principal + relance séance
+   - snooze P2 via message QStash ponctuel
+   - endpoint de livraison protégé par `PUSH_DELIVERY_SECRET`
+   - identifiant + secret par installation ; seul le hash du secret est stocké côté serveur
+   - limitation des nouvelles inscriptions par IP
+   - déduplication serveur des livraisons et suppression automatique des abonnements expirés 404/410
+   - nettoyage des schedules si un appareil n'existe plus côté Redis
+   - le fallback P1 se met automatiquement en veille lorsque P2 est actif
+   - import / reset désabonnent le serveur avant de supprimer l'état local ; état appareil exclu des exports
+   - nouveau `push` handler dans le Service Worker
+   - configuration documentée dans `P2_SETUP.md`
+   - contrôle qualité : 44 vérifications (`test-step11-runtime.js`) + toutes les non-régressions P0/P1
+
+## Suite recommandée
+
+12. **Santé des notifications & appareils** — À FAIRE
+   - diagnostic de dernière livraison / dernière erreur par appareil
+   - renouvellement explicite d'un abonnement perdu
+   - interface de suppression d'anciens appareils lorsqu'une identité utilisateur/cloud sera ajoutée
+   - télémétrie minimale opt-in sur les échecs de delivery

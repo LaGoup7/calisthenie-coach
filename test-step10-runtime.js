@@ -42,7 +42,7 @@ vm.runInContext(source+'\n'+dailySource+'\n'+localReminderSource,sandbox,{filena
   ok(p.snoozeMinutes===30&&p.workoutFollowup===true&&p.workoutFollowupDelay===120,'local reminder timing defaults are wrong');
   ok(manager?.version==='1.0.0','Local Reminder Coordinator is missing or wrong version');
   ok(permissionRequests===0,'notification permission was requested automatically on load');
-  ok(sandbox.renderReminderSettings().includes('Notifications locales')&&sandbox.renderReminderSettings().includes('Limite P1'),'local notification settings are not exposed in reminders');
+  ok((sandbox.renderReminderSettings().includes('Notifications locales')||sandbox.renderReminderSettings().includes('Fallback local'))&&(sandbox.renderReminderSettings().includes('Limite P1')||sandbox.renderReminderSettings().includes('Fallback P1')),'local notification settings are not exposed in reminders');
 
   const permission=await manager.requestPermission();
   p=sandbox.getReminderPrefs();
@@ -122,13 +122,13 @@ vm.runInContext(source+'\n'+dailySource+'\n'+localReminderSource,sandbox,{filena
   // Device-local delivery state is not exported as user data but is registered so Clear all data removes it.
   const appText=source;
   ok(appText.includes('localNotificationState: "cc_local_notification_state_v1"'),'device-local notification state is not registered for full reset');
-  ok(appText.includes("filter(([name])=>name!=='localNotificationState')"),'device-local delivery state would leak into backups');
+  ok(appText.includes("['localNotificationState','webPushDeviceState'].includes(name)"),'device-local delivery state would leak into backups');
   ok(appText.includes("localStorage.removeItem(STORAGE.localNotificationState)"),'backup restore does not clear stale notification delivery state');
 
   // Service worker click contract and PWA assets are validated statically here.
   const sw=fs.readFileSync(__dirname+'/sw.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8');
   ok(sw.includes("notificationclick")&&sw.includes("kinetik-reminder-click")&&sw.includes("snooze"),'service worker notification interaction contract is missing');
-  ok(sw.includes('local-reminders.js?v=10.124')&&html.includes('local-reminders.js?v=10.124'),'local reminder module is not part of the PWA asset chain');
+  ok(sw.includes('local-reminders.js?v=10.125')&&html.includes('local-reminders.js?v=10.125'),'local reminder module is not part of the PWA asset chain');
 
   if(failures.length){console.error('STEP10_RUNTIME_FAIL',failures);process.exitCode=1;}else console.log('STEP10_RUNTIME_OK '+checks+' checks');
 })().catch(e=>{console.error('STEP10_RUNTIME_CRASH',e);process.exitCode=1;});

@@ -24,6 +24,7 @@ const STORAGE = {
   athleteProfile: "kinetik_athlete_profile_v1",
   dailyTaskDecisions: "cc_daily_task_decisions_v1",
   localNotificationState: "cc_local_notification_state_v1",
+  webPushDeviceState: "cc_web_push_device_v1",
 };
 
 function ex(name, type, sets, target, rest, tip, opts={}) {
@@ -1362,7 +1363,7 @@ function blobToDataURL(blob){return new Promise((resolve,reject)=>{const r=new F
 function dataURLToBlob(dataURL){const [meta,data]=String(dataURL||'').split(',');if(!meta||!data)return null;const mime=(meta.match(/data:([^;]+)/)||[])[1]||'application/octet-stream';const bin=atob(data),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new Blob([bytes],{type:mime});}
 async function exportBackup(){
   const data={};
-  Object.entries(STORAGE).filter(([name])=>name!=='localNotificationState').forEach(([name,key])=>{data[name]=parse(key,null);});
+  Object.entries(STORAGE).filter(([name])=>!['localNotificationState','webPushDeviceState'].includes(name)).forEach(([name,key])=>{data[name]=parse(key,null);});
   const photos={};
   for(const row of getBodyLogs()){
     if(!row.photoId||photos[row.photoId])continue;
@@ -1380,8 +1381,10 @@ async function importBackupFile(file){
   if(!backup||backup.app!=='KINETIK'||!backup.data||typeof backup.data!=='object'){alert('Ce fichier ne semble pas être une sauvegarde KINETIK valide.');return;}
   if(!confirm('Restaurer cette sauvegarde ? Les données actuelles de ce navigateur seront remplacées.'))return;
   try{
+    await window.KinetikWebPush?.disable?.({unsubscribeBrowser:true,render:false});
     localStorage.removeItem(STORAGE.localNotificationState);
-    Object.entries(STORAGE).forEach(([name,key])=>{if(name==='localNotificationState')return;if(Object.prototype.hasOwnProperty.call(backup.data,name)){const value=backup.data[name];if(value===null||value===undefined)localStorage.removeItem(key);else save(key,value);}});
+    localStorage.removeItem(STORAGE.webPushDeviceState);
+    Object.entries(STORAGE).forEach(([name,key])=>{if(['localNotificationState','webPushDeviceState'].includes(name))return;if(Object.prototype.hasOwnProperty.call(backup.data,name)){const value=backup.data[name];if(value===null||value===undefined)localStorage.removeItem(key);else save(key,value);}});
     await clearPhotos();
     if(backup.photos&&typeof backup.photos==='object'){
       for(const [id,dataURL] of Object.entries(backup.photos)){const blob=dataURLToBlob(dataURL);if(blob)await putPhoto(id,blob);}
@@ -10895,4 +10898,58 @@ bindEvents=function(){
   const delay=document.getElementById('localWorkoutFollowupDelay');if(delay)delay.onchange=()=>{setReminderPrefs({...getReminderPrefs(),workoutFollowupDelay:Number(delay.value||120)});render();};
   const details=document.getElementById('localNotificationDetail');if(details)details.onchange=()=>{setReminderPrefs({...getReminderPrefs(),notificationDetail:details.checked?'detailed':'discreet'});render();};
   const test=document.getElementById('testLocalNotification');if(test)test.onclick=async()=>{const ok=await manager?.testNotification?.();if(!ok)alert('Notification de test impossible sur cet appareil.');};
+};
+
+/* ========================================================================== */
+/* KINETIK v10.125 · Step 11 · Reliable Web Push                             */
+/* P2 subscribes the installed PWA to standards-based Push API delivery and  */
+/* synchronizes a minimal reminder manifest to the server scheduler.          */
+/* ========================================================================== */
+function v10125WebPushStatus(){
+  return window.KinetikWebPush?.getStatus?.()||{configured:false,configLoaded:false,active:false,enabled:false,subscribed:false,permission:typeof Notification!=='undefined'?(Notification.permission||'default'):'unsupported',supported:false,requiresInstall:false,lastSyncAt:null,lastManifestDays:0,timezone:null,lastError:null};
+}
+function v10125WebPushBadge(status){
+  if(status.requiresInstall)return ['À installer','Ajoute KINETIK à l’écran d’accueil puis ouvre la PWA installée.'];
+  if(!status.configLoaded)return ['Vérification…','KINETIK vérifie la configuration Web Push du serveur.'];
+  if(!status.configured)return ['Backend à configurer','Ajoute les variables VAPID, Redis et QStash indiquées dans P2_SETUP.md.'];
+  if(status.permission==='denied')return ['Refusées','Les notifications sont bloquées dans les réglages de cet appareil.'];
+  if(!status.supported)return ['Indisponible','Push API ou Service Worker indisponible sur ce navigateur.'];
+  if(status.active)return ['Actif','Les rappels sont planifiés côté serveur et peuvent arriver PWA fermée.'];
+  return ['Prêt','Active Web Push sur cet appareil pour recevoir les rappels PWA fermée.'];
+}
+function renderWebPushSettings(){
+  const status=v10125WebPushStatus(),[badge,note]=v10125WebPushBadge(status),active=!!status.active;
+  const synced=status.lastSyncAt?new Date(status.lastSyncAt).toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):null;
+  return `<div class="reminder-settings-block web-push-settings ${active?'is-active':''}"><div class="reminder-settings-title"><strong>Notifications fiables</strong><span>Web Push · même lorsque KINETIK est fermé</span></div>
+    <div class="local-notification-status"><div><span class="local-notification-dot ${active?'is-on':status.permission==='denied'?'is-off':'is-idle'}"></span><div><strong>${esc(badge)}</strong><small>${esc(note)}</small></div></div><span class="pill">P2 Web Push</span></div>
+    ${status.configured&&status.supported&&status.permission!=='denied'&&!active?`<button type="button" class="btn btn-primary local-notification-request" id="activateWebPush">Activer Web Push</button>`:''}
+    ${active?`<div class="web-push-summary"><div><span>Planification</span><strong>${status.lastManifestDays||0} jours synchronisés</strong></div><div><span>Fuseau</span><strong>${esc(status.timezone||'—')}</strong></div>${synced?`<div><span>Dernière synchro</span><strong>${esc(synced)}</strong></div>`:''}</div>
+      <div class="local-notification-actions"><button type="button" class="btn btn-outline compact" id="testWebPush">Tester depuis le serveur</button><button type="button" class="btn btn-outline compact" id="syncWebPush">Synchroniser</button><button type="button" class="btn btn-ghost compact" id="disableWebPush">Désactiver</button></div>`:''}
+    ${status.lastError?`<p class="reminder-local-note web-push-error"><strong>Dernière erreur :</strong> ${esc(status.lastError)}</p>`:''}
+    <p class="reminder-local-note"><strong>Données serveur minimales :</strong> abonnement de cet appareil, fuseau horaire et calendrier de rappels. Les mensurations, photos, notes et performances restent locales. En mode discret, le serveur ne stocke pas le nom des tâches.</p>
+    <p class="reminder-local-note"><strong>iPhone/iPad :</strong> Web Push fonctionne pour les web apps ajoutées à l’écran d’accueil et l’autorisation doit être demandée après une action de l’utilisateur.</p>
+  </div>`;
+}
+const _renderReminderSettingsV10125=renderReminderSettings;
+renderReminderSettings=function(){
+  let html=_renderReminderSettingsV10125(),block=renderWebPushSettings(),marker='<div class="reminder-settings-block local-notification-settings">';
+  if(html.includes(marker))html=html.replace(marker,block+marker);
+  else html=html.replace(/<\/section>\s*$/,block+'</section>');
+  html=html.replace('KINETIK utilise ces préférences pour filtrer ton parcours quotidien et, si tu les actives ci-dessous, déclencher des rappels locaux tant que la PWA reste en cours d’exécution.','KINETIK utilise ces préférences pour filtrer ton parcours quotidien. Web Push P2 peut délivrer les rappels même PWA fermée ; le mode local P1 reste disponible en fallback.');
+  html=html.replace('Heure utilisée par les rappels locaux de cet appareil','Heure utilisée par les rappels locaux et Web Push');
+  html=html.replace('<strong>Limite P1 :</strong> ces rappels sont planifiés localement tant que KINETIK reste en cours d’exécution. iOS/Android peuvent suspendre une PWA fermée ou longtemps en arrière-plan. La livraison garantie app fermée sera ajoutée en P2 avec Web Push + planification serveur.','<strong>Fallback P1 :</strong> ces rappels locaux dépendent du runtime. Lorsque Web Push P2 est actif, ce fallback est automatiquement mis en veille pour éviter les doublons.');
+  if(v10125WebPushStatus().active)html=html.replace('<strong>Notifications locales</strong><span>Heure préférée, snooze et relance de séance</span>','<strong>Fallback local</strong><span>P1 reste silencieux tant que Web Push P2 est actif</span>');
+  return html;
+};
+const _setReminderPrefsV10125=setReminderPrefs;
+setReminderPrefs=function(v){const next=_setReminderPrefsV10125(v);try{window.KinetikWebPush?.scheduleSync?.();}catch(_){}return next;};
+const _bindEventsV10125=bindEvents;
+bindEvents=function(){
+  _bindEventsV10125();
+  const manager=window.KinetikWebPush;
+  const activate=document.getElementById('activateWebPush');if(activate)activate.onclick=async()=>{activate.disabled=true;const ok=await manager?.activate?.();if(!ok&&!v10125WebPushStatus().configured)alert('Le backend Web Push doit d’abord être configuré sur Vercel.');render();};
+  const disable=document.getElementById('disableWebPush');if(disable)disable.onclick=async()=>{await manager?.disable?.();render();};
+  const sync=document.getElementById('syncWebPush');if(sync)sync.onclick=async()=>{sync.disabled=true;const ok=await manager?.sync?.();if(!ok)alert('Synchronisation Web Push impossible. Vérifie la configuration serveur.');render();};
+  const test=document.getElementById('testWebPush');if(test)test.onclick=async()=>{test.disabled=true;const ok=await manager?.test?.();if(!ok)alert('Notification Web Push de test impossible.');test.disabled=false;};
+  const clear=document.getElementById('clearAllData');if(clear)clear.onclick=async()=>{if(confirm('Effacer historique, tests, skills, mesures, rappels serveur et photos ?')){await manager?.disable?.({unsubscribeBrowser:true,render:false});Object.values(STORAGE).forEach(k=>localStorage.removeItem(k));await clearPhotos();render();}};
 };
