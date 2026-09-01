@@ -149,3 +149,12 @@ Le ZIP root peut être envoyé directement à la racine GitHub/Vercel.
 - Modèle réellement plus dézoomé par défaut (caméra Z 9.85).
 - Recentrage vertical léger pour afficher tête et pieds avec davantage de marge.
 - Limites de zoom molette recalibrées autour du nouveau cadrage.
+
+## V10.115 — Daily Tasks Engine
+- Nouveau moteur central `daily-tasks.js` pour répondre à « Que dois-je faire aujourd'hui ? ».
+- Contrat de tâche normalisé : id, type, statut, priorité, échéance, action et source.
+- Providers initiaux : séance du jour, activités planifiées, mesures dues et tests périodiques.
+- Les tâches terminées sont déduites des données existantes ; aucun stockage parallèle n'est créé à ce stade.
+- Pont de compatibilité : les anciens rappels locaux consomment désormais le moteur central.
+- API développeur : `window.KinetikDailyTasks`, `getDailyTasks()` et `getDailyTaskSummary()`.
+- Plan complet du chantier disponible dans `IMPLEMENTATION_PLAN.md`.

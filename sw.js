@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-114-body-3d-framing';
-const ASSETS = ['./','./index.html','./styles.css?v=10.114','./app.js?v=10.114','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-115-daily-tasks-engine';
+const ASSETS = ['./','./index.html','./styles.css?v=10.115','./app.js?v=10.115','./daily-tasks.js?v=10.115','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {
@@ -11,7 +11,7 @@ self.addEventListener('fetch', e => {
   // Never cache dynamic server/API responses (OAuth status, Strava activities, etc.).
   // Cache-first here previously kept an old {connected:false} response after OAuth.
   if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) return;
-  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
+  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/daily-tasks.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
   if (isCore) {
     e.respondWith(fetch(e.request).then(resp => {
       const copy = resp.clone(); caches.open(CACHE).then(c=>c.put(e.request, copy)); return resp;
