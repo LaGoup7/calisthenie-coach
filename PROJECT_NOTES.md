@@ -1,6 +1,6 @@
 # KINETIK — Project Notes
 
-Current package: **v10.147**
+Current package: **v10.148**
 
 This file replaces the historical audit/step Markdown files that were removed from the distributable ZIP.
 
@@ -37,3 +37,14 @@ This file replaces the historical audit/step Markdown files that were removed fr
 
 ## Packaging policy
 The user-facing working ZIP is intentionally lean. Historical audits and regression test files are kept out of the package and should not be reintroduced into the app ZIP. A production-only cleanup can be done again at final release if needed.
+
+## v10.148 · Rangs clarifiés
+- Argent: 3 standards réels uniquement (5 tractions, 8 dips, dead hang 45 s).
+- Or: standards réels + diversité technique; pas d’indices composites redondants.
+- Les indices composites de capacité commencent à Platine, où ils servent à vérifier l’équilibre global.
+- La colonne de droite des rangs affiche valeur réelle / objectif ou score en points + seuil explicite.
+
+## v10.148 · Corps 3D réintégré
+- Le modèle corporel 3D n'a jamais été supprimé du runtime ; il est de nouveau visible dans `Progression → Corps`.
+- Il reste interactif : rotation 360°, 3D/2D, Face/Dos, Vue d'ensemble/Force/Mobilité, zones cliquables.
+- Les courbes Poids/Tour de taille/Masse grasse restent sous la carte 3D et ne sont pas fusionnées avec son scoring.

@@ -1,4 +1,4 @@
-/* KINETIK v10.147 · Mobility, progression UX and product-coaching layers. */
+/* KINETIK v10.148 · Mobility, progression UX and product-coaching layers. */
 /* V10.145 · Mobility finalisation                                            */
 /* Today → Mobility balance → Progression → Secondary details                 */
 /* ========================================================================== */
@@ -1728,7 +1728,7 @@ bindEvents=function(){
 /* ========================================================================== */
 
 /* ========================================================================== */
-/* KINETIK v10.147 · Progression finalisation                                */
+/* KINETIK v10.148 · Progression finalisation                                */
 /* Résumé → Performances → Skills → Corps → Historique                       */
 /* ========================================================================== */
 Object.assign(state,{
@@ -1887,17 +1887,57 @@ function v10147RankRoadmap(){
   const rs=getRankState();
   return `<div class="p147-rank-roadmap">${RANKS.map((r,i)=>`<button class="p147-rank-node rank-${r.id} ${i<rs.index?'done':''} ${i===rs.index?'current':''} ${i>rs.index?'future':''}" data-rank-select="${r.id}"><span>${i<rs.index?'✓':i+1}</span><strong>${esc(r.name)}</strong><small>${i<rs.index?'Validé':i===rs.index?'Actuel':'À atteindre'}</small></button>`).join('')}</div>`;
 }
+function v10148RankGateKind(g){
+  if(String(g.id||'').startsWith('proof-'))return 'proof';
+  if(g.id==='avg'||String(g.id||'').startsWith('cap-'))return 'capability';
+  return 'mastery';
+}
+function v10148RankGateValue(g){
+  const cur=Number(g.current||0),target=Number(g.target||0),unit=String(g.unit||'').trim();
+  const curText=Number.isInteger(cur)?String(cur):cur.toFixed(1);
+  if(v10148RankGateKind(g)==='capability'){
+    return `<span class="p148-gate-value-main">${curText} pts</span><small>seuil ≥ ${target}</small>`;
+  }
+  if((unit===''||unit==='/100')&&target===1){
+    return `<span class="p148-gate-value-main">${g.done?'Validé':'À valider'}</span>`;
+  }
+  if(g.id==='skills')return `<span class="p148-gate-value-main">${curText} pts</span><small>objectif ${target} pts</small>`;
+  if(g.id==='mastery'||g.id==='major-mastery')return `<span class="p148-gate-value-main">${curText} / ${target}</span><small>skills validés</small>`;
+  return `<span class="p148-gate-value-main">${curText} / ${target}${unit?` ${esc(unit.replace('/100','pts'))}`:''}</span>`;
+}
+function v10148RankGateDetail(g){
+  const kind=v10148RankGateKind(g);
+  if(g.id==='avg')return `Indice global KINETIK · moyenne des 6 capacités${g.detail?` · ${esc(g.detail)}`:''}`;
+  if(kind==='capability')return `Indice composite KINETIK${g.detail?` · ${esc(g.detail)}`:''}`;
+  return g.detail?esc(g.detail):'';
+}
+function v10148RankGateRows(gates){
+  const groups=[
+    ['proof','Standards mesurables','Valeurs réelles à démontrer'],
+    ['capability','Équilibre du profil','À partir de Platine, ces indices vérifient qu’une force isolée ne masque pas une faiblesse.'],
+    ['mastery','Maîtrise technique','Diversité et skills nécessaires aux rangs plus élevés.']
+  ];
+  return groups.map(([kind,title,help])=>{
+    const rows=(gates||[]).filter(g=>v10148RankGateKind(g)===kind);if(!rows.length)return '';
+    return `<div class="p148-rank-group"><div class="p148-rank-group-head"><div><strong>${title}</strong><small>${help}</small></div><span>${rows.filter(x=>x.done).length}/${rows.length}</span></div><div class="rank-v2-content p148-rank-rows">${rows.map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${esc(g.label)}</strong>${v10148RankGateDetail(g)?`<small>${v10148RankGateDetail(g)}</small>`:''}</div><b class="p148-gate-value">${v10148RankGateValue(g)}</b></div>`).join('')}</div></div>`;
+  }).join('');
+}
 function renderProgressRank(){
-  const rs=getRankState(),rank=RANKS[rankIndexById(state.selectedRankId||rs.current.id)]||rs.current,selectedId=rank.id,selectedIndex=rankIndexById(selectedId),selected=RANKS[selectedIndex],ev=evaluateRank(selected),next=rs.next,pct=Math.round(rs.readiness*100);
-  const incomplete=(ev.gates||[]).filter(g=>!g.done);
-  return `<section class="p147-rank-head rank-${rs.current.id}"><div><div class="kicker">Rang KINETIK</div><h1>${esc(rs.displayName)}</h1><p>Le rang dépend uniquement des capacités et performances validées.</p></div><div class="p147-rank-head-score"><strong>${next?`${pct}%`:'Max'}</strong><span>${next?`vers ${esc(next.name)}`:'Légende atteinte'}</span></div></section>
+  const rs=getRankState();
+  const selectedIndex=rankIndexById(state.selectedRankId||rs.current.id);
+  const selected=RANKS[selectedIndex]||rs.current;
+  const ev=evaluateRank(selected),next=rs.next,pct=Math.round(rs.readiness*100);
+  const nextEval=next?evaluateRank(next):null;
+  const nextIncomplete=(nextEval?.gates||[]).filter(g=>!g.done);
+  const selectedStatus=selectedIndex<rs.index?'Validé':selectedIndex===rs.index?'Rang actuel':'À atteindre';
+  return `<section class="p147-rank-head rank-${rs.current.id}"><div><div class="kicker">Rang KINETIK</div><h1>${esc(rs.displayName)}</h1><p>Des standards réels et transparents. Les indices composites n’interviennent qu’à partir de Platine.</p></div><div class="p147-rank-head-score"><strong>${next?`${pct}%`:'Max'}</strong><span>${next?`vers ${esc(next.name)}`:'Légende atteinte'}</span></div></section>
     <section class="p147-rank-summary">
       <article><span>Rang actuel</span><strong>${esc(rs.displayName)}</strong><small>${esc(rs.current.title)}</small></article>
-      <article><span>Prochain rang</span><strong>${next?esc(next.name):'—'}</strong><small>${next?`${rs.nextEval.completed}/${rs.nextEval.required} exigences validées`:'Rang maximal atteint'}</small></article>
-      <article><span>Blocage principal</span><strong>${incomplete[0]?esc(incomplete[0].label):'Aucun'}</strong><small>${incomplete[0]?(incomplete[0].detail?esc(incomplete[0].detail):'À travailler'):'Tout est validé pour ce rang'}</small></article>
+      <article><span>Prochain rang</span><strong>${next?esc(next.name):'—'}</strong><small>${nextEval?`${nextEval.completed}/${nextEval.required} exigences validées`:'Rang maximal atteint'}</small></article>
+      <article><span>Prochaine exigence</span><strong>${nextIncomplete[0]?esc(nextIncomplete[0].label):'Aucune'}</strong><small>${nextIncomplete[0]?(nextIncomplete[0].detail?esc(nextIncomplete[0].detail):'À valider'):'Toutes les exigences sont remplies'}</small></article>
     </section>
     <section class="p146-section"><div class="p146-section-head"><div><div class="kicker">Roadmap</div><h2>Échelle des rangs</h2></div></div>${v10147RankRoadmap()}</section>
-    <section class="card rank-detail rank-${selected.id} p147-rank-detail"><div class="rank-detail-head"><div class="rank-emblem rank-emblem-large">${selectedIndex===6?'★':selectedIndex+1}</div><div class="grow"><div class="kicker">Barèmes de performance</div><div class="rank-name">${esc(selected.name)}</div><h2>${esc(selected.title)}</h2><p>${esc(selected.description)}</p></div><span class="rank-status-pill">${selectedIndex<rs.index?'Validé':selectedIndex===rs.index?'Rang actuel':'À atteindre'}</span></div><div class="section-head rank-missions-head"><div><div class="kicker">Exigences</div><h2>Performances à démontrer</h2></div><span class="pill">${ev.completed}/${ev.required}</span></div><div class="rank-v2-content">${(ev.gates||[]).length?(ev.gates||[]).map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join(''):'<p>Point de départ du système KINETIK.</p>'}</div>${selectedIndex===rs.index && next?`<p class="rank-rule-note">${pct}% vers ${esc(next.name)} · ${rs.nextEval.completed}/${rs.nextEval.required} exigences validées.</p>`:'<p class="rank-rule-note">Le rang dépend uniquement des capacités et performances démontrées.</p>'}</section>`;
+    <section class="card rank-detail rank-${selected.id} p147-rank-detail"><div class="rank-detail-head"><div class="rank-emblem rank-emblem-large">${selectedIndex===6?'★':selectedIndex+1}</div><div class="grow"><div class="kicker">Barèmes de performance</div><div class="rank-name">${esc(selected.name)}</div><h2>${esc(selected.title)}</h2><p>${esc(selected.description)}</p></div><span class="rank-status-pill">${selectedStatus}</span></div><div class="section-head rank-missions-head"><div><div class="kicker">Exigences du rang</div><h2>${selected.id==='bronze'?'Point de départ':`${ev.completed} sur ${ev.required} validées`}</h2></div>${selected.id!=='bronze'?`<span class="pill">${ev.completed}/${ev.required}</span>`:''}</div>${(ev.gates||[]).length?v10148RankGateRows(ev.gates):'<div class="p148-rank-entry"><strong>Bronze est le rang d’entrée.</strong><span>Il permet de commencer à enregistrer tes références. La promotion vers Argent dépend ensuite de standards mesurables.</span></div>'}${selectedIndex===rs.index&&next?`<p class="rank-rule-note">Progression actuelle : ${pct}% vers ${esc(next.name)}. Cette valeur estime la proximité avec les exigences restantes ; elle ne remplace jamais les barèmes réels.</p>`:'<p class="rank-rule-note">Une promotion est obtenue uniquement lorsque toutes les exigences du rang sont validées.</p>'}</section>`;
 }
 function v10146BodySnapshot(){
   const weight=v10146BodySummary('weight'),waist=v10146BodySummary('waist');
@@ -1974,6 +2014,52 @@ renderProgressSkills=function(){
     ${v10146RankCompact()}`;
 };
 
+function v10148BodyMapPanel(){
+  const mode=state.progressBodyMode||'overall';
+  const view=state.progressBodyView||'front';
+  const display=typeof v10107DisplayMode==='function'?v10107DisplayMode():(state.progressBodyDisplay||'3d');
+  const selected=typeof v1095SelectedBodyZone==='function'?v1095SelectedBodyZone(mode,view):null;
+  if(selected)state.progressBodyZone=selected.id||state.progressBodyZone;
+  const visual=typeof v10107RenderBodyVisual==='function'?v10107RenderBodyVisual(view,mode,selected?.id||''):'<div class="p146-empty">Carte corporelle indisponible.</div>';
+  const detail=typeof v1095ZoneDetailCard==='function'?v1095ZoneDetailCard(mode,view):'';
+  return `<section class="p148-body-map-section">
+    <div class="p148-body-map-head"><div><div class="kicker">Carte corporelle</div><h1>Ton corps en 3D</h1><p>Explore tes zones de force et de mobilité, puis fais tourner le modèle à 360°.</p></div><span class="p148-body-map-badge">${display==='3d'?'3D interactive':'Vue 2D'}</span></div>
+    <div class="body-overview-toolbar p148-body-toolbar">
+      <div class="body-overview-toggle" role="tablist" aria-label="Mode de lecture corporelle">
+        <button class="${mode==='overall'?'active':''}" data-body-mode="overall">Vue d’ensemble</button>
+        <button class="${mode==='strength'?'active':''}" data-body-mode="strength">Force</button>
+        <button class="${mode==='mobility'?'active':''}" data-body-mode="mobility">Mobilité</button>
+      </div>
+      <div class="body-toolbar-right">
+        <div class="body-overview-toggle body-display-toggle" role="tablist" aria-label="Affichage du corps">
+          <button class="${display==='2d'?'active':''}" data-body-display="2d">2D</button>
+          <button class="${display==='3d'?'active':''}" data-body-display="3d">3D</button>
+        </div>
+        <div class="body-overview-toggle" role="tablist" aria-label="Orientation du corps">
+          <button class="${view==='front'?'active':''}" data-body-view="front">Face</button>
+          <button class="${view==='back'?'active':''}" data-body-view="back">Dos</button>
+        </div>
+      </div>
+    </div>
+    <div class="body-overview-model-wrap p148-body-map-wrap">
+      <div class="body-overview-model body-overview-model-3d p148-body-model">${visual}</div>
+      <aside class="body-overview-side p148-body-side">
+        ${detail}
+        <div class="body-overview-legend p148-body-legend">
+          <span><i class="tone-none"></i>À évaluer</span>
+          <span><i class="tone-partial"></i>Données limitées</span>
+          <span><i class="tone-low"></i>Fragile</span>
+          <span><i class="tone-watch"></i>À travailler</span>
+          <span><i class="tone-ok"></i>Correct</span>
+          <span><i class="tone-good"></i>Solide</span>
+          <span><i class="tone-great"></i>Avancé</span>
+        </div>
+        <p class="p148-body-note">${display==='3d'?'Glisse pour tourner · clique une zone pour afficher son détail.':'Clique une zone pour afficher son détail.'}</p>
+      </aside>
+    </div>
+  </section>`;
+}
+
 function v10146BodyMetricSelector(){
   const defs=[['weight','Poids'],['waist','Tour de taille'],['bodyFat','Masse grasse']];
   return `<div class="p146-metric-switch p146-body-switch">${defs.map(([id,label])=>`<button class="${state.progressBodyMetric===id?'active':''}" data-progress-body-metric="${id}">${label}</button>`).join('')}</div>`;
@@ -1981,7 +2067,7 @@ function v10146BodyMetricSelector(){
 renderProgressBody=function(){
   const bounds=v10146PeriodBounds(),metric=state.progressBodyMetric||'weight',s=v10146BodySummary(metric,bounds),latest=getBodyLogs().slice().sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;
   const derived=latest?bodyDerived(latest):{};
-  return `<section class="p146-body-head"><div><div class="kicker">Corps · ${esc(bounds.label)}</div><h1>Mesures corporelles</h1><p>Une courbe à la fois, avec la variation réelle sur la période.</p></div><button class="btn btn-outline compact" data-view="measurements">Toutes les mesures →</button></section>
+  return `${v10148BodyMapPanel()}<section class="p146-body-head p148-body-measures-head"><div><div class="kicker">Mesures · ${esc(bounds.label)}</div><h1>Évolution corporelle</h1><p>Poids, tour de taille et composition corporelle restent suivis séparément de la carte 3D.</p></div><button class="btn btn-outline compact" data-view="measurements">Toutes les mesures →</button></section>
     ${v10146BodyMetricSelector()}
     <section class="p146-main-chart p146-body-chart">
       <div class="p146-chart-kpis"><div><span>Actuel</span><strong>${s.last!=null?`${v10146Number(s.last,s.digits)} ${s.unit}`:'—'}</strong></div><div><span>Début période</span><strong>${s.first!=null?`${v10146Number(s.first,s.digits)} ${s.unit}`:'—'}</strong></div><div><span>Variation</span><strong>${s.delta!=null&&s.points.length>1?v10146Signed(s.delta,s.unit,s.digits):'—'}</strong></div><div><span>Mesures</span><strong>${s.points.length}</strong></div></div>

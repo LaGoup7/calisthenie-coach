@@ -4276,7 +4276,7 @@ html[data-theme="dark"] .quick-log-journal-empty{background:var(--surface-2)}
 @media(max-width:430px){.mob145-today{padding-top:17px}.mob145-today h1{font-size:1.32rem}.mob145-today-copy>p{font-size:.7rem}.mob145-section-head{align-items:flex-start}.mob145-section-head h2{font-size:.95rem}.mob145-section-head p{font-size:.6rem}.mob145-zone>summary{padding:13px}.mob145-routine-meta{gap:10px}.mob145-routine-meta span{font-size:.61rem}.mob145-progress-summary{grid-template-columns:1fr}.mob145-progress-summary>div:last-child{grid-column:auto}}
 
 /* ========================================================================== */
-/* KINETIK v10.147 · Progression finalisation                                */
+/* KINETIK v10.148 · Progression finalisation                                */
 /* ========================================================================== */
 .p146-topbar{margin-bottom:8px}.p146-content{display:grid;gap:18px;padding-bottom:28px}.p146-tabs{margin-bottom:4px}.p146-tabs .progress-hub-tab{min-width:128px}.p146-periods{display:flex;gap:4px;overflow:auto;padding:2px 0 10px;scrollbar-width:none}.p146-periods::-webkit-scrollbar{display:none}.p146-periods button,.p146-metric-switch button,.p146-history-filters button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:.64rem;font-weight:800;white-space:nowrap;padding:8px 11px;border-bottom:2px solid transparent}.p146-periods button.active,.p146-metric-switch button.active,.p146-history-filters button.active{color:var(--text);border-color:currentColor}
 .p146-overview-head,.p146-performance-head,.p146-skills-head,.p146-body-head,.p146-history-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding:8px 2px 4px}.p146-overview-head h1,.p146-performance-head h1,.p146-skills-head h1,.p146-body-head h1,.p146-history-head h1{font-size:1.65rem;letter-spacing:-.045em;margin:3px 0}.p146-overview-head p,.p146-performance-head p,.p146-skills-head p,.p146-body-head p,.p146-history-head p{margin:0;color:var(--muted);font-size:.66rem;line-height:1.45}.p146-history-head>strong{font-size:2rem;line-height:1;color:var(--muted)}
@@ -4296,7 +4296,7 @@ html[data-theme="dark"] .quick-log-journal-empty{background:var(--surface-2)}
 @media(max-width:430px){.p146-tabs .progress-hub-tab{min-width:112px}.p146-overview-head h1,.p146-performance-head h1,.p146-skills-head h1,.p146-body-head h1,.p146-history-head h1{font-size:1.4rem}.p146-kpi{padding:13px 11px}.p146-kpi>strong{font-size:.92rem}.p146-section{padding:15px}.p146-cap-grid{grid-template-columns:1fr}.p146-body-snapshot,.p146-rank{align-items:flex-start}.p146-body-snapshot>b,.p146-rank>b{white-space:normal;text-align:right}.p146-history-row{padding:11px 12px}.p146-history-row>b{display:none}}
 .p146-evidence-note{margin:12px 0 10px;color:var(--muted);font-size:.58rem;line-height:1.45}
 
-/* V10.147 · Progression rank tab + compact 6-tab top nav */
+/* V10.148 · Progression rank tab + compact 6-tab top nav */
 .p146-rank[class*="rank-"]{
   border-color:color-mix(in srgb,var(--rank) 28%,var(--line));
   background:linear-gradient(135deg,color-mix(in srgb,var(--rank-soft) 72%,var(--surface)),var(--surface));
@@ -4378,4 +4378,51 @@ html[data-theme="dark"] .quick-log-journal-empty{background:var(--surface-2)}
 @media(max-width:430px){
   .p147-tabs .progress-hub-tab strong{font-size:.54rem}
   .p147-rank-roadmap{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* V10.148 · Rank clarity audit */
+.p148-rank-group{margin-top:18px}
+.p148-rank-group+.p148-rank-group{padding-top:18px;border-top:1px solid var(--line)}
+.p148-rank-group-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:6px}
+.p148-rank-group-head>div{display:grid;gap:3px}
+.p148-rank-group-head strong{font-size:.74rem}
+.p148-rank-group-head small{font-size:.57rem;line-height:1.4;color:var(--muted);max-width:620px}
+.p148-rank-group-head>span{font-size:.58rem;font-weight:900;color:var(--muted);background:var(--surface-2);padding:5px 7px;border-radius:999px;white-space:nowrap}
+.p148-rank-rows{border-top:1px solid var(--line)}
+.p148-rank-rows>div{grid-template-columns:minmax(0,1fr) auto!important;gap:18px}
+.p148-gate-value{display:grid!important;justify-items:end;gap:2px;min-width:96px;text-align:right}
+.p148-gate-value-main{font-size:.65rem;font-weight:900;color:var(--text);white-space:nowrap}
+.p148-gate-value small{font-size:.51rem!important;font-weight:750!important;color:var(--muted)!important;white-space:nowrap}
+.p148-rank-rows>div.done .p148-gate-value-main{color:var(--success)}
+.p148-rank-entry{display:grid;gap:5px;padding:18px 0 4px;border-top:1px solid var(--line)}
+.p148-rank-entry strong{font-size:.8rem}
+.p148-rank-entry span{font-size:.62rem;line-height:1.45;color:var(--muted)}
+@media(max-width:520px){
+  .p148-rank-group-head{display:grid}
+  .p148-rank-group-head>span{justify-self:start}
+  .p148-rank-rows>div{gap:10px}
+  .p148-gate-value{min-width:82px}
+  .p148-gate-value-main{font-size:.6rem}
+}
+
+/* V10.148 · Progression > Corps · retour de la carte corporelle 3D */
+.p148-body-map-section{display:grid;gap:14px;padding:18px;border:1px solid var(--line);border-radius:24px;background:var(--surface)}
+.p148-body-map-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+.p148-body-map-head h1{font-size:1.55rem;margin:3px 0 5px;letter-spacing:-.035em}
+.p148-body-map-head p{margin:0;color:var(--muted);font-size:.66rem;line-height:1.45}
+.p148-body-map-badge{padding:7px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);font-size:.58rem;font-weight:900;white-space:nowrap}
+.p148-body-toolbar{margin:0;padding:0 0 2px}
+.p148-body-map-wrap{grid-template-columns:minmax(330px,390px) minmax(0,1fr)}
+.p148-body-model{min-height:580px}
+.p148-body-model .body3d-stage{height:580px;min-height:520px}
+.p148-body-side{align-self:stretch}
+.p148-body-note{margin:10px 0 0;color:var(--muted);font-size:.58rem;line-height:1.45}
+.p148-body-measures-head{margin-top:2px}
+@media(max-width:720px){
+  .p148-body-map-section{padding:14px}
+  .p148-body-map-head{display:grid}
+  .p148-body-map-badge{justify-self:start}
+  .p148-body-map-wrap{grid-template-columns:1fr}
+  .p148-body-model{min-height:530px;max-width:410px;margin:0 auto;width:100%}
+  .p148-body-model .body3d-stage{height:530px;min-height:500px}
 }

@@ -1,4 +1,4 @@
-/* KINETIK v10.147 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.148 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -1503,7 +1503,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.147',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.148',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -3583,7 +3583,8 @@ const KINETIK_RANK_RULES={
   },
   silver:{
     avg:0,
-    caps:{pull:14,push:13,grip:15},
+    // Argent reste volontairement transparent : 3 standards réels, sans doublon d'indice composite.
+    caps:{},
     skillPoints:0,mastery:0,majorMastery:0,
     proofs:[
       {kind:'test',id:'pullups',value:5,label:'5 tractions strictes',unit:'reps'},
@@ -3593,7 +3594,8 @@ const KINETIK_RANK_RULES={
   },
   gold:{
     avg:0,
-    caps:{pull:24,push:24,grip:23,core:8},
+    // Or valide les standards + un minimum de diversité technique. Les indices composites commencent à Platine.
+    caps:{},
     skillPoints:6,mastery:0,majorMastery:0,
     proofs:[
       {kind:'test',id:'pullups',value:8,label:'8 tractions strictes',unit:'reps'},

@@ -1,4 +1,4 @@
-/* KINETIK v10.147 · Multisport planning, timers and planning presentation. */
+/* KINETIK v10.148 · Multisport planning, timers and planning presentation. */
 /* V10.70 · Multisport Planning                                               */
 /* Planned vs completed · weekly load forecast · conflicts · opt-in optimizer */
 /* ========================================================================== */
