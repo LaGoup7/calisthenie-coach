@@ -306,3 +306,12 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 ## V10.142 · Planning — heatmap déplacée dans Calendrier
 - La vue de régularité type GitHub est affichée en haut de Planning → Calendrier, juste sous les onglets.
 - Elle a été retirée de Planning → Programmes pour éviter la duplication et garder Programmes centré sur la configuration des cycles.
+
+## V10.143 · Planning — finalisation fonctionnelle
+- Navigation semaine précédente / actuelle / suivante conservée et mise en avant.
+- États explicites par jour : Prévue, À faire, Faite, Express, Partielle, Manquée, Repos, Activité prévue/réalisée.
+- Déplacement ponctuel d'une séance KINETIK à un autre jour libre de la semaine sans modifier le cycle permanent.
+- Les déplacements sont répercutés dans Aujourd'hui, Daily Tasks, rappels et heatmap afin d'éviter les faux jours manqués.
+- Activités externes prévues et réalisées restent intégrées au jour correspondant.
+- Résumé hebdomadaire compact : séances réalisées/prévues, minutes d'entraînement, séances de mobilité.
+- Vocabulaire principal allégé : l'UI Calendrier n'expose plus `UA`; l'analyse avancée parle d'indice de charge interne.

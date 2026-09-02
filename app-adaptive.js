@@ -1,4 +1,4 @@
-/* KINETIK v10.142 · Adaptive coaching, assessment and progression intelligence. */
+/* KINETIK v10.143 · Adaptive coaching, assessment and progression intelligence. */
 /* V10.0 · Adaptive Local Coach                                                */
 /* Cloud/onboarding intentionally excluded.                                    */
 /* ========================================================================== */
@@ -248,7 +248,7 @@ function setReminderPrefs(v){const next={...getReminderPrefs(),...(v||{}),versio
 function reminderCategoryCount(p=getReminderPrefs()){return ['workout','activities','measurements','tests','mobility','recovery'].filter(k=>p[k]!==false).length;}
 function smartReminderItems(){
   const p=getReminderPrefs();if(!p.enabled)return [];
-  const out=[],day=todayDay(),todayW=workoutTemplateForDay(day),done=getHistory().some(s=>localDateKey(s.date)===localDateKey()&&String(s.trainingCycleId||getActiveTrainingCycleId())===String(getActiveTrainingCycleId()));
+  const out=[],day=todayDay(),todayW=typeof workoutTemplateForDate==='function'?workoutTemplateForDate(new Date()):workoutTemplateForDay(day),done=getHistory().some(s=>localDateKey(s.date)===localDateKey()&&String(s.trainingCycleId||getActiveTrainingCycleId())===String(getActiveTrainingCycleId()));
   if(p.workout&&(todayW.exercises||[]).length&&!done)out.push({type:'workout',label:`Séance ${todayW.name} à faire`,detail:`Complète ${todayW.duration} min · Express ${todayW.shortDuration||'—'} min`});
   if(p.activities||p.mobility){(plannedEventsForDate(localDateKey())||[]).forEach(event=>{const type=plannedEventType(event),isMobility=(event.type||type?.id)==='mobility';if((isMobility&&!p.mobility)||(!isMobility&&!p.activities)||plannedEventActual(event))return;out.push({type:isMobility?'mobility':'activity',label:`${type?.label||event.label||'Activité'} prévue`,detail:`${event.time||'Aujourd’hui'} · ${Number(event.duration||0)||'—'} min`});});}
   if(p.measurements){const schedule=bodyTrackingSchedule(),due=schedule.filter(x=>x.due),soon=p.visibility==='due-and-soon'?schedule.filter(x=>!x.due&&Math.max(0,Number(x.every||1)-Number(x.age||0))<=p.upcomingDays):[];if(due.length)out.push({type:'measure',label:`${due.length} suivi${due.length>1?'s':''} mesure à jour`,detail:due.map(x=>x.label).join(' · ')});if(soon.length)out.push({type:'measure',label:'Mesures bientôt à refaire',detail:soon.map(x=>`${x.label} · ${x.text}`).join(' · ')});}

@@ -1,4 +1,4 @@
-/* KINETIK v10.142 · Daily journey, reminders, shortcuts and Web Push settings UI. */
+/* KINETIK v10.143 · Daily journey, reminders, shortcuts and Web Push settings UI. */
 /* KINETIK v10.120 · Step 6 · Today Agenda                                   */
 /* One compact surface for the Daily Tasks Engine.                            */
 /* Completed tasks leave the active list and feed the daily progress.         */
@@ -768,3 +768,41 @@ function renderSettings(){
   if(html.includes(marker))html=html.replace(marker,renderDecisionJournalSettings()+marker);
   return html;
 }
+
+/* ========================================================================== */
+/* KINETIK v10.143 · Date-aware moved workouts on Aujourd'hui                  */
+/* Planning may move one cycle session inside the week without editing cycle. */
+/* ========================================================================== */
+const _preparedWorkoutV10143DateAware=preparedWorkout;
+preparedWorkout=function(day,readiness=null,sessionLength='full'){
+  if(Number(day)===Number(todayDay())&&typeof v10143WorkoutDirectiveForDate==='function'){
+    const directive=v10143WorkoutDirectiveForDate(new Date());
+    if(directive.kind==='moved-in')return _preparedWorkoutV10143DateAware(Number(directive.sourceDay),readiness,sessionLength);
+    if(directive.kind==='moved-away'){
+      const w=_preparedWorkoutV10143DateAware(Number(day),readiness,sessionLength);
+      return {...w,name:'Repos',subtitle:`Séance déplacée au ${formatShortDate(directive.move.targetDate)}`,duration:0,shortDuration:0,cardioPlan:[],exercises:[]};
+    }
+  }
+  return _preparedWorkoutV10143DateAware(day,readiness,sessionLength);
+};
+const _requestWorkoutStartV10143=requestWorkoutStart;
+requestWorkoutStart=function(day=todayDay()){
+  if(Number(day)===Number(todayDay())&&typeof v10143WorkoutDirectiveForDate==='function'){
+    const directive=v10143WorkoutDirectiveForDate(new Date());
+    if(directive.kind==='moved-away')return;
+    if(directive.kind==='moved-in')return _requestWorkoutStartV10143(Number(directive.sourceDay));
+  }
+  return _requestWorkoutStartV10143(day);
+};
+const _renderTodayV10143MovedWorkout=renderToday;
+renderToday=function(){
+  let html=_renderTodayV10143MovedWorkout();
+  if(typeof v10143WorkoutDirectiveForDate!=='function')return html;
+  const directive=v10143WorkoutDirectiveForDate(new Date());
+  if(directive.kind==='moved-in'){
+    const source=directive.workout||{},express=Number(source.shortDuration||Math.max(20,Math.round((Number(source.duration||45))*.48)));
+    html=html.replace(/Express ≈ \d+ min/,`Express ≈ ${express} min`);
+    html=html.replace(/<div class="kicker">Aujourd'hui · ([^<]+)<\/div>/,`<div class="kicker">Aujourd'hui · $1 · séance déplacée</div>`);
+  }
+  return html;
+};

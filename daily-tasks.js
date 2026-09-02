@@ -257,8 +257,9 @@
     getTasks(ctx) {
       if (typeof todayDay !== 'function' || typeof workoutTemplateForDay !== 'function') return [];
       const day = ctx.now.getDay();
-      const workout = safeCall(() => workoutTemplateForDay(day), null);
-      if (!workout || !(workout.exercises || []).length) return [];
+      const workout = safeCall(() => typeof workoutTemplateForDate === 'function' ? workoutTemplateForDate(ctx.now) : workoutTemplateForDay(day), null);
+      const sourceDay = safeCall(() => typeof workoutSourceDayForDate === 'function' ? workoutSourceDayForDate(ctx.now) : day, day);
+      if (!workout || !(workout.exercises || []).length || sourceDay == null) return [];
       const done = isWorkoutDoneForDate(ctx.dateKey);
       const duration = Number(workout.duration || 0);
       const shortDuration = Number(workout.shortDuration || 0);
@@ -274,8 +275,8 @@
         priority: PRIORITY.critical,
         dueKey: ctx.dateKey,
         source: 'training-cycle',
-        action: { type: done ? 'view' : 'workout-start', view: 'today', label: done ? 'Voir' : 'Commencer', payload: { day } },
-        metadata: { day, workoutName: workout.name || '', duration, shortDuration },
+        action: { type: done ? 'view' : 'workout-start', view: 'today', label: done ? 'Voir' : 'Commencer', payload: { day: sourceDay } },
+        metadata: { day: sourceDay, calendarDay: day, workoutName: workout.name || '', duration, shortDuration },
       }];
     },
   });
@@ -576,7 +577,7 @@
     const explicitRest = Array.isArray(profile?.restDays) && profile.restDays.includes(ctx.now.getDay());
     let hasWorkout = false;
     if (typeof workoutTemplateForDay === 'function') {
-      const workout = safeCall(() => workoutTemplateForDay(ctx.now.getDay()), null);
+      const workout = safeCall(() => typeof workoutTemplateForDate === 'function' ? workoutTemplateForDate(ctx.now) : workoutTemplateForDay(ctx.now.getDay()), null);
       hasWorkout = !!(workout && Array.isArray(workout.exercises) && workout.exercises.length);
     }
     // An external sport day is not treated as a pure recovery day even if KINETIK has no strength session.

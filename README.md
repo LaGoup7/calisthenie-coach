@@ -434,3 +434,6 @@ Le Quick Log devient personnalisable : jusqu'à 8 exercices favoris, ordre manue
 ## V10.142 · Planning — heatmap déplacée dans Calendrier
 - La vue de régularité type GitHub est affichée en haut de Planning → Calendrier, juste sous les onglets.
 - Elle a été retirée de Planning → Programmes pour éviter la duplication et garder Programmes centré sur la configuration des cycles.
+
+## V10.143 · Planning finalisé
+Le Calendrier devient la vue opérationnelle de la semaine : navigation entre semaines, heatmap en tête, résumé compact, états de journée explicites et activités multisport dans leur date réelle. Une séance KINETIK peut être déplacée ponctuellement vers un jour libre ; ce déplacement ne modifie jamais le programme permanent et est pris en compte par Aujourd'hui, Daily Tasks et la heatmap. L'analyse de charge reste repliée et utilise un vocabulaire plus compréhensible.

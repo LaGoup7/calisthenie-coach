@@ -48,10 +48,10 @@ try{
 
 const html=fs.readFileSync(__dirname+'/index.html','utf8');
 let last=-1;
-for(const file of APP_SOURCE_FILES){const pos=html.indexOf(`${file}?v=10.142`);ok(pos>=0,`${file} missing from index.html`);ok(pos>last,`${file} is out of load order`);last=pos;}
+for(const file of APP_SOURCE_FILES){const pos=html.indexOf(`${file}?v=10.143`);ok(pos>=0,`${file} missing from index.html`);ok(pos>last,`${file} is out of load order`);last=pos;}
 const sw=fs.readFileSync(__dirname+'/sw.js','utf8');
-for(const file of APP_SOURCE_FILES)ok(sw.includes(`./${file}?v=10.142`),`${file} missing from service-worker precache`);
-ok(sw.includes("kinetik-v10-142-planning-heatmap"),'v10.132 modularization cache missing');
-const pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));ok(pkg.version==='10.142.0','package version is not 10.142.0');
+for(const file of APP_SOURCE_FILES)ok(sw.includes(`./${file}?v=10.143`),`${file} missing from service-worker precache`);
+ok(sw.includes("kinetik-v10-143-planning-final"),'v10.132 modularization cache missing');
+const pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));ok(pkg.version==='10.143.0','package version is not 10.143.0');
 
 if(failures.length){console.error(`STEP14_RUNTIME_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`STEP14_RUNTIME_OK ${checks} checks`);

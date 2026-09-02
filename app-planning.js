@@ -1,4 +1,4 @@
-/* KINETIK v10.142 · Multisport planning, timers and planning presentation. */
+/* KINETIK v10.143 · Multisport planning, timers and planning presentation. */
 /* V10.70 · Multisport Planning                                               */
 /* Planned vs completed · weekly load forecast · conflicts · opt-in optimizer */
 /* ========================================================================== */
@@ -903,3 +903,162 @@ renderCycleHeatmap=function(weeks=16){
 
 
 /* ========================================================================== */
+
+/* ========================================================================== */
+/* KINETIK v10.143 · Planning finalisation                                    */
+/* Week navigation + explicit day states + one-off workout moves + multisport */
+/* ========================================================================== */
+STORAGE.workoutMoves='kinetik_workout_moves_v1';
+Object.assign(state,{planningMoveWorkoutDate:null});
+
+function getWorkoutMoves(){return parse(STORAGE.workoutMoves,[]);}
+function setWorkoutMoves(rows){save(STORAGE.workoutMoves,Array.isArray(rows)?rows:[]);}
+function v10143CycleForDate(key){try{return trainingCycleForDate(v1070DateFromKey(key));}catch(_){return getActiveTrainingCycle();}}
+function v10143WorkoutMovesForCycle(cycleId){return getWorkoutMoves().filter(x=>String(x.cycleId||'')===String(cycleId||''));}
+function v10143WorkoutDirectiveForDate(value){
+  const key=typeof value==='string'?value:v1070DateKey(value),date=v1070DateFromKey(key),cycle=v10143CycleForDate(key),cycleId=cycle?.id||getActiveTrainingCycleId(),moves=v10143WorkoutMovesForCycle(cycleId);
+  const incoming=moves.find(x=>x.targetDate===key&&x.targetDate!==x.sourceDate);
+  if(incoming){
+    const sourceDay=Number(incoming.sourceDay),workout=cycleDayTemplate(cycle,sourceDay);
+    return {kind:'moved-in',key,date,cycle,sourceDay,workout,move:incoming};
+  }
+  const outgoing=moves.find(x=>x.sourceDate===key&&x.targetDate!==x.sourceDate);
+  if(outgoing){
+    const sourceDay=Number(outgoing.sourceDay),workout=cycleDayTemplate(cycle,sourceDay);
+    return {kind:'moved-away',key,date,cycle,sourceDay,workout,move:outgoing};
+  }
+  const sourceDay=date.getDay(),workout=cycleDayTemplate(cycle,sourceDay);
+  return {kind:(workout?.exercises||[]).length?'scheduled':'rest',key,date,cycle,sourceDay,workout,move:null};
+}
+function workoutTemplateForDate(value){
+  const d=v10143WorkoutDirectiveForDate(value);
+  if(d.kind==='scheduled'||d.kind==='moved-in')return clone(d.workout);
+  const base=clone(d.workout||{name:'Repos',subtitle:'Récupération complète',duration:0,shortDuration:0,intensity:'Repos',exercises:[]});
+  return {...base,name:'Repos',subtitle:d.kind==='moved-away'?`Séance déplacée au ${formatShortDate(d.move.targetDate)}`:'Récupération complète',duration:0,shortDuration:0,intensity:'Repos',exercises:[]};
+}
+function workoutSourceDayForDate(value){const d=v10143WorkoutDirectiveForDate(value);return (d.kind==='scheduled'||d.kind==='moved-in')?Number(d.sourceDay):null;}
+function v10143PreparePlanningWorkout(d){
+  if(!d||!(d.workout?.exercises||[]).length)return null;
+  try{
+    const base=applySessionLength(clone(d.workout),'full'),w=prepareWorkoutObject(base,null);
+    w.trainingCycleId=d.cycle?.id||getActiveTrainingCycleId();w.trainingCycleName=d.cycle?.name||getActiveTrainingCycle().name;return w;
+  }catch(_){return clone(d.workout);}
+}
+v1070PlannedKinetikForDate=function(key){
+  const d=v10143WorkoutDirectiveForDate(key);
+  if(!['scheduled','moved-in'].includes(d.kind))return null;
+  const w=v10143PreparePlanningWorkout(d);if(!w?.exercises?.length)return null;
+  const expectedRpe=6;
+  return {day:Number(d.sourceDay),name:w.name,duration:Number(w.duration||45),rpe:expectedRpe,load:Math.round(Number(w.duration||45)*expectedRpe),workout:w,moved:d.kind==='moved-in',move:d.move||null,originalDate:d.move?.sourceDate||key};
+};
+
+function v10143WorkoutActual(day){
+  if(!day?.kinetik)return null;
+  const cycleId=day.kinetik.workout?.trainingCycleId||v10143CycleForDate(day.key)?.id;
+  return day.actualStrength.find(x=>x.trainingCycleId?String(x.trainingCycleId)===String(cycleId)&&Number(x.day)===Number(day.kinetik.day):!x.customWorkoutId&&Number(x.day)===Number(day.kinetik.day))||null;
+}
+function v10143WorkoutCompletion(day){
+  const actual=v10143WorkoutActual(day);if(!day.kinetik)return actual?{id:'done',label:'Séance réalisée',cls:'done'}:{id:'rest',label:'Repos',cls:'rest'};
+  if(actual){
+    if(actual.sessionLength==='short')return {id:'express',label:'Express',cls:'done'};
+    const expected=(day.kinetik.workout?.exercises||[]).filter(e=>e.type!=='timer').reduce((s,e)=>s+Math.max(1,Number(e.sets||1)),0),done=Array.isArray(actual.entries)?actual.entries.filter(e=>e.type!=='timer').length:0;
+    if(expected>=4&&done>0&&done<Math.ceil(expected*.6))return {id:'partial',label:'Partielle',cls:'partial'};
+    return {id:'done',label:'Faite',cls:'done'};
+  }
+  const today=v1070DateKey(new Date());if(day.key<today)return {id:'missed',label:'Manquée',cls:'missed'};if(day.key===today)return {id:'today',label:'À faire',cls:'today'};return {id:'planned',label:'Prévue',cls:'planned'};
+}
+function v10143DayState(day){
+  if(day.kinetik)return v10143WorkoutCompletion(day);
+  if(day.actualStrength.length||day.actualManual.length)return {id:'activity',label:'Activité réalisée',cls:'done'};
+  if(day.manual.length)return {id:'activity-planned',label:'Activité prévue',cls:'planned'};
+  return {id:'rest',label:'Repos',cls:'rest'};
+}
+function v10143MoveForDisplayedDate(key){
+  const directive=v10143WorkoutDirectiveForDate(key);return directive.move||null;
+}
+function v10143MoveCandidates(key){
+  const source=v10143WorkoutDirectiveForDate(key),week=mondayDate(v1070DateFromKey(key));week.setHours(12,0,0,0);const today=v1070DateKey(new Date());
+  return Array.from({length:7},(_,i)=>{const date=v1070AddDays(week,i),target=v1070DateKey(date),directive=v10143WorkoutDirectiveForDate(target),external=plannedEventsForDate(target).filter(x=>x.type!=='mobility');return {key:target,date,directive,external};})
+    .filter(x=>x.key!==key&&x.key>=today&&!['scheduled','moved-in'].includes(x.directive.kind)&&actualStrengthForDate(x.key).length===0)
+    .map(x=>({...x,label:x.date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'}),note:x.external.length?`${x.external.length} activité${x.external.length>1?'s':''} déjà prévue${x.external.length>1?'s':''}`:'Journée disponible'}));
+}
+function v10143MoveWorkout(fromKey,toKey){
+  const directive=v10143WorkoutDirectiveForDate(fromKey);if(!['scheduled','moved-in'].includes(directive.kind))return false;
+  const rows=getWorkoutMoves(),cycleId=directive.cycle?.id||getActiveTrainingCycleId();let existing=null;
+  if(directive.kind==='moved-in')existing=rows.find(x=>String(x.cycleId)===String(cycleId)&&x.targetDate===fromKey);
+  const sourceDate=existing?.sourceDate||fromKey,sourceDay=Number(existing?.sourceDay??directive.sourceDay);
+  const next=rows.filter(x=>!(String(x.cycleId)===String(cycleId)&&(x.sourceDate===sourceDate||x.targetDate===sourceDate)));
+  if(toKey!==sourceDate)next.push({id:existing?.id||`move_${Date.now()}`,cycleId:String(cycleId),sourceDate,targetDate:toKey,sourceDay,createdAt:existing?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()});
+  setWorkoutMoves(next);state.planningMoveWorkoutDate=null;return true;
+}
+function v10143ResetWorkoutMove(key){
+  const directive=v10143WorkoutDirectiveForDate(key),move=directive.move;if(!move)return false;
+  setWorkoutMoves(getWorkoutMoves().filter(x=>String(x.id)!==String(move.id)));state.planningMoveWorkoutDate=null;return true;
+}
+function v10143RenderMoveWorkoutOverlay(){
+  const key=state.planningMoveWorkoutDate;if(!key)return '';
+  const directive=v10143WorkoutDirectiveForDate(key),move=directive.move,candidates=v10143MoveCandidates(key),name=directive.workout?.name||'Séance';
+  return `<div class="planning-move-overlay" role="dialog" aria-modal="true" aria-label="Déplacer la séance"><section class="planning-move-sheet"><header><div><div class="kicker">Cette semaine seulement</div><h2>Déplacer ${esc(name)}</h2><p>Le programme permanent reste inchangé.</p></div><button class="icon-btn planning-move-close" aria-label="Fermer">×</button></header>${move&&directive.kind==='moved-in'?`<div class="planning-move-current"><span>Jour prévu initialement</span><strong>${formatShortDate(move.sourceDate)}</strong><button type="button" class="planning-move-reset" data-reset-workout-move="${esc(key)}">Revenir au programme</button></div>`:''}<div class="planning-move-days">${candidates.length?candidates.map(x=>`<button type="button" data-move-workout-to="${esc(x.key)}"><span>${esc(x.label)}</span><small>${esc(x.note)}</small><b>→</b></button>`).join(''):'<p class="muted">Aucun autre jour libre cette semaine. Tu peux déplacer une activité externe ou modifier le programme depuis l’onglet Programmes.</p>'}</div></section></div>`;
+}
+const _shellV10143=shell;
+shell=function(content,activeTab=state.view){return _shellV10143(content,activeTab)+v10143RenderMoveWorkoutOverlay();};
+
+function v10143WeekGlance(stats,start){
+  const startMs=new Date(start).setHours(0,0,0,0),end=v1070AddDays(start,7).getTime(),strength=getHistory().filter(x=>{const t=new Date(x.date).getTime();return t>=startMs&&t<end;}),activities=getActivities().filter(x=>{const t=new Date(x.date).getTime();return t>=startMs&&t<end;}),flex=getFlexLogs().filter(x=>{const t=new Date(x.date).getTime();return t>=startMs&&t<end;});
+  const trainingMinutes=strength.reduce((s,x)=>s+Number(x.durationMinutes||0),0)+activities.filter(x=>x.type!=='mobility').reduce((s,x)=>s+Number(x.duration||0),0),mobilitySessions=flex.length+activities.filter(x=>x.type==='mobility').length;
+  return {trainingMinutes,mobilitySessions};
+}
+function v10143FriendlyConflictDetail(c){
+  const detail=String(c?.detail||'').replace(/\d+\s*UA/g,'charge élevée').replace(/\bUA\b/g,'');return detail.replace(/\s{2,}/g,' ').trim();
+}
+v1071RenderAnalysis=function(stats,conflicts,maxLoad){
+  return `<details class="planning-analysis"><summary><div><strong>Analyser la semaine</strong><span>Effort prévu / réalisé, conflits et optimisation</span></div><b>⌄</b></summary><div class="planning-analysis-body"><div class="planning-week-summary-v1071"><div><span>Indice prévu</span><strong>${stats.planned.toLocaleString('fr-FR')}</strong><small>durée × effort</small></div><div><span>Indice réalisé</span><strong>${stats.actual.toLocaleString('fr-FR')}</strong><small>calcul interne</small></div><div><span>Récupération</span><strong>${stats.actualRecovery}/${stats.plannedRecovery} min</strong></div></div><div class="planning-load-week-v1071"><div class="planning-load-legend"><span><i></i>Prévu</span><span><b></b>Réalisé</span></div><div class="planning-load-columns">${stats.days.map(d=>`<div><div class="planning-load-column"><i style="height:${Math.max(3,d.plannedSportLoad/maxLoad*100)}%"></i>${d.actualSportLoad?`<b style="height:${Math.max(3,d.actualSportLoad/maxLoad*100)}%"></b>`:''}</div><span>${DAY_NAMES[d.date.getDay()].slice(0,1)}</span></div>`).join('')}</div></div>${conflicts.length?`<div class="planning-conflicts-v1071"><div class="kicker">À surveiller</div>${conflicts.map(c=>`<div class="${c.level}"><strong>${esc(c.title)}</strong><span>${formatShortDate(c.date)} · ${esc(v10143FriendlyConflictDetail(c))}</span></div>`).join('')}</div>`:''}<div class="planning-analysis-actions"><button class="planning-optimize">Optimiser ma semaine</button><span>KINETIK propose seulement ; aucun déplacement n’est appliqué sans validation.</span></div>${renderPlanningOptimizer()}</div></details>`;
+};
+
+v1076RenderKinetik=function(day){
+  const k=day.kinetik;if(!k)return '';
+  const actual=v10143WorkoutActual(day),expanded=state.expandedWeekDay===k.day,w=k.workout,status=v10143WorkoutCompletion(day),move=k.move;
+  return `<section class="planning-session-v1076 status-${status.cls} ${actual?'completed':''}"><div class="planning-session-top-v1076"><div class="planning-session-title-v1076"><span class="planning-source-v1076">KINETIK${k.moved?' · déplacée':''}</span><h3>${esc(k.name)}</h3><p>${esc(w.subtitle||'')}${k.moved&&move?` · prévue initialement ${formatShortDate(move.sourceDate)}`:''}</p></div><div class="planning-session-tools-v10143"><span class="planning-day-state status-${status.cls}">${esc(status.label)}</span>${!actual?`<button type="button" class="planning-session-menu-v10143" data-move-workout="${esc(day.key)}" aria-label="Options de séance">•••</button>`:''}</div></div>${v1076ExercisePreview(w)}<div class="planning-session-meta-v1076"><span>${k.duration} min</span><span>${w.exercises.length} étapes</span>${actual?`<span>RPE ${actual.rpe||'—'}</span>`:`<span>Effort prévu · RPE ${k.rpe}</span>`}</div><button class="planning-exercises-action-v1076 week-toggle" data-day="${k.day}" aria-expanded="${expanded}"><span>${expanded?'Masquer les exercices':`Voir les ${w.exercises.length} exercices`}</span><b>${expanded?'↑':'↓'}</b></button>${v1071KinetikDetails(day)}</section>`;
+};
+function v10143RenderUnplannedStrength(day){
+  if(day.kinetik||!day.actualStrength.length)return '';
+  return day.actualStrength.map(x=>`<section class="planning-unplanned-strength-v10143"><span>KINETIK</span><div><strong>${esc(x.name||'Séance réalisée')}</strong><small>${Number(x.durationMinutes||0)} min · RPE ${x.rpe||'—'} · enregistrée hors planning</small></div><b>Faite</b></section>`).join('');
+}
+v1076RenderExternalEvent=function(e){
+  const type=plannedEventType(e),actual=plannedEventActual(e),realText=v1070PlanRealizationText(e);
+  return `<section class="planning-external-v1076 ${actual?'completed':''}"><div class="planning-external-v1076-head"><div><span>${e.time||'Activité'}</span><strong>${esc(type.label)}</strong></div><span class="planning-day-state ${actual?'status-done':'status-planned'}">${actual?'Réalisée':'Prévue'}</span></div><div class="planning-external-v1076-meta"><span>${e.duration} min</span><span>RPE ${e.rpe}</span>${realText?`<span>${esc(realText)}</span>`:''}</div>${e.note?`<p>${esc(e.note)}</p>`:''}<div class="planning-external-v1076-actions">${!actual?`<button data-complete-plan="${e.id}">Réaliser</button>`:''}<button data-edit-plan="${e.id}">Modifier</button><button data-delete-plan="${e.id}">Supprimer</button></div></section>`;
+};
+v1076RenderDay=function(day){
+  const weekday=DAY_NAMES[day.date.getDay()].slice(0,3).toUpperCase(),today=day.key===v1070DateKey(new Date()),linkedIds=new Set(day.manual.map(e=>String(plannedEventActual(e)?.id||''))),unplanned=day.actualManual.filter(a=>!linkedIds.has(String(a.id))),hasAnything=!!day.kinetik||day.manual.length||unplanned.length||day.actualStrength.length,stateInfo=v10143DayState(day);
+  return `<article class="planning-day-v1076 ${today?'today':''} day-state-${stateInfo.cls}"><header class="planning-day-head-v1076"><div class="planning-date-v1076"><span>${weekday}</span><strong>${day.date.getDate()}</strong>${today?'<em>Aujourd’hui</em>':''}</div><div class="planning-day-head-actions-v10143"><span class="planning-day-state status-${stateInfo.cls}">${esc(stateInfo.label)}</span><button class="planning-day-add-v1076" data-plan-date="${day.key}" aria-label="Ajouter une activité">＋</button></div></header><div class="planning-day-content-v1076">${v1076RenderKinetik(day)}${v10143RenderUnplannedStrength(day)}${day.manual.map(v1076RenderExternalEvent).join('')}${unplanned.map(v1070RenderUnplannedActual).join('')}${!hasAnything?`<section class="planning-rest-v1076"><strong>Repos</strong><span>Aucune séance principale prévue.</span></section>`:!day.kinetik&&day.manual.length?`<div class="planning-no-kinetik-v1076">Pas de séance KINETIK prévue</div>`:''}<button class="planning-mobility-v1076" data-view="flexibility"><span>Mobilité recommandée</span><strong>${recommendedFlexRoutine(day.date.getDay()).duration} min</strong><b>→</b></button></div></article>`;
+};
+
+renderWeek=function(){
+  const start=v1070WeekStart(),stats=v1070WeekStats(start),conflicts=v1070Conflicts(start),maxLoad=Math.max(600,...stats.days.map(x=>x.plannedSportLoad),...stats.days.map(x=>x.actualSportLoad)),todayWeek=Number(state.planningWeekOffset||0)===0,plannedText=`${stats.plannedSessions} séance${stats.plannedSessions>1?'s':''} prévue${stats.plannedSessions>1?'s':''}`,glance=v10143WeekGlance(stats,start);
+  return shell(`<header class="topbar planning-topbar-v1076"><div><div class="brand">Planning</div><div class="daylabel">Ta semaine d’entraînement</div></div></header>${renderPlanningTabs('calendar')}<div class="week-heatmap planning-calendar-heatmap">${renderCycleHeatmap(16)}</div><section class="planning-week-header-v1076"><button data-week-shift="-1" aria-label="Semaine précédente">←</button><div><div class="kicker">${todayWeek?'Cette semaine':'Semaine'}</div><h1>${v1070WeekLabel(start)}</h1><p>${plannedText} · ${stats.actualSessions} enregistrée${stats.actualSessions>1?'s':''}</p></div><button data-week-shift="1" aria-label="Semaine suivante">→</button></section><section class="planning-week-glance-v10143"><div><strong>${stats.actualSessions}/${stats.plannedSessions||0}</strong><span>séances réalisées / prévues</span></div><div><strong>${glance.trainingMinutes}</strong><span>min d’entraînement</span></div><div><strong>${glance.mobilitySessions}</strong><span>séance${glance.mobilitySessions>1?'s':''} de mobilité</span></div></section><section class="planning-actions-v1076"><button class="planning-new-event" data-plan-date="${v1070DateKey(new Date())}">＋ Planifier une activité</button>${todayWeek?'':`<button class="planning-today-week">Cette semaine</button>`}</section>${v1071RenderAnalysis(stats,conflicts,maxLoad)}<section class="planning-days-v1076">${stats.days.map(v1076RenderDay).join('')}</section>`, 'week');
+};
+
+const _bindEventsV10143=bindEvents;
+bindEvents=function(){
+  _bindEventsV10143();
+  document.querySelectorAll('[data-move-workout]').forEach(b=>b.onclick=e=>{e.stopPropagation();state.planningMoveWorkoutDate=b.dataset.moveWorkout;render();});
+  document.querySelectorAll('.planning-move-close').forEach(b=>b.onclick=()=>{state.planningMoveWorkoutDate=null;render();});
+  document.querySelectorAll('[data-move-workout-to]').forEach(b=>b.onclick=()=>{if(v10143MoveWorkout(state.planningMoveWorkoutDate,b.dataset.moveWorkoutTo))render();});
+  document.querySelectorAll('[data-reset-workout-move]').forEach(b=>b.onclick=()=>{if(v10143ResetWorkoutMove(b.dataset.resetWorkoutMove))render();});
+  const overlay=document.querySelector('.planning-move-overlay');if(overlay)overlay.onclick=e=>{if(e.target===overlay){state.planningMoveWorkoutDate=null;render();}};
+};
+
+/* Make cycle regularity respect one-off moved sessions while leaving the
+   permanent program untouched. */
+const _dailyCycleStatusV10143=dailyCycleStatus;
+dailyCycleStatus=function(value){
+  const d=value instanceof Date?new Date(value):new Date(value),key=localDateKey(d),directive=v10143WorkoutDirectiveForDate(key);
+  if(!directive.move)return _dailyCycleStatusV10143(value);
+  const today=localDateKey(),cycle=directive.cycle,w=workoutTemplateForDate(d),isRest=!(w.exercises||[]).length;
+  const activation=ensureCycleActivationHistory(),trackedFrom=activation[0]?.date||today;if(key<trackedFrom)return {key,status:'untracked',cycle,w};if(key>today)return {key,status:'future',cycle,w};
+  const sessions=getHistory().filter(h=>localDateKey(h.date)===key),quick=getQuickLogs().filter(q=>localDateKey(q.date)===key&&isStrengthQuickLog(q));
+  if(isRest){const strengthSessions=sessions.filter(h=>(h.entries||[]).some(e=>!(/mobilité|étirement|stretch|respiration|cardio|marche|échauffement|retour au calme/i.test(String(e.exercise||''))))),breaksRest=strengthSessions.length||quick.length;if(key===today)return {key,status:breaksRest?'rest-broken':'rest-planned',cycle,w};return {key,status:breaksRest?'rest-broken':'rest-ok',cycle,w};}
+  const sourceDay=Number(directive.sourceDay),plannedSessions=sessions.filter(h=>h.trainingCycleId?String(h.trainingCycleId)===String(cycle.id)&&Number(h.day)===sourceDay:!h.customWorkoutId&&Number(h.day)===sourceDay);
+  if(plannedSessions.length){const session=plannedSessions[0],status=session.sessionLength==='short'?'done-express':'done';return {key,status,cycle,w,session};}
+  return {key,status:key===today?'planned':'missed',cycle,w};
+};
