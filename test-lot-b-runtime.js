@@ -23,10 +23,11 @@ const ui=vm.runInContext(`(()=>{
 })()`,sandbox);
 
 // Today: one intent = one action surface.
-ok(ui.today.includes('today-primary-shortcuts'),'Today shortcuts container missing');
-ok(ui.today.includes('core-cockpit')&&ui.today.includes('today-add-session-card'),'Rank/Gainage/Session shortcut row is incomplete');
+ok(!ui.today.includes('today-primary-shortcuts'),'retired Today shortcuts container is still visible');
+ok(!ui.today.includes('core-cockpit')&&!ui.today.includes('today-add-session-card'),'redundant Gainage/Session shortcuts are still visible');
 ok(ui.today.includes('id="openAddHub"'),'global Add hub FAB missing from Today');
-ok((ui.today.match(/today-add-session-card/g)||[]).length===1,'Today session shortcut is duplicated');
+ok((ui.today.match(/today-add-session-card/g)||[]).length===0,'Today session shortcut should be fully removed');
+ok(ui.today.includes('today-watch-rank'),'rank is not merged into À surveiller');
 ok(ui.workoutAction==='','workout agenda still duplicates the workout hero CTA');
 ok(ui.today.includes('id="startWorkout"'),'workout hero lost its primary start action');
 
@@ -51,9 +52,9 @@ ok(bodySource.includes("state.view==='settings'"),'install prompt does not targe
 
 // PWA/version and Vercel Hobby invariant.
 const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),sw=fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),pkg=JSON.parse(fs.readFileSync(path.join(__dirname,'package.json'),'utf8'));
-ok(html.includes('app.js?v=10.140')&&html.includes('account-manager.js?v=10.140'),'v10.140 asset chain missing');
-ok(sw.includes('kinetik-v10-140-today-activity')&&sw.includes('app-journey.js?v=10.140'),'v10.140 PWA cache missing');
-ok(pkg.version==='10.140.0','package version is not 10.140.0');
+ok(html.includes('app.js?v=10.141')&&html.includes('account-manager.js?v=10.141'),'v10.141 asset chain missing');
+ok(sw.includes('kinetik-v10-141-today-cleanup')&&sw.includes('app-journey.js?v=10.141'),'v10.141 PWA cache missing');
+ok(pkg.version==='10.141.0','package version is not 10.141.0');
 ok(fs.readFileSync(path.join(__dirname,'styles.css'),'utf8').includes('v10.132 · Lot B'),'Lot B styles missing');
 const apiFiles=[];function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const full=path.join(dir,e.name);if(e.isDirectory())walk(full);else if(e.isFile()&&e.name.endsWith('.js'))apiFiles.push(full);}}walk(path.join(__dirname,'api'));
 ok(apiFiles.length===12,`Vercel Hobby function count changed: ${apiFiles.length}`);

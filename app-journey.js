@@ -1,4 +1,4 @@
-/* KINETIK v10.140 · Daily journey, reminders, shortcuts and Web Push settings UI. */
+/* KINETIK v10.141 · Daily journey, reminders, shortcuts and Web Push settings UI. */
 /* KINETIK v10.120 · Step 6 · Today Agenda                                   */
 /* One compact surface for the Daily Tasks Engine.                            */
 /* Completed tasks leave the active list and feed the daily progress.         */
@@ -66,24 +66,12 @@ renderTodayMobilityPrompt=function(){return '';};
 renderTodayPlannedEvents=function(){return '';};
 renderTodayUsefulActions=function(){
   const x=progressWeekStats(),rank=getRankState(),next=rank.next;
-  const count=(x.recs?.length||0)+(next?1:0);
-  if(!count)return '';
-  return `<section class="card today-actions-card"><div class="section-head"><div><div class="kicker">Progression</div><h2>À surveiller</h2></div><span class="pill">${count}</span></div><div class="progress-watch-list">${x.recs?.length?`<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">↗</span><div><strong>${x.recs.length} progression${x.recs.length>1?'s':''} disponible${x.recs.length>1?'s':''}</strong><small>${x.recs.slice(0,2).map(r=>`${r.current.name} → ${r.next.name}`).join(' · ')}</small></div><b>Voir →</b></button>`:''}${next?`<button class="progress-watch-item rank-${rank.current.id}" data-view="skills"><span class="progress-watch-icon">◆</span><div><strong>${rank.current.name} → ${next.name}</strong><small>${rankProgressText(next,rank.nextEval)}</small></div><b>Rangs →</b></button>`:''}</div></section>`;
+  const progress=Math.max(0,Math.min(100,Math.round(Number(rank.readiness||0)*100)));
+  const rankLabel=rank.displayName||rank.current.name;
+  const rankDetail=next?`${progress}% vers ${next.name}`:'Rang maximal atteint';
+  const recommendations=x.recs||[];
+  return `<section class="card today-actions-card today-watch-card rank-${esc(rank.current.id)}"><div class="section-head"><div><div class="kicker">Progression</div><h2>À surveiller</h2></div>${recommendations.length?`<span class="pill">${recommendations.length}</span>`:''}</div><button class="today-watch-rank" type="button" data-view="skills"><span class="today-watch-rank-icon">${uiIcon('award')}</span><div class="today-watch-rank-copy"><small>Rang actuel</small><strong>${esc(rankLabel)}</strong><span>${esc(rankDetail)}</span></div><div class="today-watch-rank-progress" aria-label="${progress}% vers le prochain rang"><i style="width:${next?progress:100}%"></i></div><b>Voir →</b></button>${recommendations.length?`<div class="progress-watch-list">${recommendations.map(r=>`<button class="progress-watch-item today-progress-link" data-today-progress="performance"><span class="progress-watch-icon">↗</span><div><strong>${esc(r.current.name)} → ${esc(r.next.name)}</strong><small>${esc(r.reason||'Progression disponible')}</small></div><b>Voir →</b></button>`).join('')}</div>`:''}</section>`;
 };
-
-function todayActivityShortcutMeta(){
-  const recent=getActivities().filter(x=>new Date(x.date).getTime()>=Date.now()-7*86400000&&x.type!=='mobility');
-  const minutes=recent.reduce((sum,x)=>sum+Number(x.duration||0),0);
-  return recent.length
-    ? {sessions:recent.length,minutes,subtitle:`${recent.length} session${recent.length>1?'s':''} · ${minutes} min sur 7 j`}
-    : {sessions:0,minutes:0,subtitle:'Course, natation, vélo, marche, boxe…'};
-}
-function renderTodayPrimaryShortcuts(){
-  const rank=getRankState();
-  const core=typeof coreTimerTodaySummary==='function'?coreTimerTodaySummary():{sets:0,seconds:0};
-  const activity=todayActivityShortcutMeta();
-  return `<button class="cockpit-card rank-cockpit rank-${esc(rank.current.id)}" data-view="skills"><span>${uiIcon('award')}</span><strong>${esc(rank.displayName||rank.current.name)}</strong><small>${rank.next?`${Math.round(rank.readiness*100)}% vers ${esc(rank.next.name)}`:'Rang maximal'}</small></button><button class="cockpit-card today-action-card core-cockpit" type="button" data-open-core-timer="true"><span>${uiIcon('clock')}</span><strong>Gainage</strong><small>${core.sets?`${core.sets} maintien${core.sets>1?'s':''} · ${coreTimerFormat(core.seconds)} aujourd’hui`:'Chronomètre + routines personnalisées'}</small></button><button class="cockpit-card today-action-card today-add-session-card" type="button" data-open-activity="true" data-activity-type="running"><span>${uiIcon('sessions')}</span><strong>Ajouter une session</strong><small>${activity.subtitle}</small></button>`;
-}
 function removeFirstSectionByClass(html,className){
   const rx=new RegExp(`<section[^>]*class="[^"]*${className}[^"]*"[^>]*>[\\s\\S]*?<\\/section>`);
   return html.replace(rx,'');
@@ -107,8 +95,7 @@ renderToday=function(){
   html=html.replace('<section class="card hero','<section id="todayWorkoutHero" class="card hero');
   html=removeFirstSectionByClass(html,'today-agenda');
   html=removeFirstSectionByClass(html,'today-core-timer');
-  const shortcuts=`<section class="today-cockpit today-primary-actions today-primary-shortcuts">${renderTodayPrimaryShortcuts()}</section>`;
-  html=replaceFirstSectionByClass(html,'today-cockpit today-primary-actions today-primary-shortcuts',shortcuts);
+  html=removeFirstSectionByClass(html,'today-cockpit today-primary-actions today-primary-shortcuts');
   const agenda=renderTodayAgenda();
   if(agenda)html=insertAfterHeroSection(html,agenda);
   return html;

@@ -417,7 +417,7 @@ Le Quick Log devient personnalisable : jusqu'à 8 exercices favoris, ordre manue
 - Les résultats non correspondants utilisent désormais un masquage explicite `display:none`, robuste face aux cartes en `display:grid`.
 - La recherche reste insensible aux accents et repasse automatiquement sur Toutes les catégories lorsqu’un texte est saisi.
 
-## V10.140 · Aujourd’hui — activité fusionnée & couleur Rang
+## V10.141 · Aujourd’hui — activité fusionnée & couleur Rang
 
 - fusion de `Charge sportive · 7 jours` et `Volume journalier` en un seul bloc `Activité du jour` ;
 - vocabulaire utilisateur simplifié : répétitions ajoutées, séries rapides, séances, récupération et temps d’entraînement ;
@@ -425,3 +425,7 @@ Le Quick Log devient personnalisable : jusqu'à 8 exercices favoris, ordre manue
 - détail aujourd’hui / répartition 7 jours disponible à la demande ;
 - bouton `+ Ajouter` du bloc relié au hub Ajouter ;
 - correction de la palette du raccourci Rang sur Aujourd’hui (`rank-bronze`, etc.).
+
+## V10.141 · Nettoyage de la page Aujourd’hui
+- Gainage et Ajouter une session retirés des raccourcis redondants : disponibles via `+ Ajouter`.
+- Rang intégré au bloc `À surveiller` avec palette active et progression vers le rang suivant.

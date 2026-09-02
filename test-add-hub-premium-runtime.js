@@ -49,12 +49,13 @@ ok(result.editor.includes('Reprendre une activité'),'repeat editor context miss
 ok(result.editor.includes('value="42"')&&result.editor.includes('value="7.2"')&&result.editor.includes('value="6"'),'repeat values are not prefilled');
 ok(result.before===result.after,'repeat prefill mutated the previous activity');
 ok(result.today.includes('id="openAddHub"'),'Today FAB does not open Add hub');
-ok(result.today.includes('core-cockpit')&&result.today.includes('today-add-session-card'),'Today shortcuts lost Gainage or Add session');
+ok(!result.today.includes('core-cockpit')&&!result.today.includes('today-add-session-card'),'Today still exposes redundant Gainage or Add session shortcuts');
+ok(result.hub.includes('data-add-action="core"')&&result.hub.includes('data-add-action="activity"'),'Add hub lost Gainage or Activity access');
 const source=fs.readFileSync(path.join(__dirname,'app.js'),'utf8');
 ok(source.includes("if(e.target===addHubOverlay)"),'backdrop close behavior missing');
 ok(source.includes("state.planningEditor=true"),'planning route is not wired');
 const styles=fs.readFileSync(path.join(__dirname,'styles.css'),'utf8');
 ok(styles.includes('v10.137 · Premium Add Hub'),'premium hub styles missing');
 const pkg=JSON.parse(fs.readFileSync(path.join(__dirname,'package.json'),'utf8'));
-ok(pkg.version==='10.140.0','package version mismatch');
+ok(pkg.version==='10.141.0','package version mismatch');
 if(failures.length){console.error(`ADD_HUB_PREMIUM_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`ADD_HUB_PREMIUM_OK ${checks} checks`);
