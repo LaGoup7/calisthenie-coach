@@ -1,4 +1,4 @@
-/* KINETIK v10.149 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.150 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -977,6 +977,16 @@ const ATHLETE_SPORTS=[
   ['swimming','Piscine'],['crossfit','CrossFit'],['hyrox','HYROX'],['boxing','Boxe / sports de combat'],
   ['walking','Marche / randonnée'],['rowing','Rameur'],['mobility','Mobilité'],['other','Autre']
 ];
+const ATHLETE_GOALS=[
+  ['muscle-up','Muscle-up'],['pullups-10','10 tractions strictes'],['handstand','Handstand'],
+  ['human-flag','Human Flag'],['weight-loss','Perte de poids'],['mobility','Mobilité'],
+  ['general','Progression générale'],['custom','Objectif personnalisé']
+];
+function athleteGoalPreset(goal){
+  const value=String(goal||'').trim().toLowerCase();
+  const match=ATHLETE_GOALS.find(([,label])=>label.toLowerCase()===value);
+  return match?.[0]||'custom';
+}
 function getAthleteProfile(){
   const raw=parse(STORAGE.athleteProfile,{});
   const active=typeof getActiveTrainingCycle==='function'?getActiveTrainingCycle():null;
@@ -1503,7 +1513,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.149',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.150',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -2689,23 +2699,25 @@ function shell(content, activeTab=state.view) {
   ${['today','week','flexibility','progress'].includes(activeTab)?`<button class="quick-fab quick-fab-add" id="openAddHub" aria-label="Ajouter quelque chose"><span class="quick-fab-plus">＋</span><span>Ajouter</span></button>`:''}
   ${renderAddHubModal()}
   ${renderQuickLogModal()}
-  <nav class="bottom-nav bottom-nav-simple" aria-label="Navigation principale">
+  ${activeTab==='editor'?'':`<nav class="bottom-nav bottom-nav-simple" aria-label="Navigation principale">
     <button class="nav-btn ${navTab==='today'?'active':''}" data-view="today"><span>${uiIcon('today')}</span>Aujourd'hui</button>
     <button class="nav-btn ${navTab==='week'?'active':''}" data-view="week"><span>${uiIcon('week')}</span>Planning</button>
     <button class="nav-btn ${navTab==='flexibility'?'active':''}" data-view="flexibility"><span>${uiIcon('flex')}</span>Mobilité</button>
     <button class="nav-btn ${navTab==='progress'?'active':''}" data-view="progress"><span>${uiIcon('progress')}</span>Progression</button>
     <button class="nav-btn ${navTab==='athlete'?'active':''}" data-view="athlete"><span>${uiIcon('profile')}</span>Profil</button>
-  </nav>`;
+  </nav>`}`;
 }
 
 function renderProfileDaySelector(p){
   return `<div class="profile-day-selector">${[1,2,3,4,5,6,0].map(day=>`<label class="${(p.trainingDays||[]).includes(day)?'selected':''}"><input type="checkbox" class="athlete-training-day" value="${day}" ${(p.trainingDays||[]).includes(day)?'checked':''}><span>${athleteDayLabel(day).slice(0,3)}</span></label>`).join('')}</div>`;
 }
 function renderAthleteProfileEditor(){
-  const p=getAthleteProfile(),sports=new Set(p.sports||[]),locations=new Set(p.locations||[]),setup=getEquipmentSetup();
+  const p=getAthleteProfile(),sports=new Set(p.sports||[]),locations=new Set(p.locations||[]),setup=getEquipmentSetup(),restrictions=typeof getRestrictions==='function'?getRestrictions():{},goalPreset=athleteGoalPreset(p.primaryGoal);
   return shell(`<header class="topbar"><div><div class="brand">Modifier le profil</div><div class="daylabel">Une seule source pour personnaliser tout KINETIK</div></div></header>
   <section class="athlete-profile-editor-full">
-    <section class="profile-editor-block"><div class="profile-editor-heading"><span>01</span><div><h2>Identité sportive</h2><p>Les informations de base de l'athlète.</p></div></div><div class="profile-form-grid">
+    <nav class="profile-editor-nav" aria-label="Sections du profil">${[['identity','Identité'],['goals','Objectifs'],['training','Entraînement'],['context','Sports & lieux'],['equipment','Matériel'],['limits','Contraintes'],['notes','Notes']].map(([id,label],i)=>`<button type="button" data-profile-editor-section="${id}"><span>0${i+1}</span>${label}</button>`).join('')}</nav>
+
+    <section class="profile-editor-block" id="profile-section-identity"><div class="profile-editor-heading"><span>01</span><div><h2>Identité sportive</h2><p>Les informations de base utilisées dans les repères physiques.</p></div></div><div class="profile-form-grid">
       <label><span>Prénom ou pseudo</span><input id="athleteName" value="${esc(p.name)}" placeholder="Ton prénom"></label>
       <label><span>Niveau actuel</span><select id="athleteExperience">${['Débutant','Intermédiaire','Avancé','Expert'].map(x=>`<option ${p.experience===x?'selected':''}>${x}</option>`).join('')}</select></label>
       <label><span>Âge <small>optionnel</small></span><input id="athleteAge" type="number" min="12" max="100" value="${p.age||''}" placeholder="—"></label>
@@ -2714,31 +2726,34 @@ function renderAthleteProfileEditor(){
       <label><span>Années de pratique <small>optionnel</small></span><input id="athleteYears" type="number" min="0" max="60" step=".5" value="${p.yearsTraining||''}" placeholder="—"></label>
     </div></section>
 
-    <section class="profile-editor-block"><div class="profile-editor-heading"><span>02</span><div><h2>Objectifs</h2><p>Ce que KINETIK doit prioriser dans les cycles et recommandations.</p></div></div><div class="profile-form-grid">
-      <label class="wide"><span>Objectif principal</span><input id="athletePrimaryGoal" value="${esc(p.primaryGoal)}" placeholder="Ex. Muscle-up"></label>
+    <section class="profile-editor-block" id="profile-section-goals"><div class="profile-editor-heading"><span>02</span><div><h2>Objectifs</h2><p>Un objectif structuré permet à KINETIK de suivre les bons prérequis.</p></div></div><div class="profile-form-grid">
+      <label class="wide"><span>Objectif principal</span><select id="athletePrimaryGoalPreset">${ATHLETE_GOALS.map(([id,label])=>`<option value="${id}" ${goalPreset===id?'selected':''}>${label}</option>`).join('')}</select></label>
+      <label class="wide profile-custom-goal ${goalPreset==='custom'?'':'is-hidden'}"><span>Objectif personnalisé</span><input id="athletePrimaryGoalCustom" value="${goalPreset==='custom'?esc(p.primaryGoal):''}" placeholder="Ex. 20 tractions strictes"></label>
       <label class="wide"><span>Objectif secondaire</span><input id="athleteSecondaryGoal" value="${esc(p.secondaryGoal)}" placeholder="Ex. 10 tractions strictes"></label>
       <label><span>Horizon</span><select id="athleteGoalHorizon">${['','4 semaines','8 semaines','3 mois','6 mois','12 mois','Progression durable'].map(x=>`<option value="${x}" ${p.goalHorizon===x?'selected':''}>${x||'Non défini'}</option>`).join('')}</select></label>
       <label><span>Poids cible <small>optionnel</small></span><div class="profile-input-unit"><input id="athleteTargetWeight" type="number" min="30" max="250" step=".1" value="${p.targetWeight||''}" placeholder="—"><b>kg</b></div></label>
     </div></section>
 
-    <section class="profile-editor-block"><div class="profile-editor-heading"><span>03</span><div><h2>Organisation</h2><p>Le rythme auquel le programme doit réellement s'adapter.</p></div></div><div class="profile-form-grid">
+    <section class="profile-editor-block" id="profile-section-training"><div class="profile-editor-heading"><span>03</span><div><h2>Organisation</h2><p>Le rythme auquel le programme doit réellement s'adapter.</p></div></div><div class="profile-form-grid">
       <label><span>Séances par semaine</span><select id="athleteWeeklySessions">${Array.from({length:7},(_,i)=>i+1).map(n=>`<option value="${n}" ${p.weeklySessions===n?'selected':''}>${n} séance${n>1?'s':''}</option>`).join('')}</select></label>
       <label><span>Durée idéale</span><select id="athletePreferredDuration">${[30,45,60,75,90,120].map(n=>`<option value="${n}" ${p.preferredDuration===n?'selected':''}>${n} min</option>`).join('')}</select></label>
       <label><span>Format préféré</span><select id="athleteSessionPreference">${['Complet + Express','Complet','Express','Flexible'].map(x=>`<option ${p.sessionPreference===x?'selected':''}>${x}</option>`).join('')}</select></label>
       <label><span>Style du coach</span><select id="athleteCoachStyle">${['Prudent','Équilibré','Ambitieux'].map(x=>`<option ${p.coachStyle===x?'selected':''}>${x}</option>`).join('')}</select></label>
-    </div><div class="profile-editor-sub"><span>Jours d'entraînement préférés</span>${renderProfileDaySelector(p)}<small>Les autres jours seront considérés comme des jours de récupération préférés.</small></div></section>
+    </div><div class="profile-editor-sub"><span>Jours d'entraînement préférés</span>${renderProfileDaySelector(p)}<small>Les autres jours seront considérés comme des jours de récupération préférés.</small></div><div class="profile-editor-impact"><strong>Impact actuel</strong><span>${p.weeklySessions} séances de ${p.preferredDuration} min · format ${esc(p.sessionPreference).toLowerCase()} · progression ${esc(p.coachStyle).toLowerCase()}</span></div></section>
 
-    <section class="profile-editor-block"><div class="profile-editor-heading"><span>04</span><div><h2>Sports & lieux</h2><p>KINETIK suit l'ensemble de ton entraînement, pas uniquement la calisthénie.</p></div></div>
+    <section class="profile-editor-block" id="profile-section-context"><div class="profile-editor-heading"><span>04</span><div><h2>Sports & lieux</h2><p>KINETIK suit l'ensemble de ton entraînement, pas uniquement la calisthénie.</p></div></div>
       <div class="profile-select-grid">${ATHLETE_SPORTS.map(([id,label])=>`<label class="${sports.has(id)?'selected':''}"><input type="checkbox" class="athlete-sport-check" value="${id}" ${sports.has(id)?'checked':''}><span>${label}</span></label>`).join('')}</div>
       <div class="profile-editor-sub"><span>Lieux disponibles</span><div class="profile-select-grid compact">${[['home','Maison'],['outdoor','Parc / extérieur'],['gym','Salle'],['club','Club / box']].map(([id,label])=>`<label class="${locations.has(id)?'selected':''}"><input type="checkbox" class="athlete-location-check" value="${id}" ${locations.has(id)?'checked':''}><span>${label}</span></label>`).join('')}</div></div>
     </section>
 
-    <section class="profile-editor-block"><div class="profile-editor-heading"><span>05</span><div><h2>Équipement</h2><p>Un exercice indisponible pourra être remplacé automatiquement par une variante compatible.</p></div></div><div class="profile-equipment-editor">${EQUIPMENT_CATALOG.map(x=>`<label class="${setup[x.id]?'selected':''}"><input type="checkbox" class="athlete-equipment-check" data-equipment-id="${x.id}" ${setup[x.id]?'checked':''}><span class="profile-equipment-icon">${x.icon}</span><span><strong>${esc(x.label)}</strong><small>${esc(x.note)}</small></span></label>`).join('')}</div></section>
+    <section class="profile-editor-block" id="profile-section-equipment"><div class="profile-editor-heading"><span>05</span><div><h2>Équipement</h2><p>Les exercices incompatibles seront signalés avec une variante disponible.</p></div></div><div class="profile-equipment-editor">${EQUIPMENT_CATALOG.map(x=>`<label class="${setup[x.id]?'selected':''}"><input type="checkbox" class="athlete-equipment-check" data-equipment-id="${x.id}" ${setup[x.id]?'checked':''}><span class="profile-equipment-icon">${x.icon}</span><span><strong>${esc(x.label)}</strong><small>${esc(x.note)}</small></span></label>`).join('')}</div></section>
 
-    <section class="profile-editor-block"><div class="profile-editor-heading"><span>06</span><div><h2>Contexte</h2><p>Informations permanentes utiles à la personnalisation.</p></div></div><label class="profile-notes"><span>Notes pour KINETIK <small>optionnel</small></span><textarea id="athleteNotes" rows="4" placeholder="Ex. contraintes de planning, préférences d'entraînement…">${esc(p.notes)}</textarea></label></section>
+    <section class="profile-editor-block" id="profile-section-limits"><div class="profile-editor-heading"><span>06</span><div><h2>Contraintes physiques</h2><p>Ces zones adaptent les exercices. Elles ne constituent pas un diagnostic médical.</p></div></div><div class="profile-restriction-grid">${RESTRICTION_AREAS.map(([id,label])=>`<label class="${restrictions[id]?'selected':''}"><input type="checkbox" class="athlete-restriction-check" data-restriction-id="${id}" ${restrictions[id]?'checked':''}><span>${esc(label)}</span><b>${restrictions[id]?'À ménager':'Disponible'}</b></label>`).join('')}</div></section>
+
+    <section class="profile-editor-block" id="profile-section-notes"><div class="profile-editor-heading"><span>07</span><div><h2>Contexte personnel</h2><p>Informations permanentes utiles à la personnalisation.</p></div></div><label class="profile-notes"><span>Notes pour KINETIK <small>optionnel</small></span><textarea id="athleteNotes" rows="4" placeholder="Ex. contraintes de planning, préférences d'entraînement…">${esc(p.notes)}</textarea></label></section>
 
     <div class="profile-editor-sticky"><button class="btn btn-secondary" id="cancelAthleteProfile">Annuler</button><button class="btn btn-primary" id="saveAthleteProfile">Enregistrer le profil</button></div>
-  </section>`, 'more');
+  </section>`, 'editor');
 }
 function renderMore(){
   const p=getAthleteProfile(),cycle=getActiveTrainingCycle(),cs=getCycleState(),stats=totalTrainingStats(7),records=athleteRecords(),setup=getEquipmentSetup(),equipment=EQUIPMENT_CATALOG.filter(x=>setup[x.id]),completion=athleteProfileCompletion(p);
@@ -4163,7 +4178,12 @@ async function hydrateBodyPhotos(){const imgs=[...document.querySelectorAll('[da
 function bindEvents(){
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;state.selectedHistoryId=null;render();});
   document.querySelectorAll('#editAthleteProfile,[data-edit-athlete-profile]').forEach(editAthlete=>editAthlete.onclick=()=>{state.athleteProfileEditor=true;render();});
-  document.querySelectorAll('.athlete-training-day,.athlete-sport-check,.athlete-location-check,.athlete-equipment-check').forEach(el=>el.onchange=()=>el.closest('label')?.classList.toggle('selected',el.checked));
+  document.querySelectorAll('.athlete-training-day,.athlete-sport-check,.athlete-location-check,.athlete-equipment-check,.athlete-restriction-check').forEach(el=>el.onchange=()=>{
+    const label=el.closest('label');label?.classList.toggle('selected',el.checked);
+    const status=label?.querySelector('b');if(status&&el.classList.contains('athlete-restriction-check'))status.textContent=el.checked?'À ménager':'Disponible';
+  });
+  document.querySelectorAll('[data-profile-editor-section]').forEach(b=>b.onclick=()=>document.getElementById(`profile-section-${b.dataset.profileEditorSection}`)?.scrollIntoView({behavior:'smooth',block:'start'}));
+  const goalPreset=document.getElementById('athletePrimaryGoalPreset');if(goalPreset)goalPreset.onchange=()=>document.querySelector('.profile-custom-goal')?.classList.toggle('is-hidden',goalPreset.value!=='custom');
   const cancelAthlete=document.getElementById('cancelAthleteProfile');if(cancelAthlete)cancelAthlete.onclick=()=>{state.athleteProfileEditor=false;render();};
   const saveAthlete=document.getElementById('saveAthleteProfile');if(saveAthlete)saveAthlete.onclick=()=>{
     const old=getAthleteProfile();
@@ -4173,6 +4193,8 @@ function bindEvents(){
     const locations=[...document.querySelectorAll('.athlete-location-check:checked')].map(x=>x.value);
     const profileHeight=Number(document.getElementById('athleteHeight')?.value||0)||null;
     const profileWeight=Number(document.getElementById('athleteWeight')?.value||0)||null;
+    const selectedGoal=document.getElementById('athletePrimaryGoalPreset')?.value||'general';
+    const primaryGoal=selectedGoal==='custom'?(document.getElementById('athletePrimaryGoalCustom')?.value||'').trim():(ATHLETE_GOALS.find(x=>x[0]===selectedGoal)?.[1]||'Progression générale');
     setAthleteProfile({...old,
       name:(document.getElementById('athleteName')?.value||'').trim(),
       age:Number(document.getElementById('athleteAge')?.value||0)||null,
@@ -4180,7 +4202,7 @@ function bindEvents(){
       targetWeight:Number(document.getElementById('athleteTargetWeight')?.value||0)||null,
       yearsTraining:Number(document.getElementById('athleteYears')?.value||0)||null,
       experience:document.getElementById('athleteExperience')?.value||'Intermédiaire',
-      primaryGoal:(document.getElementById('athletePrimaryGoal')?.value||'').trim()||'Progression générale',
+      primaryGoal:primaryGoal||'Progression générale',
       secondaryGoal:(document.getElementById('athleteSecondaryGoal')?.value||'').trim(),
       goalHorizon:document.getElementById('athleteGoalHorizon')?.value||'',
       weeklySessions:Number(document.getElementById('athleteWeeklySessions')?.value||4),
@@ -4193,6 +4215,7 @@ function bindEvents(){
     setCanonicalHeight(profileHeight);
     if(profileWeight)recordCurrentWeight(profileWeight,'profile-editor');
     const eq=getEquipmentSetup();document.querySelectorAll('.athlete-equipment-check').forEach(x=>eq[x.dataset.equipmentId]=x.checked);setEquipmentSetup(eq);
+    if(typeof getRestrictions==='function'&&typeof setRestrictions==='function'){const r=getRestrictions();document.querySelectorAll('.athlete-restriction-check').forEach(x=>r[x.dataset.restrictionId]=x.checked);setRestrictions(r);}
     state.athleteProfileEditor=false;render();
   };
   const openActivity=document.getElementById('openActivityLog');if(openActivity)openActivity.onclick=()=>{state.activityEditor=true;render();};document.querySelectorAll('[data-open-activity]').forEach(b=>b.onclick=()=>{state.activityEditor=true;render();});

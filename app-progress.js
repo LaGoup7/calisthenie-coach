@@ -1,4 +1,4 @@
-/* KINETIK v10.149 · Mobility, progression UX and product-coaching layers. */
+/* KINETIK v10.150 · Mobility, progression UX and product-coaching layers. */
 /* V10.145 · Mobility finalisation                                            */
 /* Today → Mobility balance → Progression → Secondary details                 */
 /* ========================================================================== */
@@ -977,9 +977,40 @@ function v10149ProfileNext(status){
   if(!status.gaps.length)return `<section class="p149-profile-ready"><div><span>Profil prêt</span><strong>KINETIK dispose des informations essentielles pour personnaliser ton programme.</strong></div><b>✓</b></section>`;
   return `<section class="p149-profile-next"><div><div class="kicker">À compléter</div><h2>${status.gaps.length} information${status.gaps.length>1?'s':''} utile${status.gaps.length>1?'s':''}</h2><p>${status.gaps.slice(0,3).map(esc).join(' · ')}${status.gaps.length>3?' · …':''}</p></div><button class="btn btn-primary compact" data-edit-athlete-profile>Compléter</button></section>`;
 }
+function v10150GoalPath(goal){
+  const key=String(goal||'').toLowerCase();
+  if(/muscle.?up/.test(key))return {focus:'Tirage explosif · transition · dips',next:'Valider la force de traction et la stabilité au-dessus de la barre'};
+  if(/10 tractions/.test(key))return {focus:'Volume de tirage · grip · technique stricte',next:'Construire des séries propres sans atteindre l’échec'};
+  if(/handstand/.test(key))return {focus:'Équilibre · épaules · gainage',next:'Stabiliser les appuis et accumuler du temps inversé'};
+  if(/human flag/.test(key))return {focus:'Gainage latéral · tirage/poussée · épaules',next:'Valider les prérequis de force sur barre verticale'};
+  if(/poids/.test(key))return {focus:'Régularité · activité · mesures corporelles',next:'Créer une première tendance poids et tour de taille'};
+  if(/mobilit/.test(key))return {focus:'Amplitude · régularité · zones limitantes',next:'Compléter les six évaluations de mobilité'};
+  return {focus:'Force générale · technique · régularité',next:'Enregistrer des références fiables sur les mouvements de base'};
+}
+function v10150ProfileSummary(p){
+  const setup=getEquipmentSetup(),equipment=EQUIPMENT_CATALOG.filter(x=>setup[x.id]).map(x=>x.label),restrictions=typeof getRestrictions==='function'?getRestrictions():{},limited=Object.entries(restrictions).filter(([,v])=>v).map(([id])=>restrictionLabel(id));
+  return `<section class="p150-coach-summary"><div class="p88-section-head"><div><div class="kicker">Lecture KINETIK</div><h2>Ce que le coach utilise</h2></div><button data-edit-athlete-profile>Corriger →</button></div><p><strong>${p.weeklySessions} séances de ${p.preferredDuration} min</strong>, objectif <strong>${esc(p.primaryGoal)}</strong>, progression <strong>${esc(p.coachStyle).toLowerCase()}</strong>, entraînement ${((p.locations||[]).map(x=>({home:'à la maison',outdoor:'au parc',gym:'en salle',club:'en club'}[x]||x)).join(' et ')||'sans lieu confirmé')}.</p><div class="p150-coach-tags"><span>${equipment.length} équipements</span><span>${(p.trainingDays||[]).length} jours disponibles</span><span>${limited.length?`${limited.length} zone${limited.length>1?'s':''} à ménager`:'Aucune restriction active'}</span></div></section>`;
+}
+function v10150Consistency(p){
+  const setup=getEquipmentSetup(),days=(p.trainingDays||[]).length,goal=String(p.primaryGoal||'').toLowerCase(),issues=[];
+  if(days&&days!==p.weeklySessions)issues.push(`${p.weeklySessions} séances prévues mais ${days} jours sélectionnés`);
+  if(/muscle.?up/.test(goal)&&!setup.powerTower)issues.push('L’objectif Muscle-up nécessite une barre haute');
+  if(/human flag/.test(goal)&&!setup.verticalPole)issues.push('L’objectif Human Flag nécessite une barre verticale sûre');
+  if(/poids/.test(goal)&&!p.weight)issues.push('Ajoute un premier poids pour suivre cet objectif');
+  if(!issues.length)return `<section class="p150-consistency ok"><span>Contrôle de cohérence</span><strong>Configuration cohérente avec ton objectif et ton matériel.</strong><b>✓</b></section>`;
+  return `<section class="p150-consistency warn"><div><span>Contrôle de cohérence</span><strong>${issues.length} point${issues.length>1?'s':''} à vérifier</strong>${issues.map(x=>`<small>• ${esc(x)}</small>`).join('')}</div><button data-edit-athlete-profile>Corriger</button></section>`;
+}
+function v10150Restrictions(){
+  const r=typeof getRestrictions==='function'?getRestrictions():{},active=Object.entries(r).filter(([,v])=>v).map(([id])=>restrictionLabel(id));
+  return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Contraintes</div><h2>${active.length?`${active.length} zone${active.length>1?'s':''} à ménager`:'Aucune restriction active'}</h2></div><button data-edit-athlete-profile>Modifier →</button></div>${active.length?`<div class="p150-restrictions">${active.map(x=>`<span>${esc(x)}</span>`).join('')}</div><p class="p88-muted">Les exercices sollicitant ces zones sont signalés et adaptés.</p>`:`<p class="p88-muted">Ajoute une zone sensible pour que KINETIK évite les mouvements incompatibles.</p>`}</section>`;
+}
+function v10150DataStatus(){
+  const account=globalThis.KinetikAccount?.getStatus?.(),body=getBodyLogs(),meta=getStravaMeta();
+  return `<section class="p150-data-status"><div><div class="kicker">Données & synchronisation</div><h2>${account?.linked?'Compte multi-appareils actif':'Données enregistrées sur cet appareil'}</h2><p>${account?.linked?`${account.memberCount||1} appareil${(account.memberCount||1)>1?'s':''} lié${(account.memberCount||1)>1?'s':''}${account.lastSyncAt?` · synchronisé ${formatDate(account.lastSyncAt)}`:''}`:'Exporte une sauvegarde avant de changer de téléphone ou de navigateur.'}</p></div><div class="p150-data-kpis"><span><strong>${body.length}</strong> relevés corporels</span><span><strong>${meta.lastSync?'✓':'—'}</strong> Strava</span></div><button data-view="settings">Gérer les données →</button></section>`;
+}
 
 renderMore=function(){
-  const p=getAthleteProfile(),cycle=getActiveTrainingCycle(),cs=getCycleState(),status=v10149ProfileStatus(p),rank=getRankState();
+  const p=getAthleteProfile(),cycle=getActiveTrainingCycle(),cs=getCycleState(),status=v10149ProfileStatus(p),rank=getRankState(),goalPath=v10150GoalPath(p.primaryGoal);
   return shell(`<header class="topbar p88-topbar"><div><div class="brand">Profil</div><div class="daylabel">Tes objectifs, ton rythme et le contexte utilisé par KINETIK</div></div><button class="btn btn-primary compact" data-edit-athlete-profile>Modifier</button></header>
 
     <section class="p88-identity">
@@ -990,16 +1021,23 @@ renderMore=function(){
 
     ${v10149ProfileNext(status)}
 
+    ${v10150ProfileSummary(p)}
+
+    ${v10150Consistency(p)}
+
     <section class="p88-goal">
       <div class="p88-section-head"><div><div class="kicker">Objectifs</div><h2>${esc(p.primaryGoal)}</h2></div><button data-edit-athlete-profile>Modifier →</button></div>
       ${p.secondaryGoal?`<p><span>Secondaire</span><strong>${esc(p.secondaryGoal)}</strong></p>`:''}
       <div class="p88-goal-cycle"><div><span>Cycle actuel</span><strong>${esc(cycle.name)} · S${cs.week}/${cs.weekCount}</strong></div>${p.goalHorizon?`<div><span>Horizon</span><strong>${esc(p.goalHorizon)}</strong></div>`:''}</div>
+      <div class="p150-goal-path"><div><span>Axes suivis</span><strong>${esc(goalPath.focus)}</strong></div><div><span>Prochain jalon</span><strong>${esc(goalPath.next)}</strong></div></div>
       <button class="p88-inline-link" data-view="week">Voir le programme actuel →</button>
     </section>
 
     ${v1088ProfileContext(p)}
 
     ${v1088EquipmentSection()}
+
+    ${v10150Restrictions()}
 
     <section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Données personnelles</div><h2>Ce que KINETIK utilise pour te suivre</h2></div></div>
       ${v1088BodySummary()}
@@ -1008,6 +1046,8 @@ renderMore=function(){
     </section>
 
     ${v1088ConnectionSection()}
+
+    ${v10150DataStatus()}
 
     <section class="p88-settings-link">
       <button data-view="settings"><div><div class="kicker">Application</div><strong>Réglages KINETIK</strong><span>Coach, timers, écran, bibliothèque, sauvegarde et installation</span></div><b>→</b></button>
