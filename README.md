@@ -429,3 +429,8 @@ Le Quick Log devient personnalisable : jusqu'à 8 exercices favoris, ordre manue
 ## V10.141 · Nettoyage de la page Aujourd’hui
 - Gainage et Ajouter une session retirés des raccourcis redondants : disponibles via `+ Ajouter`.
 - Rang intégré au bloc `À surveiller` avec palette active et progression vers le rang suivant.
+
+
+## V10.142 · Planning — heatmap déplacée dans Calendrier
+- La vue de régularité type GitHub est affichée en haut de Planning → Calendrier, juste sous les onglets.
+- Elle a été retirée de Planning → Programmes pour éviter la duplication et garder Programmes centré sur la configuration des cycles.

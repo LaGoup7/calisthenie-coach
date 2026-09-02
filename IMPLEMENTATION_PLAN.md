@@ -301,3 +301,8 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - Retrait des raccourcis redondants Gainage / Ajouter une session.
 - Fusion du rang dans le bloc À surveiller.
 - Hub + Ajouter conservé comme point d’entrée unique.
+
+
+## V10.142 · Planning — heatmap déplacée dans Calendrier
+- La vue de régularité type GitHub est affichée en haut de Planning → Calendrier, juste sous les onglets.
+- Elle a été retirée de Planning → Programmes pour éviter la duplication et garder Programmes centré sur la configuration des cycles.

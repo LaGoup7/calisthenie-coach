@@ -4243,3 +4243,8 @@ html[data-theme="dark"] .quick-log-journal-empty{background:var(--surface-2)}
   .today-watch-rank-progress{grid-column:2/-1;width:100%}
   .today-watch-rank>b{grid-column:3;grid-row:1/3;align-self:center}
 }
+
+
+/* v10.142 · Planning: regularity heatmap belongs to Calendrier */
+.planning-calendar-heatmap{margin:10px 0 16px}
+.planning-calendar-heatmap .cycle-heat-card{margin-top:0}

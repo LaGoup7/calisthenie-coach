@@ -1,0 +1,24 @@
+const fs=require('fs');
+let checks=0;function ok(v,m){checks++;if(!v)throw new Error(m);}
+const app=fs.readFileSync(__dirname+'/app.js','utf8');
+const planning=fs.readFileSync(__dirname+'/app-planning.js','utf8');
+const html=fs.readFileSync(__dirname+'/index.html','utf8');
+const sw=fs.readFileSync(__dirname+'/sw.js','utf8');
+const pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
+const customStart=app.indexOf('function renderCustomSessions(){');
+const customEnd=app.indexOf('function renderCustomSessionEditor(){',customStart);
+const custom=app.slice(customStart,customEnd);
+ok(customStart>=0&&customEnd>customStart,'renderCustomSessions missing');
+ok(!custom.includes('renderCycleHeatmap(16)'),'Programmes still renders the GitHub heatmap');
+const finalWeek=planning.lastIndexOf('renderWeek=function(){');
+ok(finalWeek>=0,'final Planning calendar renderer missing');
+const weekSource=planning.slice(finalWeek,planning.indexOf('\n};',finalWeek)+3);
+ok(weekSource.includes("renderPlanningTabs('calendar')"),'Calendrier tabs missing');
+ok(weekSource.includes('planning-calendar-heatmap'),'calendar heatmap wrapper missing');
+ok(weekSource.includes('renderCycleHeatmap(16)'),'calendar does not render GitHub heatmap');
+ok(weekSource.indexOf('planning-calendar-heatmap')>weekSource.indexOf("renderPlanningTabs('calendar')"),'heatmap is not after tabs');
+ok(weekSource.indexOf('planning-calendar-heatmap')<weekSource.indexOf('planning-week-header-v1076'),'heatmap is not at the top of Calendrier');
+ok(html.includes('app-planning.js?v=10.142'),'v10.142 Planning asset missing');
+ok(sw.includes('kinetik-v10-142-planning-heatmap'),'v10.142 cache missing');
+ok(pkg.version==='10.142.0','package version mismatch');
+console.log(`PLANNING_HEATMAP_OK ${checks} checks`);

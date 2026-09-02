@@ -1,4 +1,4 @@
-/* KINETIK v10.141 · Multisport planning, timers and planning presentation. */
+/* KINETIK v10.142 · Multisport planning, timers and planning presentation. */
 /* V10.70 · Multisport Planning                                               */
 /* Planned vs completed · weekly load forecast · conflicts · opt-in optimizer */
 /* ========================================================================== */
@@ -834,6 +834,7 @@ renderWeek=function(){
         plannedText=`${stats.plannedSessions} séance${stats.plannedSessions>1?'s':''}`;
   return shell(`<header class="topbar planning-topbar-v1076"><div><div class="brand">Planning</div><div class="daylabel">Ta semaine d’entraînement</div></div></header>
     ${renderPlanningTabs('calendar')}
+    <div class="week-heatmap planning-calendar-heatmap">${renderCycleHeatmap(16)}</div>
     <section class="planning-week-header-v1076">
       <button data-week-shift="-1" aria-label="Semaine précédente">←</button>
       <div><div class="kicker">${todayWeek?'Cette semaine':'Semaine'}</div><h1>${v1070WeekLabel(start)}</h1><p>${plannedText} · ${stats.planned.toLocaleString('fr-FR')} UA prévues · ${stats.actualSessions} réalisée${stats.actualSessions>1?'s':''}</p></div>

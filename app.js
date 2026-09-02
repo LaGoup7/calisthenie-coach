@@ -1,4 +1,4 @@
-/* KINETIK v10.141 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.142 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -1503,7 +1503,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.141',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.142',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -2593,7 +2593,6 @@ function renderCustomSessions(){
   const list=getCustomWorkouts(),cycles=allTrainingCycles(false),active=getActiveTrainingCycle();
   return shell(`<header class="topbar"><div><div class="brand">Planning</div><div class="daylabel">Cycles hebdomadaires et séances libres</div></div><div class="topbar-actions"><button class="btn btn-secondary compact" id="newCustomSession">＋ Séance</button><button class="btn btn-primary compact" id="newTrainingCycle">＋ Cycle</button></div></header>
     ${renderPlanningTabs('programs')}
-    ${renderCycleHeatmap(16)}
     <section class="cycle-page-intro"><div><div class="kicker">Cycle actif</div><h1>${esc(active.name)}</h1><p class="muted">Le calendrier et la séance du jour utilisent automatiquement ce cycle.</p></div></section>
     <section class="training-cycle-list">${cycles.map(renderTrainingCycleCard).join('')}</section>
     <section class="custom-free-head"><div><div class="kicker">Hors cycle</div><h2>Séances libres</h2><p class="muted small">Pour un entraînement ponctuel qui ne remplace pas ton planning hebdomadaire.</p></div><button class="btn btn-secondary compact" id="newCustomSession2">＋ Nouvelle séance</button></section>

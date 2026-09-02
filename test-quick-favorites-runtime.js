@@ -69,6 +69,6 @@ ok(source.includes("quickFavoriteUsageScore"),'usage-based candidate ranking mis
 const styles=fs.readFileSync(path.join(__dirname,'styles.css'),'utf8');
 ok(styles.includes('v10.137 · Quick performance favorites'),'favorite UI styles missing');
 const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),sw=fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),pkg=JSON.parse(fs.readFileSync(path.join(__dirname,'package.json'),'utf8'));
-ok(html.includes('app.js?v=10.141')&&sw.includes('kinetik-v10-141-today-cleanup'),'v10.141 PWA chain missing');
-ok(pkg.version==='10.141.0','package version mismatch');
+ok(html.includes('app.js?v=10.142')&&sw.includes('kinetik-v10-142-planning-heatmap'),'v10.142 PWA chain missing');
+ok(pkg.version==='10.142.0','package version mismatch');
 if(failures.length){console.error(`QUICK_FAVORITES_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`QUICK_FAVORITES_OK ${checks} checks`);
