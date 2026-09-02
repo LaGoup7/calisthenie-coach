@@ -70,9 +70,9 @@ ok(adapted.exercises.length===1&&adapted.exercises[0].sets===3&&!adapted.exercis
   ok(source.includes('Tour de taille'),'Tour de taille label is missing');
   ok(!source.includes('<span>Taille</span><strong>${deltaText(r.waist'),'Adaptive report still labels waist as Taille');
   const html=fs.readFileSync(__dirname+'/index.html','utf8'),sw=fs.readFileSync(__dirname+'/sw.js','utf8'),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
-  ok(html.includes('app.js?v=10.137')&&html.includes('account-manager.js?v=10.137'),'v10.137 assets missing from index');
-  ok(sw.includes('kinetik-v10-137-quick-log-journal')&&sw.includes('app-progress.js?v=10.137'),'v10.137 service-worker cache missing');
-  ok(pkg.version==='10.137.0','package version is not 10.137.0');
+  ok(html.includes('app.js?v=10.138')&&html.includes('account-manager.js?v=10.138'),'v10.138 assets missing from index');
+  ok(sw.includes('kinetik-v10-138-quick-favorite-presets')&&sw.includes('app-progress.js?v=10.138'),'v10.138 service-worker cache missing');
+  ok(pkg.version==='10.138.0','package version is not 10.138.0');
   ok(fs.readFileSync(__dirname+'/styles.css','utf8').includes('Lot A — intégrité fonctionnelle'),'Lot A styles missing');
 
   if(failures.length){console.error(`LOT_A_RUNTIME_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`LOT_A_RUNTIME_OK ${checks} checks`);

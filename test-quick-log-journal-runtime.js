@@ -46,7 +46,7 @@ ok(result.before.includes(result.deleteTarget),'delete target missing before del
 ok(!result.after.includes(result.deleteTarget),'targeted quick log was not deleted');
 ok(result.after.includes(result.firstId),'deleting one quick log removed a different row');
 const styles=fs.readFileSync(path.join(__dirname,'styles.css'),'utf8');
-ok(styles.includes('v10.137 · Quick Log band fit + deletable journal'),'v10.137 journal styles missing');
+ok(styles.includes('v10.137 · Quick Log band fit + deletable journal'),'v10.138 journal styles missing');
 ok(styles.includes('.quick-log-journal-row'),'journal row styles missing');
 ok(styles.includes('.quick-favorite-card .quick-band-taps .band-choice'),'favorite band fit styles missing');
 const source=fs.readFileSync(path.join(__dirname,'app.js'),'utf8');
@@ -54,7 +54,7 @@ ok(source.includes('function deleteQuickLog(id)'),'targeted delete function miss
 ok(source.includes('function renderQuickLogJournal'),'journal renderer missing');
 ok(source.includes("data-delete-quick-log"),'delete binding contract missing');
 const htmlFile=fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),sw=fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),pkg=JSON.parse(fs.readFileSync(path.join(__dirname,'package.json'),'utf8'));
-ok(htmlFile.includes('app.js?v=10.137'),'v10.137 asset version missing');
-ok(sw.includes('kinetik-v10-137-quick-log-journal'),'v10.137 service worker cache missing');
-ok(pkg.version==='10.137.0','package version mismatch');
+ok(htmlFile.includes('app.js?v=10.138'),'v10.138 asset version missing');
+ok(sw.includes('kinetik-v10-138-quick-favorite-presets'),'v10.138 service worker cache missing');
+ok(pkg.version==='10.138.0','package version mismatch');
 if(failures.length){console.error(`QUICK_LOG_JOURNAL_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`QUICK_LOG_JOURNAL_OK ${checks} checks`);

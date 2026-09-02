@@ -402,3 +402,11 @@ Le Quick Log devient personnalisable : jusqu'à 8 exercices favoris, ordre manue
 - Remplacement de « Annuler le dernier ajout » par un journal des 20 dernières lignes Quick Log.
 - Chaque ligne affiche exercice, heure/date, valeur, bande/lest et peut être supprimée individuellement.
 - La suppression met à jour les vraies données Quick Log et donc les agrégats calculés à partir de celles-ci.
+
+
+## V10.138 · 3 valeurs rapides par favori
+
+- Chaque exercice favori peut définir trois valeurs rapides personnalisées (ex. Pompes : 10 / 20 / 25).
+- La saisie exacte reste toujours disponible.
+- Les valeurs sont éditables depuis **Gérer mes favoris** et sauvegardées localement / dans les backups KINETIK.
+- Recherche d'exercices renforcée : insensible aux accents et étendue automatiquement à toutes les catégories dès qu'une recherche est saisie.

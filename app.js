@@ -1,4 +1,4 @@
-/* KINETIK v10.137 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.138 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -13,6 +13,7 @@ const STORAGE = {
   exerciseChoices: "cc_exercise_choices",
   quickLogs: "cc_quick_logs",
   quickFavorites: "cc_quick_favorites_v1",
+  quickFavoritePresets: "cc_quick_favorite_presets_v1",
   stravaActivities: "cc_strava_activities",
   stravaMeta: "cc_strava_meta",
   customWorkouts: "cc_custom_workouts",
@@ -1296,14 +1297,26 @@ function quickFavoriteUsageScore(name){
   return score;
 }
 function quickFavoriteLastLog(name){return getQuickLogs().find(x=>x.exercise===name)||null;}
-function quickFavoriteAddValues(name,type){
+function quickFavoriteDefaultValues(name,type){
   const last=quickFavoriteLastLog(name),info=exerciseInfo(name),target=Number(info?.prescription?.target||0),lastValue=Number(last?.value||0);
   if(String(type).startsWith('hold')){
-    const a=Math.max(10,Math.round((lastValue||target||30)/5)*5),b=Math.max(a+5,Math.round((a*1.5)/5)*5);
-    return [...new Set([a,b])].slice(0,2);
+    const base=Math.max(10,Math.round((lastValue||target||30)/5)*5),step=base>=60?15:base>=30?10:5;
+    return [base,base+step,base+step*2];
   }
-  const a=Math.max(1,Math.round(lastValue||target||5)),step=a>=15?5:a>=8?2:1,b=a+step;
-  return [...new Set([a,b])].slice(0,2);
+  const base=Math.max(1,Math.round(lastValue||target||5)),step=base>=20?5:base>=8?2:1;
+  return [base,base+step,base+step*2];
+}
+function getQuickFavoritePresetMap(){const raw=parse(STORAGE.quickFavoritePresets,{});return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};}
+function normalizeQuickFavoriteValues(name,type,values){
+  const defaults=quickFavoriteDefaultValues(name,type),out=[];
+  (Array.isArray(values)?values:[]).forEach(v=>{v=Math.round(Number(v||0));if(v>0&&!out.includes(v))out.push(v);});
+  defaults.forEach(v=>{if(out.length<3&&!out.includes(v))out.push(v);});
+  return out.slice(0,3);
+}
+function quickFavoriteAddValues(name,type){return normalizeQuickFavoriteValues(name,type,getQuickFavoritePresetMap()[name]);}
+function setQuickFavoritePresetValues(name,values){
+  const info=exerciseInfo(name),type=info?.prescription?.type||'reps',map=getQuickFavoritePresetMap();
+  map[name]=normalizeQuickFavoriteValues(name,type,values);save(STORAGE.quickFavoritePresets,map);return map[name];
 }
 function renderQuickFavoritePreset(name,index){
   const info=exerciseInfo(name),type=info?.prescription?.type||'reps',isBand=type==='reps_band',last=quickFavoriteLastLog(name),values=quickFavoriteAddValues(name,type),preferred=isBand?(last?.band||lastBandForExercise(name)||defaultBandForExercise(name)):null;
@@ -1317,11 +1330,13 @@ function renderQuickFavorites(){
 function renderQuickFavoritesManager(){
   if(!state.quickFavoritesEditor)return '';
   const selected=getQuickFavorites(),candidates=quickFavoriteCandidates(),categories=[...new Set(candidates.map(x=>x.category))].sort((a,b)=>a.localeCompare(b,'fr'));
-  return `<div class="quick-favorite-manager"><div class="quick-favorite-manager-head"><div><div class="kicker">Personnalisation · ${selected.length}/8</div><h3>Mes exercices rapides</h3><p>Épingle jusqu’à 8 exercices. Les favoris restent dans l’ordre ci-dessous.</p></div><button type="button" class="btn btn-primary compact" id="doneQuickFavorites">Terminé</button></div>${state.quickFavoriteMessage?`<div class="quick-favorite-message">${esc(state.quickFavoriteMessage)}</div>`:''}${selected.length?`<div class="quick-favorite-selected">${selected.map((name,i)=>`<div><span><b>${i+1}</b><strong>${esc(name)}</strong></span><span><button type="button" data-quick-favorite-move="up" data-quick-favorite-name="${encodeURIComponent(name)}" ${i===0?'disabled':''}>↑</button><button type="button" data-quick-favorite-move="down" data-quick-favorite-name="${encodeURIComponent(name)}" ${i===selected.length-1?'disabled':''}>↓</button><button type="button" class="remove" data-quick-favorite-toggle="${encodeURIComponent(name)}">×</button></span></div>`).join('')}</div>`:''}<div class="quick-favorite-picker"><div class="quick-search-wrap"><span aria-hidden="true">⌕</span><input id="quickFavoriteSearch" type="search" placeholder="Rechercher un exercice…" autocomplete="off"></div><div class="quick-category-tabs favorite-tabs" role="tablist"><button type="button" class="quick-favorite-category ${state.quickFavoriteCategory==='Tous'?'active':''}" data-quick-favorite-category="Tous">Tous</button>${categories.map(c=>`<button type="button" class="quick-favorite-category ${state.quickFavoriteCategory===c?'active':''}" data-quick-favorite-category="${esc(c)}">${esc(c)}</button>`).join('')}</div><div class="quick-favorite-list" id="quickFavoriteList">${candidates.map(item=>{const active=selected.includes(item.name),usage=quickFavoriteUsageScore(item.name);return `<button type="button" class="quick-favorite-option ${active?'active':''}" data-quick-favorite-toggle="${encodeURIComponent(item.name)}" data-quick-favorite-category-name="${esc(item.category)}" data-quick-favorite-search="${esc((item.name+' '+item.category+' '+item.level+' '+(item.muscles||[]).join(' ')).toLowerCase())}"><span>${quickExerciseThumb(item.name)}</span><span><strong>${esc(item.name)}</strong><small>${esc(item.category)}${usage?` · utilisé récemment`:''}</small></span><b>${active?'★':'☆'}</b></button>`}).join('')}</div><div class="quick-exercise-empty" id="quickFavoriteEmpty" hidden>Aucun exercice ne correspond à cette recherche.</div></div></div>`;
+  return `<div class="quick-favorite-manager"><div class="quick-favorite-manager-head"><div><div class="kicker">Personnalisation · ${selected.length}/8</div><h3>Mes exercices rapides</h3><p>Épingle jusqu’à 8 exercices et définis 3 valeurs rapides pour chacun. La saisie exacte reste toujours disponible.</p></div><button type="button" class="btn btn-primary compact" id="doneQuickFavorites">Terminé</button></div>${state.quickFavoriteMessage?`<div class="quick-favorite-message">${esc(state.quickFavoriteMessage)}</div>`:''}${selected.length?`<div class="quick-favorite-selected">${selected.map((name,i)=>{const type=exerciseInfo(name)?.prescription?.type||'reps',values=quickFavoriteAddValues(name,type),unit=type.startsWith('hold')?'sec':'reps';return `<div class="quick-favorite-selected-row"><div class="quick-favorite-selected-main"><span><b>${i+1}</b><strong>${esc(name)}</strong></span><span class="quick-favorite-order"><button type="button" data-quick-favorite-move="up" data-quick-favorite-name="${encodeURIComponent(name)}" ${i===0?'disabled':''}>↑</button><button type="button" data-quick-favorite-move="down" data-quick-favorite-name="${encodeURIComponent(name)}" ${i===selected.length-1?'disabled':''}>↓</button><button type="button" class="remove" data-quick-favorite-toggle="${encodeURIComponent(name)}">×</button></span></div><div class="quick-favorite-presets-editor"><span>Valeurs rapides</span>${values.map((v,j)=>`<label><small>${j+1}</small><input type="number" min="1" step="1" inputmode="numeric" value="${v}" data-quick-favorite-preset-name="${encodeURIComponent(name)}" data-quick-favorite-preset-index="${j}" aria-label="Valeur rapide ${j+1} pour ${esc(name)}"></label>`).join('')}<em>${unit}</em></div></div>`}).join('')}</div>`:''}<div class="quick-favorite-picker"><div class="quick-search-wrap"><span aria-hidden="true">⌕</span><input id="quickFavoriteSearch" type="search" placeholder="Rechercher un exercice…" autocomplete="off"></div><div class="quick-category-tabs favorite-tabs" role="tablist"><button type="button" class="quick-favorite-category ${state.quickFavoriteCategory==='Tous'?'active':''}" data-quick-favorite-category="Tous">Tous</button>${categories.map(c=>`<button type="button" class="quick-favorite-category ${state.quickFavoriteCategory===c?'active':''}" data-quick-favorite-category="${esc(c)}">${esc(c)}</button>`).join('')}</div><div class="quick-favorite-list" id="quickFavoriteList">${candidates.map(item=>{const active=selected.includes(item.name),usage=quickFavoriteUsageScore(item.name);return `<button type="button" class="quick-favorite-option ${active?'active':''}" data-quick-favorite-toggle="${encodeURIComponent(item.name)}" data-quick-favorite-category-name="${esc(item.category)}" data-quick-favorite-search="${esc((item.name+' '+item.category+' '+item.level+' '+(item.muscles||[]).join(' ')).toLowerCase())}"><span>${quickExerciseThumb(item.name)}</span><span><strong>${esc(item.name)}</strong><small>${esc(item.category)}${usage?` · utilisé récemment`:''}</small></span><b>${active?'★':'☆'}</b></button>`}).join('')}</div><div class="quick-exercise-empty" id="quickFavoriteEmpty" hidden>Aucun exercice ne correspond à cette recherche.</div></div></div>`;
 }
 function filterQuickFavoritePicker(){
-  const q=(document.getElementById('quickFavoriteSearch')?.value||'').trim().toLowerCase(),cat=state.quickFavoriteCategory||'Tous';let visible=0;
-  document.querySelectorAll('.quick-favorite-option').forEach(card=>{const show=(cat==='Tous'||card.dataset.quickFavoriteCategoryName===cat)&&(!q||(card.dataset.quickFavoriteSearch||'').includes(q));card.hidden=!show;if(show)visible++;});
+  const q=normalizeQuickSearchText(document.getElementById('quickFavoriteSearch')?.value||'');
+  if(q){state.quickFavoriteCategory='Tous';document.querySelectorAll('[data-quick-favorite-category]').forEach(tab=>tab.classList.toggle('active',tab.dataset.quickFavoriteCategory==='Tous'));}
+  const cat=q?'Tous':(state.quickFavoriteCategory||'Tous');let visible=0;
+  document.querySelectorAll('.quick-favorite-option').forEach(card=>{const hay=normalizeQuickSearchText(card.dataset.quickFavoriteSearch||''),show=(cat==='Tous'||card.dataset.quickFavoriteCategoryName===cat)&&(!q||hay.includes(q));card.hidden=!show;if(show)visible++;});
   const empty=document.getElementById('quickFavoriteEmpty');if(empty)empty.hidden=visible!==0;
 }
 function toggleQuickFavorite(name){
@@ -1476,7 +1491,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.137',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.138',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1993,16 +2008,20 @@ function renderAddHubModal(){
   </section></div>`;
 }
 
+function normalizeQuickSearchText(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
 function filterQuickExercisePicker(){
-  const q=(document.getElementById('quickExerciseSearch')?.value||'').trim().toLowerCase();
-  const active=document.querySelector('.quick-category.active')?.dataset.quickCategory||'Tous';
-  let visible=0;
+  const input=document.getElementById('quickExerciseSearch'),q=normalizeQuickSearchText(input?.value||'');
+  if(q){document.querySelectorAll('.quick-category').forEach(tab=>tab.classList.toggle('active',tab.dataset.quickCategory==='Tous'));}
+  const active=q?'Tous':(document.querySelector('.quick-category.active')?.dataset.quickCategory||'Tous');
+  let visible=0,firstVisible=null;
   document.querySelectorAll('.quick-exercise-card').forEach(card=>{
     const okCategory=active==='Tous'||card.dataset.quickExerciseCategory===active;
-    const okSearch=!q||(card.dataset.quickExerciseSearch||'').includes(q);
-    const show=okCategory&&okSearch;card.hidden=!show;if(show)visible++;
+    const hay=normalizeQuickSearchText(card.dataset.quickExerciseSearch||'');
+    const okSearch=!q||hay.includes(q);
+    const show=okCategory&&okSearch;card.hidden=!show;if(show){visible++;if(!firstVisible)firstVisible=card;}
   });
   const empty=document.getElementById('quickExerciseEmpty');if(empty)empty.hidden=visible!==0;
+  if(q&&firstVisible&&!document.querySelector('.quick-exercise-card.selected:not([hidden])'))selectQuickExerciseCard(firstVisible);
 }
 function selectQuickExerciseCard(card){
   const input=document.getElementById('quickExercise');if(!input||!card)return;
@@ -4184,6 +4203,7 @@ function bindEvents(){
   document.querySelectorAll('[data-quick-favorite-move]').forEach(b=>b.onclick=()=>{moveQuickFavorite(decodeURIComponent(b.dataset.quickFavoriteName),b.dataset.quickFavoriteMove);render();});
   document.querySelectorAll('[data-quick-favorite-category]').forEach(b=>b.onclick=()=>{state.quickFavoriteCategory=b.dataset.quickFavoriteCategory||'Tous';document.querySelectorAll('[data-quick-favorite-category]').forEach(x=>x.classList.toggle('active',x===b));filterQuickFavoritePicker();});
   const quickFavoriteSearch=document.getElementById('quickFavoriteSearch');if(quickFavoriteSearch)quickFavoriteSearch.oninput=filterQuickFavoritePicker;
+  document.querySelectorAll('[data-quick-favorite-preset-name]').forEach(input=>input.onchange=()=>{const encoded=input.dataset.quickFavoritePresetName,name=decodeURIComponent(encoded),rows=[...document.querySelectorAll('[data-quick-favorite-preset-name]')].filter(x=>x.dataset.quickFavoritePresetName===encoded),values=rows.sort((a,b)=>Number(a.dataset.quickFavoritePresetIndex)-Number(b.dataset.quickFavoritePresetIndex)).map(x=>Number(x.value||0));setQuickFavoritePresetValues(name,values);state.quickFavoriteMessage='Valeurs rapides enregistrées.';});
   document.querySelectorAll('#syncStrava').forEach(b=>b.onclick=syncStravaActivities);
   const disconnectS=document.getElementById('disconnectStrava');if(disconnectS)disconnectS.onclick=()=>{if(confirm('Déconnecter Strava de KINETIK ?'))disconnectStrava();};
   const presetBand=(index,name)=>document.querySelector(`[data-quick-preset="${index}"] .band-choice.active`)?.dataset.bandLabel||lastBandForExercise(name)||defaultBandForExercise(name);

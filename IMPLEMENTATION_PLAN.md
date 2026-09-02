@@ -272,3 +272,10 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - Journal des derniers Quick Logs avec suppression ciblée par ligne.
 - Ancien undo-last retiré de l'interface.
 - Aucun changement du moteur de progression ou de la limite Vercel.
+
+
+## V10.138 — Favoris Quick Log paramétrables — TERMINÉ
+- 3 valeurs rapides personnalisables par exercice favori.
+- Valeur exacte conservée.
+- Recherche exercice/favoris réparée et normalisée.
+- Préférences incluses dans la sauvegarde locale.
