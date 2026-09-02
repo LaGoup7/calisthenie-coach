@@ -1881,7 +1881,23 @@ function v10146SkillCards(limit=3){
 }
 function v10146RankCompact(){
   const r=getRankState(),pct=Math.round(r.readiness*100);
-  return `<button class="p146-rank rank-${r.current.id}" data-view="skills"><div><span>Rang</span><strong>${esc(r.displayName)}</strong><small>${r.next?`${pct}% vers ${esc(r.next.name)} · ${r.nextEval.completed}/${r.nextEval.required} exigences`:'Rang maximal atteint'}</small></div><b>Voir les rangs →</b></button>`;
+  return `<button class="p146-rank rank-${r.current.id}" data-progress-tab="rank"><div><span>Rang</span><strong>${esc(r.displayName)}</strong><small>${r.next?`${pct}% vers ${esc(r.next.name)} · ${r.nextEval.completed}/${r.nextEval.required} exigences`:'Rang maximal atteint'}</small></div><b>Voir les rangs →</b></button>`;
+}
+function v10147RankRoadmap(){
+  const rs=getRankState();
+  return `<div class="p147-rank-roadmap">${RANKS.map((r,i)=>`<button class="p147-rank-node rank-${r.id} ${i<rs.index?'done':''} ${i===rs.index?'current':''} ${i>rs.index?'future':''}" data-rank-select="${r.id}"><span>${i<rs.index?'✓':i+1}</span><strong>${esc(r.name)}</strong><small>${i<rs.index?'Validé':i===rs.index?'Actuel':'À atteindre'}</small></button>`).join('')}</div>`;
+}
+function renderProgressRank(){
+  const rs=getRankState(),rank=RANKS[rankIndexById(state.selectedRankId||rs.current.id)]||rs.current,selectedId=rank.id,selectedIndex=rankIndexById(selectedId),selected=RANKS[selectedIndex],ev=evaluateRank(selected),next=rs.next,pct=Math.round(rs.readiness*100);
+  const incomplete=(ev.gates||[]).filter(g=>!g.done);
+  return `<section class="p147-rank-head rank-${rs.current.id}"><div><div class="kicker">Rang KINETIK</div><h1>${esc(rs.displayName)}</h1><p>Le rang dépend uniquement des capacités et performances validées.</p></div><div class="p147-rank-head-score"><strong>${next?`${pct}%`:'Max'}</strong><span>${next?`vers ${esc(next.name)}`:'Légende atteinte'}</span></div></section>
+    <section class="p147-rank-summary">
+      <article><span>Rang actuel</span><strong>${esc(rs.displayName)}</strong><small>${esc(rs.current.title)}</small></article>
+      <article><span>Prochain rang</span><strong>${next?esc(next.name):'—'}</strong><small>${next?`${rs.nextEval.completed}/${rs.nextEval.required} exigences validées`:'Rang maximal atteint'}</small></article>
+      <article><span>Blocage principal</span><strong>${incomplete[0]?esc(incomplete[0].label):'Aucun'}</strong><small>${incomplete[0]?(incomplete[0].detail?esc(incomplete[0].detail):'À travailler'):'Tout est validé pour ce rang'}</small></article>
+    </section>
+    <section class="p146-section"><div class="p146-section-head"><div><div class="kicker">Roadmap</div><h2>Échelle des rangs</h2></div></div>${v10147RankRoadmap()}</section>
+    <section class="card rank-detail rank-${selected.id} p147-rank-detail"><div class="rank-detail-head"><div class="rank-emblem rank-emblem-large">${selectedIndex===6?'★':selectedIndex+1}</div><div class="grow"><div class="kicker">Barèmes de performance</div><div class="rank-name">${esc(selected.name)}</div><h2>${esc(selected.title)}</h2><p>${esc(selected.description)}</p></div><span class="rank-status-pill">${selectedIndex<rs.index?'Validé':selectedIndex===rs.index?'Rang actuel':'À atteindre'}</span></div><div class="section-head rank-missions-head"><div><div class="kicker">Exigences</div><h2>Performances à démontrer</h2></div><span class="pill">${ev.completed}/${ev.required}</span></div><div class="rank-v2-content">${(ev.gates||[]).length?(ev.gates||[]).map(g=>`<div class="${g.done?'done':''}"><div><span>${g.done?'✓':'○'}</span><strong>${g.label}</strong>${g.detail?`<small>${esc(g.detail)}</small>`:''}</div><b>${Number(g.current).toFixed(Number(g.current)%1?1:0)} / ${g.target}${g.unit?` ${g.unit}`:''}</b></div>`).join(''):'<p>Point de départ du système KINETIK.</p>'}</div>${selectedIndex===rs.index && next?`<p class="rank-rule-note">${pct}% vers ${esc(next.name)} · ${rs.nextEval.completed}/${rs.nextEval.required} exigences validées.</p>`:'<p class="rank-rule-note">Le rang dépend uniquement des capacités et performances démontrées.</p>'}</section>`;
 }
 function v10146BodySnapshot(){
   const weight=v10146BodySummary('weight'),waist=v10146BodySummary('waist');
@@ -1889,8 +1905,8 @@ function v10146BodySnapshot(){
 }
 
 renderProgressTabs=function(){
-  const tabs=[['overview','Vue d’ensemble','Résumé'],['performance','Performances','Records & courbe'],['skills','Skills','Compétences'],['body','Corps','Mesures'],['history','Historique','Journal']];
-  return `<nav class="progress-hub-tabs p146-tabs" aria-label="Sections Progression">${tabs.map(([id,label,small])=>`<button class="progress-hub-tab ${state.progressTab===id?'active':''}" data-progress-tab="${id}"><strong>${label}</strong><small>${small}</small></button>`).join('')}</nav>`;
+  const tabs=[['overview','Vue d’ensemble','Résumé'],['performance','Performances','Records & courbe'],['skills','Skills','Compétences'],['body','Corps','Mesures'],['history','Historique','Journal'],['rank','Rang','Barèmes']];
+  return `<nav class="progress-hub-tabs p146-tabs p147-tabs" aria-label="Sections Progression">${tabs.map(([id,label,small])=>`<button class="progress-hub-tab ${state.progressTab===id?'active':''}" data-progress-tab="${id}"><strong>${label}</strong><small>${small}</small></button>`).join('')}</nav>`;
 };
 
 renderProgressOverview=function(){
@@ -2004,9 +2020,9 @@ renderProgressHistory=function(){
 };
 
 renderProgress=function(){
-  if(!['overview','performance','skills','body','history'].includes(state.progressTab))state.progressTab='overview';
-  const content=state.progressTab==='performance'?renderProgressPerformance():state.progressTab==='skills'?renderProgressSkills():state.progressTab==='body'?renderProgressBody():state.progressTab==='history'?renderProgressHistory():renderProgressOverview();
-  const showPeriod=state.progressTab!=='skills';
+  if(!['overview','performance','skills','body','history','rank'].includes(state.progressTab))state.progressTab='overview';
+  const content=state.progressTab==='performance'?renderProgressPerformance():state.progressTab==='skills'?renderProgressSkills():state.progressTab==='body'?renderProgressBody():state.progressTab==='history'?renderProgressHistory():state.progressTab==='rank'?renderProgressRank():renderProgressOverview();
+  const showPeriod=!['skills','rank'].includes(state.progressTab);
   return shell(`<header class="topbar p146-topbar"><div><div class="brand">Progression</div><div class="daylabel">Est-ce que je progresse · sur quoi · depuis quand</div></div></header>
     ${renderProgressTabs()}
     ${showPeriod?v10146PeriodControl():''}
