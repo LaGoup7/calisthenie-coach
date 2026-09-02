@@ -435,5 +435,8 @@ Le Quick Log devient personnalisable : jusqu'à 8 exercices favoris, ordre manue
 - La vue de régularité type GitHub est affichée en haut de Planning → Calendrier, juste sous les onglets.
 - Elle a été retirée de Planning → Programmes pour éviter la duplication et garder Programmes centré sur la configuration des cycles.
 
-## V10.143 · Planning finalisé
+## V10.144 · Planning finalisé
 Le Calendrier devient la vue opérationnelle de la semaine : navigation entre semaines, heatmap en tête, résumé compact, états de journée explicites et activités multisport dans leur date réelle. Une séance KINETIK peut être déplacée ponctuellement vers un jour libre ; ce déplacement ne modifie jamais le programme permanent et est pris en compte par Aujourd'hui, Daily Tasks et la heatmap. L'analyse de charge reste repliée et utilise un vocabulaire plus compréhensible.
+
+## v10.144 · Programmes premium management
+La page Planning > Programmes est désormais centrée sur la gestion du programme actif : hero avec phase/objectif/rythme/formats, semaine type, liste des séances avec durée/étapes/zones/matériel, réglages de progression, autres cycles repliables, séances libres et actions de gestion. Les jours d'un cycle personnalisé restent éditables et peuvent être passés en repos. Une journée du programme peut être dupliquée en séance libre indépendante. L'éditeur de séance rend le réordre ↑/↓ explicite et affiche un aperçu d'impact avant sauvegarde (durée, étapes, zones sollicitées, matériel). La heatmap et les statistiques de progression restent hors de Programmes.

@@ -35,12 +35,12 @@ ok(!out.today.includes('rank-cockpit'),'standalone rank shortcut should be remov
 ok(out.today.includes(`today-actions-card today-watch-card rank-${out.rank}`),'rank is not merged into À surveiller with its active palette');
 ok(out.rank==='bronze' ? out.today.includes('today-actions-card today-watch-card rank-bronze') : true,'Bronze merged rank palette missing');
 const styles=fs.readFileSync(path.join(__dirname,'styles.css'),'utf8');
-ok(styles.includes('v10.141 · Today cleanup — rank merged into À surveiller'),'v10.143 Today cleanup styles missing');
+ok(styles.includes('v10.141 · Today cleanup — rank merged into À surveiller'),'v10.144 Today cleanup styles missing');
 ok(styles.includes('.today-watch-rank'),'merged rank styles missing');
 const source=fs.readFileSync(path.join(__dirname,'app.js'),'utf8');
 ok(source.includes("document.querySelectorAll('[data-open-add-hub]')"),'secondary Add hub launcher binding missing');
 const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),sw=fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),pkg=JSON.parse(fs.readFileSync(path.join(__dirname,'package.json'),'utf8'));
-ok(html.includes('app.js?v=10.143')&&html.includes('app-journey.js?v=10.143'),'v10.143 asset chain missing');
-ok(sw.includes('kinetik-v10-143-planning-final'),'v10.143 service worker cache missing');
-ok(pkg.version==='10.143.0','package version mismatch');
+ok(html.includes('app.js?v=10.144')&&html.includes('app-journey.js?v=10.144'),'v10.144 asset chain missing');
+ok(sw.includes('kinetik-v10-144-programs-premium'),'v10.144 service worker cache missing');
+ok(pkg.version==='10.144.0','package version mismatch');
 if(failures.length){console.error(`TODAY_ACTIVITY_MERGE_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`TODAY_ACTIVITY_MERGE_OK ${checks} checks`);

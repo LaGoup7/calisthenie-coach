@@ -1,4 +1,4 @@
-/* KINETIK v10.143 · Multisport planning, timers and planning presentation. */
+/* KINETIK v10.144 · Multisport planning, timers and planning presentation. */
 /* V10.70 · Multisport Planning                                               */
 /* Planned vs completed · weekly load forecast · conflicts · opt-in optimizer */
 /* ========================================================================== */
@@ -905,7 +905,7 @@ renderCycleHeatmap=function(weeks=16){
 /* ========================================================================== */
 
 /* ========================================================================== */
-/* KINETIK v10.143 · Planning finalisation                                    */
+/* KINETIK v10.144 · Planning finalisation                                    */
 /* Week navigation + explicit day states + one-off workout moves + multisport */
 /* ========================================================================== */
 STORAGE.workoutMoves='kinetik_workout_moves_v1';
@@ -1061,4 +1061,80 @@ dailyCycleStatus=function(value){
   const sourceDay=Number(directive.sourceDay),plannedSessions=sessions.filter(h=>h.trainingCycleId?String(h.trainingCycleId)===String(cycle.id)&&Number(h.day)===sourceDay:!h.customWorkoutId&&Number(h.day)===sourceDay);
   if(plannedSessions.length){const session=plannedSessions[0],status=session.sessionLength==='short'?'done-express':'done';return {key,status,cycle,w,session};}
   return {key,status:key===today?'planned':'missed',cycle,w};
+};
+
+/* ========================================================================== */
+/* KINETIK v10.144 · Programmes premium management                            */
+/* Active program first · week template · session impact · settings/actions   */
+/* ========================================================================== */
+function v10144ProgramImpact(w){
+  const cov=customSessionCoverage(w||{}),exercises=(w?.exercises||[]),minutes=Number(w?.duration||estimateWorkoutMinutes(w||{}))||0;
+  const main=exercises.filter(e=>(e.phase||'main')==='main');
+  return {minutes,steps:exercises.length,main:main.length,groups:cov.groups||[],equipment:cov.equipment||[]};
+}
+function v10144ShortList(rows,max=3){
+  const a=(rows||[]).filter(Boolean);if(!a.length)return '—';
+  return esc(a.slice(0,max).join(' · '))+(a.length>max?` · +${a.length-max}`:'');
+}
+function v10144ProgramHero(c){
+  const pp=progressionPlanForCycle(c),ps=getCycleState(new Date(),c.id),week=normalizeProgressionWeek(pp.weeks?.[Math.max(0,Number(ps.week||1)-1)]||{},Math.max(0,Number(ps.week||1)-1)),st=cycleStats(c),rest=cycleRestDayNames(c);
+  return `<section class="program-active-v10144">
+    <div class="program-active-main-v10144">
+      <div><div class="kicker">Programme actif</div><h1>${esc(c.name)}</h1><p>${esc(c.description||'Ton programme hebdomadaire KINETIK')}</p></div>
+      <span class="program-active-badge-v10144">ACTIF</span>
+    </div>
+    <div class="program-active-metrics-v10144">
+      <div><span>Phase</span><strong>${esc(week.name||`Semaine ${ps.week}`)}</strong><small>S${ps.week}/${ps.weekCount}</small></div>
+      <div><span>Objectif</span><strong>${esc(pp.goal||'Équilibré')}</strong><small>${esc(progressionModeLabel(pp))}</small></div>
+      <div><span>Rythme</span><strong>${st.activeDays} séances</strong><small>${st.rest} repos${rest.length?` · ${esc(rest.join(', '))}`:''}</small></div>
+      <div><span>Formats</span><strong>Complet + Express</strong><small>selon ta disponibilité</small></div>
+    </div>
+  </section>`;
+}
+function v10144WeekTemplate(c){
+  const days=[1,2,3,4,5,6,0];
+  return `<section class="card program-week-template-v10144"><div class="section-head"><div><div class="kicker">Semaine type</div><h2>Quand tu fais quoi</h2></div><span class="pill">7 jours</span></div><div class="program-week-strip-v10144">${days.map(day=>{const w=cycleDayTemplate(c,day),rest=!(w.exercises||[]).length;return `<div class="program-week-day-v10144 ${rest?'is-rest':''}"><span>${DAY_NAMES[day].slice(0,3)}</span><strong>${rest?'Repos':esc(w.name)}</strong><small>${rest?'Récupération':`${Number(w.duration||estimateWorkoutMinutes(w))} min`}</small></div>`}).join('')}</div></section>`;
+}
+function v10144ActiveSessions(c){
+  const days=[1,2,3,4,5,6,0];
+  const rows=days.map(day=>{const w=cycleDayTemplate(c,day),rest=!(w.exercises||[]).length,impact=v10144ProgramImpact(w);return `<article class="program-session-row-v10144 ${rest?'is-rest':''}">
+    <div class="program-session-day-v10144"><span>${DAY_NAMES[day].slice(0,3).toUpperCase()}</span><b>${day===new Date().getDay()?'Aujourd’hui':''}</b></div>
+    <div class="program-session-copy-v10144"><strong>${rest?'Repos':esc(w.name)}</strong><p>${rest?'Récupération complète':esc(w.subtitle||'Séance KINETIK')}</p>${!rest?`<div class="program-session-impact-v10144"><span>${impact.minutes} min</span><span>${impact.steps} étapes</span><span>${v10144ShortList(impact.groups,2)}</span><span>${v10144ShortList(impact.equipment,2)}</span></div>`:''}</div>
+    <div class="program-session-actions-v10144">${rest?(!c.base?`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Ajouter</button>`:''):`${!c.base?`<button class="mini-action edit-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Modifier</button>`:''}<button class="mini-action clone-program-day" data-clone-day="${day}">Dupliquer</button>${!c.base?`<button class="mini-action rest-cycle-day" data-cycle-id="${c.id}" data-day="${day}">Repos</button>`:''}`}</div>
+  </article>`}).join('');
+  return `<section class="card program-sessions-v10144"><div class="section-head"><div><div class="kicker">Séances</div><h2>Contenu du programme</h2><p class="muted small">Modifier agit sur le cycle. Dupliquer crée une séance libre indépendante.</p></div></div><div class="program-session-list-v10144">${rows}</div></section>`;
+}
+function v10144ProgramSettings(c){
+  const pp=progressionPlanForCycle(c),ps=getCycleState(new Date(),c.id),st=cycleStats(c);
+  return `<section class="card program-settings-v10144"><div class="section-head"><div><div class="kicker">Réglages du cycle</div><h2>Structure & progression</h2></div></div><div class="program-settings-grid-v10144">
+    <div><span>Progression</span><strong>${esc(progressionModeLabel(pp))}</strong><small>Semaine ${ps.week}/${ps.weekCount}</small></div>
+    <div><span>Fréquence</span><strong>${st.activeDays} séances / semaine</strong><small>${st.rest} jour${st.rest>1?'s':''} de repos</small></div>
+    <div><span>Cardio intégré</span><strong>${st.cardio} min</strong><small>dans le programme complet</small></div>
+  </div><div class="program-settings-actions-v10144"><button class="btn btn-secondary edit-cycle-progression" data-cycle-id="${c.id}">Configurer la progression</button>${!c.base?`<button class="btn btn-outline rename-cycle" data-cycle-id="${c.id}">Renommer</button>`:''}</div></section>`;
+}
+function v10144OtherPrograms(cycles,active){
+  const others=cycles.filter(c=>String(c.id)!==String(active.id));if(!others.length)return '';
+  return `<details class="card program-other-v10144"><summary><div><div class="kicker">Autres programmes</div><strong>${others.length} cycle${others.length>1?'s':''} disponible${others.length>1?'s':''}</strong></div><b>⌄</b></summary><div class="program-other-list-v10144">${others.map(c=>{const st=cycleStats(c),pp=progressionPlanForCycle(c);return `<article><div><strong>${esc(c.name)}</strong><small>${st.activeDays} séances · ${progressionModeLabel(pp)}${c.base?' · référence':''}</small></div><div><button class="mini-action activate-cycle" data-cycle-id="${c.id}">Utiliser</button><button class="mini-action duplicate-cycle" data-cycle-id="${c.id}">Dupliquer</button>${!c.base?`<button class="mini-action rename-cycle" data-cycle-id="${c.id}">Renommer</button><button class="mini-action archive-cycle" data-cycle-id="${c.id}">Archiver</button>`:''}</div></article>`}).join('')}</div></details>`;
+}
+function v10144FreeSessions(list){
+  return `<section class="program-free-v10144"><div class="program-free-head-v10144"><div><div class="kicker">Séances libres</div><h2>En dehors du programme</h2><p class="muted small">Pour un entraînement ponctuel ou une variante que tu veux garder.</p></div><button class="btn btn-secondary compact" id="newCustomSession">＋ Nouvelle séance</button></div>${list.length?`<div class="program-free-list-v10144">${list.map(w=>{const impact=v10144ProgramImpact(w);return `<article class="card program-free-row-v10144"><div><strong>${esc(w.name)}</strong><small>${esc(w.subtitle||'Séance libre')}</small><div><span>${impact.minutes} min</span><span>${impact.steps} étapes</span><span>${v10144ShortList(impact.groups,2)}</span></div></div><div class="program-free-actions-v10144"><button class="btn btn-primary compact start-custom-session" data-custom-id="${w.id}">Lancer</button><button class="btn btn-secondary compact edit-custom-session" data-custom-id="${w.id}">Modifier</button><button class="btn btn-outline compact duplicate-custom-session" data-custom-id="${w.id}">Dupliquer</button><button class="btn btn-outline compact danger delete-custom-session" data-custom-id="${w.id}">Supprimer</button></div></article>`}).join('')}</div>`:`<div class="card program-free-empty-v10144"><strong>Aucune séance libre</strong><span>Ton programme actif suffit pour le quotidien. Tu peux créer ici des variantes ponctuelles.</span></div>`}</section>`;
+}
+function v10144ProgramActions(c){
+  return `<section class="card program-danger-zone-v10144"><div><div class="kicker">Actions du programme</div><h2>Gestion</h2><p class="muted small">Ces actions ne suppriment jamais ton historique d’entraînement.</p></div><div class="program-management-actions-v10144"><button class="btn btn-outline duplicate-cycle" data-cycle-id="${c.id}">Dupliquer le programme</button><button class="btn btn-outline" id="resetCycle">Nouveau bloc de progression</button><button class="btn btn-secondary" id="newTrainingCycle">＋ Créer un nouveau programme</button>${!c.base?`<button class="btn btn-outline danger archive-cycle" data-cycle-id="${c.id}">Archiver ce programme</button>`:''}</div></section>`;
+}
+
+renderCustomSessions=function(){
+  if(state.cycleProgressionEditor)return renderCycleProgressionEditor();
+  if(state.customSessionEditor)return renderCustomSessionEditor();
+  const list=getCustomWorkouts(),cycles=allTrainingCycles(false),active=getActiveTrainingCycle();
+  return shell(`<header class="topbar program-topbar-v10144"><div><div class="brand">Planning</div><div class="daylabel">Construis et fais évoluer ton programme</div></div></header>${renderPlanningTabs('programs')}${v10144ProgramHero(active)}${v10144WeekTemplate(active)}${v10144ActiveSessions(active)}${v10144ProgramSettings(active)}${v10144OtherPrograms(cycles,active)}${v10144FreeSessions(list)}${v10144ProgramActions(active)}`,'custom');
+};
+
+const _renderCustomSessionEditorV10144=renderCustomSessionEditor;
+renderCustomSessionEditor=function(){
+  let html=_renderCustomSessionEditorV10144(),w=state.customSessionDraft||{};if(!html)return html;
+  const impact=v10144ProgramImpact(w),impactHtml=`<div class="custom-editor-impact-v10144"><div><span>Durée estimée</span><strong>≈ ${impact.minutes} min</strong></div><div><span>Étapes</span><strong>${impact.steps}</strong></div><div><span>Zones sollicitées</span><strong>${v10144ShortList(impact.groups,3)}</strong></div><div><span>Matériel</span><strong>${v10144ShortList(impact.equipment,3)}</strong></div></div>`;
+  html=html.replace('<div class="custom-builder-head"><strong>Exercices</strong>','<div class="custom-builder-head"><div><strong>Exercices</strong><small class="custom-order-help-v10144">Utilise ↑ ↓ pour réordonner la séance</small></div>');
+  html=html.replace(/<div class="custom-editor-summary">[\s\S]*?<\/div><button class="btn btn-primary" id="saveCustomSession">/,`${impactHtml}<button class="btn btn-primary" id="saveCustomSession">`);
+  return html;
 };

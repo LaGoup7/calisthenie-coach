@@ -1,4 +1,4 @@
-# KINETIK v10.143 — Planning finalisation
+# KINETIK v10.144 — Planning finalisation
 
 ## Objectif
 Finaliser Planning sans ajouter de redondances : montrer quand faire quoi, permettre une adaptation ponctuelle de la semaine et conserver le programme permanent comme source de vérité.

@@ -46,8 +46,8 @@ const planning=fs.readFileSync(__dirname+'/app-planning.js','utf8'),journey=fs.r
 ok(planning.includes("STORAGE.workoutMoves='kinetik_workout_moves_v1'"),'move storage not registered');
 ok(journey.includes('Date-aware moved workouts'),'Today date-aware move integration missing');
 ok(daily.includes("typeof workoutTemplateForDate === 'function'"),'Daily Tasks date-aware workout integration missing');
-ok(styles.includes('v10.143 · Planning finalisation'),'Planning final CSS missing');
-ok(html.includes('app-planning.js?v=10.143'),'v10.143 Planning asset missing');
-ok(sw.includes('kinetik-v10-143-planning-final'),'v10.143 service worker cache missing');
-ok(pkg.version==='10.143.0','package version mismatch');
+ok(styles.includes('v10.144 · Planning finalisation'),'Planning final CSS missing');
+ok(html.includes('app-planning.js?v=10.144'),'v10.144 Planning asset missing');
+ok(sw.includes('kinetik-v10-144-programs-premium'),'v10.144 service worker cache missing');
+ok(pkg.version==='10.144.0','package version mismatch');
 if(failures.length){console.error(`PLANNING_FINAL_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}console.log(`PLANNING_FINAL_OK ${checks} checks`);

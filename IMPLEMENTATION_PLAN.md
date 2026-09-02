@@ -307,7 +307,7 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - La vue de régularité type GitHub est affichée en haut de Planning → Calendrier, juste sous les onglets.
 - Elle a été retirée de Planning → Programmes pour éviter la duplication et garder Programmes centré sur la configuration des cycles.
 
-## V10.143 · Planning — finalisation fonctionnelle
+## V10.144 · Planning — finalisation fonctionnelle
 - Navigation semaine précédente / actuelle / suivante conservée et mise en avant.
 - États explicites par jour : Prévue, À faire, Faite, Express, Partielle, Manquée, Repos, Activité prévue/réalisée.
 - Déplacement ponctuel d'une séance KINETIK à un autre jour libre de la semaine sans modifier le cycle permanent.
@@ -315,3 +315,15 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - Activités externes prévues et réalisées restent intégrées au jour correspondant.
 - Résumé hebdomadaire compact : séances réalisées/prévues, minutes d'entraînement, séances de mobilité.
 - Vocabulaire principal allégé : l'UI Calendrier n'expose plus `UA`; l'analyse avancée parle d'indice de charge interne.
+
+### v10.144 — Finalisation de Planning > Programmes ✅
+- Programme actif en tête avec phase, objectif, fréquence et formats.
+- Semaine type compacte Lundi → Dimanche.
+- Gestion des séances du cycle avec aperçu durée / étapes / zones / matériel.
+- Modification des jours pour les cycles personnalisés ; duplication d'une journée vers une séance libre.
+- Réglages du cycle et progression regroupés.
+- Autres programmes secondaires et repliables.
+- Séances libres simplifiées avec lancer / modifier / dupliquer / supprimer.
+- Éditeur : réordre ↑/↓ explicite + aperçu d'impact avant sauvegarde.
+- Actions de programme regroupées en bas.
+- Navigation principale Planning correctement active depuis Programmes.

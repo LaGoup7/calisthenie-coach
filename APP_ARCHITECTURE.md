@@ -60,3 +60,6 @@ Côté serveur, `lib/account-core.js` partage Redis avec P2 mais ne lit ni n’�
 - `renderSettings()` est l'entrée publique des Réglages. `renderProfile()` subsiste temporairement comme implémentation interne héritée ; sa consolidation est réservée au LOT C.
 - Le renderer Notifications final est possédé par `app-journey.js` et applique une divulgation progressive : contrôles usuels, détails appareil, puis support avancé.
 - Le cockpit Aujourd'hui ne doit plus ajouter un second CTA lorsqu'une action canonique existe déjà ailleurs sur la page.
+
+### v10.144 ownership note
+`Planning > Programmes` presentation overrides now live in `app-planning.js` (`v10144Program*` helpers + `renderCustomSessions` override). Core cycle persistence/editing helpers remain in `app.js`. This keeps new Planning UX changes in the Planning module without migrating stable storage logic during the UI finalisation pass.

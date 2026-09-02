@@ -57,5 +57,5 @@ ok(source.includes("state.planningEditor=true"),'planning route is not wired');
 const styles=fs.readFileSync(path.join(__dirname,'styles.css'),'utf8');
 ok(styles.includes('v10.137 · Premium Add Hub'),'premium hub styles missing');
 const pkg=JSON.parse(fs.readFileSync(path.join(__dirname,'package.json'),'utf8'));
-ok(pkg.version==='10.143.0','package version mismatch');
+ok(pkg.version==='10.144.0','package version mismatch');
 if(failures.length){console.error(`ADD_HUB_PREMIUM_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`ADD_HUB_PREMIUM_OK ${checks} checks`);
