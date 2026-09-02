@@ -337,3 +337,16 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - [x] Vocabulaire Recovery/Priorité nettoyé
 - [x] État routine terminée aujourd'hui
 - [x] Tests dédiés + non-régression complète
+
+## v10.146 — Progression finalisée
+- [x] Vue d'ensemble centrée sur les variations mesurables
+- [x] Périodes 30 j / 3 mois / 6 mois / Tout
+- [x] Tendances progression / stabilité / surveillance
+- [x] Performances : une seule courbe à la fois
+- [x] Skills séparés des performances
+- [x] Corps : une seule métrique corporelle à la fois
+- [x] Records personnels compacts
+- [x] Rang repositionné en secondaire
+- [x] Historique unifié et filtrable
+- [x] Volume déplacé au second niveau
+- [x] Suppression de l'override Body obsolète sur Progression

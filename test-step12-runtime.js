@@ -51,7 +51,7 @@ vm.createContext(sandbox);vm.runInContext(appSource+'\n'+dailySource+'\n'+localS
   const syncPayload=calls.find(c=>c.url.includes('/api/push/sync'))?.body;
   ok(syncPayload?.device?.platform==='ios','device platform metadata missing');
   ok(syncPayload?.device?.standalone===true,'PWA standalone metadata missing');
-  ok(syncPayload?.device?.appVersion==='10.145','device app version missing');
+  ok(syncPayload?.device?.appVersion==='10.146','device app version missing');
 
   await manager.checkHealth({force:true,render:false});
   let status=manager.getStatus();
@@ -118,9 +118,9 @@ vm.createContext(sandbox);vm.runInContext(appSource+'\n'+dailySource+'\n'+localS
   ok(syncApi.includes('sanitizeDeviceMeta')&&syncApi.includes('lastClientSyncAt'),'device metadata/client sync health missing');
   ok(appText.includes('renderWebPushHealth')&&appText.includes('repairWebPush'),'health/repair settings UI not wired');
   ok(appText.includes('Nom de l’appareil')&&appText.includes('Multi-appareils'),'current-device management UI missing');
-  ok(html.includes('web-push-manager.js?v=10.145')&&sw.includes('web-push-manager.js?v=10.145'),'v10.145 Web Push manager not in PWA asset chain');
-  ok(sw.includes("kinetik-v10-145-mobility-final"),'v10.145 cache name missing');
-  ok(pkg.version==='10.145.0','package version not updated');
+  ok(html.includes('web-push-manager.js?v=10.146')&&sw.includes('web-push-manager.js?v=10.146'),'v10.146 Web Push manager not in PWA asset chain');
+  ok(sw.includes("kinetik-v10-146-progression-final"),'v10.146 cache name missing');
+  ok(pkg.version==='10.146.0','package version not updated');
 
   if(failures.length){console.error(`STEP12_RUNTIME_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`STEP12_RUNTIME_OK ${checks} checks`);
 })().catch(error=>{console.error(error);process.exit(1)});

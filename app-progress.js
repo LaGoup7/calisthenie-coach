@@ -1,4 +1,4 @@
-/* KINETIK v10.145 · Mobility, progression UX and product-coaching layers. */
+/* KINETIK v10.146 · Mobility, progression UX and product-coaching layers. */
 /* V10.145 · Mobility finalisation                                            */
 /* Today → Mobility balance → Progression → Secondary details                 */
 /* ========================================================================== */
@@ -1726,3 +1726,298 @@ bindEvents=function(){
 
 
 /* ========================================================================== */
+
+/* ========================================================================== */
+/* KINETIK v10.146 · Progression finalisation                                */
+/* Résumé → Performances → Skills → Corps → Historique                       */
+/* ========================================================================== */
+Object.assign(state,{
+  progressPeriod:state.progressPeriod||'30d',
+  progressMetric:state.progressMetric||null,
+  progressBodyMetric:state.progressBodyMetric||'weight',
+  progressHistoryFilter:state.progressHistoryFilter||'all'
+});
+
+const V10146_PERIODS=[['30d','30 j'],['90d','3 mois'],['180d','6 mois'],['all','Tout']];
+function v10146PeriodBounds(period=state.progressPeriod){
+  const end=Date.now();
+  if(period==='all')return {start:null,end,label:'Depuis le début',days:null};
+  const days=period==='90d'?90:period==='180d'?180:30;
+  return {start:end-(days-1)*86400000,end,label:days===30?'30 derniers jours':days===90?'3 derniers mois':'6 derniers mois',days};
+}
+function v10146InPeriod(date,bounds=v10146PeriodBounds()){
+  const t=new Date(date).getTime();if(!Number.isFinite(t))return false;
+  return (bounds.start==null||t>=bounds.start)&&t<=bounds.end+86400000;
+}
+function v10146PeriodControl(){
+  return `<div class="p146-periods" aria-label="Période de progression">${V10146_PERIODS.map(([id,label])=>`<button class="${state.progressPeriod===id?'active':''}" data-progress-period="${id}">${label}</button>`).join('')}</div>`;
+}
+function v10146Number(v,digits=0){
+  const n=Number(v);if(!Number.isFinite(n))return '—';
+  return n.toLocaleString('fr-FR',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+}
+function v10146Signed(v,unit='',digits=0){
+  const n=Number(v);if(!Number.isFinite(n))return '—';
+  const s=n>0?'+':'';return `${s}${v10146Number(n,digits)}${unit?` ${unit}`:''}`;
+}
+function v10146ExerciseType(name){
+  const info=exerciseInfo(name);return info?.prescription?.type||'reps';
+}
+function v10146ExerciseUnit(name,type=null){
+  const t=type||v10146ExerciseType(name);return String(t||'').startsWith('hold')?'s':'reps';
+}
+function v10146PerformanceSeries(name,bounds=v10146PeriodBounds()){
+  const rows=[];
+  getHistory().forEach(session=>{
+    if(!v10146InPeriod(session.date,bounds))return;
+    (session.entries||[]).forEach(e=>{
+      if(e.exercise!==name||e.type==='timer')return;
+      const value=Number(e.value);if(!(value>0))return;
+      rows.push({date:session.date,value,type:entryResolvedType(e),source:'Séance'});
+    });
+  });
+  getQuickLogs().forEach(e=>{
+    if(e.exercise!==name||!v10146InPeriod(e.date,bounds))return;
+    const value=Number(e.value);if(!(value>0))return;
+    rows.push({date:e.date,value,type:entryResolvedType(e),source:e.source==='core_timer'?'Gainage':'Quick Log'});
+  });
+  const daily=new Map();
+  rows.sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(row=>{
+    const key=localDateKey(new Date(row.date)),old=daily.get(key);
+    if(!old||row.value>old.value)daily.set(key,{...row,key});
+  });
+  return [...daily.values()].sort((a,b)=>new Date(a.date)-new Date(b.date));
+}
+function v10146PerformanceSummary(name,bounds=v10146PeriodBounds()){
+  const points=v10146PerformanceSeries(name,bounds),unit=v10146ExerciseUnit(name,points.at(-1)?.type);
+  if(!points.length)return {name,points,unit,best:null,first:null,last:null,delta:null,pct:null,lastPr:null,daysSincePr:null};
+  const first=points[0].value,last=points.at(-1).value,best=Math.max(...points.map(x=>x.value));
+  const bestPoint=[...points].reverse().find(x=>x.value===best)||points.at(-1);
+  const delta=best-first,pct=first>0?delta/first*100:null;
+  const daysSincePr=Math.max(0,Math.floor((Date.now()-new Date(bestPoint.date).getTime())/86400000));
+  return {name,points,unit,best,first,last,delta,pct,lastPr:bestPoint.date,daysSincePr};
+}
+function v10146MetricNames(){
+  const preferred=['Tractions strictes','Dips','Dead hang','Pompes'];
+  const names=new Set();
+  currentRecords().forEach(r=>{if(r.exercise)names.add(r.exercise);});
+  getQuickLogs().forEach(r=>{if(r.exercise)names.add(r.exercise);});
+  getHistory().forEach(s=>(s.entries||[]).forEach(e=>{if(e.exercise&&e.type!=='timer')names.add(e.exercise);}));
+  const arr=[...names];
+  return [...preferred.filter(x=>names.has(x)),...arr.filter(x=>!preferred.includes(x)).sort((a,b)=>a.localeCompare(b,'fr'))];
+}
+function v10146PrimaryMetrics(){
+  const names=v10146MetricNames();
+  const preferred=['Tractions strictes','Dips','Dead hang','Pompes'];
+  const picked=preferred.filter(x=>names.includes(x));
+  for(const n of names)if(picked.length<5&&!picked.includes(n))picked.push(n);
+  return picked.slice(0,5);
+}
+function v10146BodySeries(key,bounds=v10146PeriodBounds()){
+  const cfg=getBodyConfig();
+  const rows=getBodyLogs().slice().sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(l=>v10146InPeriod(l.date,bounds)).map(l=>{
+    const value=key==='bodyFat'?bodyFatForLog(l,cfg):bodyValue(l,key);
+    return {date:l.date,value:Number(value)};
+  }).filter(x=>Number.isFinite(x.value)&&x.value>0);
+  return rows;
+}
+function v10146BodySummary(key,bounds=v10146PeriodBounds()){
+  const points=v10146BodySeries(key,bounds),def={weight:{label:'Poids',unit:'kg',digits:1},waist:{label:'Tour de taille',unit:'cm',digits:1},bodyFat:{label:'Masse grasse estimée',unit:'%',digits:1}}[key]||{label:key,unit:'',digits:1};
+  if(!points.length)return {...def,key,points,first:null,last:null,delta:null};
+  const first=points[0].value,last=points.at(-1).value;return {...def,key,points,first,last,delta:last-first};
+}
+function v10146SparkSvg(points,{unit='',digits=0,height=210}={}){
+  if(!points||points.length<2)return '';
+  const W=760,H=height,padX=38,padTop=25,padBottom=35,vals=points.map(x=>Number(x.value)).filter(Number.isFinite);
+  let min=Math.min(...vals),max=Math.max(...vals);if(max===min){max+=1;min-=1;}const margin=(max-min)*.12;min-=margin;max+=margin;
+  const x=i=>padX+(i/(points.length-1))*(W-padX*2),y=v=>padTop+(max-v)/(max-min)*(H-padTop-padBottom);
+  const path=points.map((p,i)=>`${i?'L':'M'} ${x(i).toFixed(1)} ${y(p.value).toFixed(1)}`).join(' ');
+  const first=points[0],last=points.at(-1),fmt=v=>`${v10146Number(v,digits)}${unit?` ${unit}`:''}`;
+  return `<svg class="p146-chart-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Évolution ${esc(fmt(first.value))} vers ${esc(fmt(last.value))}">
+    <line x1="${padX}" y1="${H-padBottom}" x2="${W-padX}" y2="${H-padBottom}" class="p146-grid-line"/>
+    <path d="${path}" class="p146-line" fill="none"/>
+    ${points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.value).toFixed(1)}" r="${i===points.length-1?5:3}" class="p146-point"><title>${formatShortDate(p.date)} · ${fmt(p.value)}</title></circle>`).join('')}
+    <text x="${padX}" y="${H-10}" class="p146-axis">${formatShortDate(first.date)}</text>
+    <text x="${W-padX}" y="${H-10}" text-anchor="end" class="p146-axis">${formatShortDate(last.date)}</text>
+    <text x="${padX}" y="17" class="p146-axis strong">${fmt(max-margin)}</text>
+  </svg>`;
+}
+function v10146MetricDeltaCard(label,summary,{body=false}={}){
+  if(summary.best==null&&summary.last==null)return `<article class="p146-kpi empty"><span>${esc(label)}</span><strong>—</strong><small>Pas encore assez de données</small></article>`;
+  const current=body?summary.last:summary.best,delta=summary.delta,unit=summary.unit||'';
+  const digits=body?summary.digits||1:0;
+  let detail='Première référence';
+  if(delta!=null&&Math.abs(delta)>.0001){
+    if(body)detail=`${v10146Signed(delta,unit,digits)} sur la période`;
+    else detail=`${v10146Signed(delta,unit,digits)} · ${summary.pct!=null?v10146Signed(summary.pct,'%',0):'depuis la référence'}`;
+  }else if((summary.points||[]).length>1)detail='Stable sur la période';
+  return `<article class="p146-kpi"><span>${esc(label)}</span><strong>${v10146Number(current,digits)} <small>${esc(unit)}</small></strong><small>${esc(detail)}</small></article>`;
+}
+function v10146TrendRows(){
+  const bounds=v10146PeriodBounds(),rows=[];
+  for(const name of v10146PrimaryMetrics()){
+    const s=v10146PerformanceSummary(name,bounds);if(s.points.length<2)continue;
+    if(s.delta>0){
+      rows.push({tone:'up',icon:'↑',title:name,detail:`${v10146Number(s.first)} → ${v10146Number(s.best)} ${s.unit}`,note:s.daysSincePr<=21?'Nouveau meilleur niveau sur la période':`Record inchangé depuis ${s.daysSincePr} j`});
+    }else if(s.daysSincePr>=21&&s.points.length>=3){
+      rows.push({tone:'flat',icon:'→',title:name,detail:`${v10146Number(s.best)} ${s.unit}`,note:`Stable depuis ${s.daysSincePr} jours`});
+    }
+  }
+  for(const zone of MOBILITY_ZONES){
+    const h=v10145ZoneScoreHistory(zone.id).filter(x=>v10146InPeriod(x.date,bounds));if(h.length<2)continue;
+    const delta=h.at(-1).score-h[0].score;if(Math.abs(delta)<4)continue;
+    rows.push({tone:delta>0?'up':'down',icon:delta>0?'↑':'↓',title:`Mobilité · ${zone.label}`,detail:`${h[0].score} → ${h.at(-1).score}`,note:delta>0?'Progression mesurée':'À surveiller'});
+  }
+  return rows.sort((a,b)=>({down:0,flat:1,up:2}[a.tone]-{down:0,flat:1,up:2}[b.tone])).slice(0,5);
+}
+function v10146CompactRecords(limit=5){
+  const records=currentRecords().slice(0,limit);
+  if(!records.length)return `<div class="p146-empty">Tes premiers records apparaîtront après quelques performances enregistrées.</div>`;
+  return `<div class="p146-records">${records.map(r=>`<button data-exercise-progress="${encodeURIComponent(r.exercise)}"><div><strong>${esc(r.exercise)}</strong><small>${formatShortDate(r.date)}</small></div><b>${recordValueText(r)}</b></button>`).join('')}</div>`;
+}
+function v10146SkillCards(limit=3){
+  const focus=primarySkillTree(),ordered=[focus,...SKILL_TREES.filter(t=>t.id!==focus.id).sort((a,b)=>skillTreeProgress(b).pct-skillTreeProgress(a).pct)];
+  return ordered.slice(0,limit).map(tree=>{const p=skillTreeProgress(tree);return `<button class="p146-skill-card" data-progress-tab="skills"><div><span>${tree.id===focus.id?'Objectif principal':'Skill'}</span><strong>${esc(tree.name)}</strong><small>${p.next?`Prochaine étape · ${esc(p.next.name)}`:'Parcours validé'}</small></div><b>${p.pct}%</b><i><u style="width:${p.pct}%"></u></i></button>`;}).join('');
+}
+function v10146RankCompact(){
+  const r=getRankState(),pct=Math.round(r.readiness*100);
+  return `<button class="p146-rank rank-${r.current.id}" data-view="skills"><div><span>Rang</span><strong>${esc(r.displayName)}</strong><small>${r.next?`${pct}% vers ${esc(r.next.name)} · ${r.nextEval.completed}/${r.nextEval.required} exigences`:'Rang maximal atteint'}</small></div><b>Voir les rangs →</b></button>`;
+}
+function v10146BodySnapshot(){
+  const weight=v10146BodySummary('weight'),waist=v10146BodySummary('waist');
+  return `<button class="p146-body-snapshot" data-progress-tab="body"><div><span>Corps</span><strong>${weight.last!=null?`${v10146Number(weight.last,1)} kg`:'Poids —'}${waist.last!=null?` · ${v10146Number(waist.last,1)} cm taille`:''}</strong><small>${weight.delta!=null&&weight.points.length>1?`Poids ${v10146Signed(weight.delta,'kg',1)}`:'Mesures corporelles'}${waist.delta!=null&&waist.points.length>1?` · taille ${v10146Signed(waist.delta,'cm',1)}`:''}</small></div><b>Voir →</b></button>`;
+}
+
+renderProgressTabs=function(){
+  const tabs=[['overview','Vue d’ensemble','Résumé'],['performance','Performances','Records & courbe'],['skills','Skills','Compétences'],['body','Corps','Mesures'],['history','Historique','Journal']];
+  return `<nav class="progress-hub-tabs p146-tabs" aria-label="Sections Progression">${tabs.map(([id,label,small])=>`<button class="progress-hub-tab ${state.progressTab===id?'active':''}" data-progress-tab="${id}"><strong>${label}</strong><small>${small}</small></button>`).join('')}</nav>`;
+};
+
+renderProgressOverview=function(){
+  const bounds=v10146PeriodBounds();
+  const pull=v10146PerformanceSummary('Tractions strictes',bounds),dips=v10146PerformanceSummary('Dips',bounds),hang=v10146PerformanceSummary('Dead hang',bounds),weight=v10146BodySummary('weight',bounds),waist=v10146BodySummary('waist',bounds),trends=v10146TrendRows();
+  return `<section class="p146-overview-head"><div><div class="kicker">Vue d’ensemble · ${esc(bounds.label)}</div><h1>Est-ce que tu progresses ?</h1><p>Les changements utiles, sans mélanger planning et historique d’entraînement.</p></div></section>
+  <section class="p146-kpis">
+    ${v10146MetricDeltaCard('Tractions',pull)}
+    ${v10146MetricDeltaCard('Dips',dips)}
+    ${v10146MetricDeltaCard('Dead hang',hang)}
+    ${v10146MetricDeltaCard('Poids',weight,{body:true})}
+    ${v10146MetricDeltaCard('Tour de taille',waist,{body:true})}
+  </section>
+
+  <section class="p146-section p146-trends-section"><div class="p146-section-head"><div><div class="kicker">Tendances</div><h2>Ce qui progresse · ce qui stagne</h2></div><span>${trends.length||'—'}</span></div>
+    ${trends.length?`<div class="p146-trend-list">${trends.map(x=>`<div class="${x.tone}"><span>${x.icon}</span><div><strong>${esc(x.title)}</strong><small>${esc(x.detail)} · ${esc(x.note)}</small></div></div>`).join('')}</div>`:`<div class="p146-empty"><strong>Encore trop tôt pour dégager une tendance.</strong><span>Deux à trois références comparables suffisent pour commencer.</span></div>`}
+  </section>
+
+  <section class="p146-two-col">
+    <article class="p146-section"><div class="p146-section-head"><div><div class="kicker">Records personnels</div><h2>Tes meilleures références</h2></div><button data-progress-tab="performance">Tout voir →</button></div>${v10146CompactRecords(5)}</article>
+    <article class="p146-section"><div class="p146-section-head"><div><div class="kicker">Skills</div><h2>Parcours techniques</h2></div><button data-progress-tab="skills">Détails →</button></div><div class="p146-skill-cards">${v10146SkillCards(3)}</div></article>
+  </section>
+
+  <section class="p146-overview-bottom">${v10146BodySnapshot()}${v10146RankCompact()}</section>`;
+};
+
+function v10146PerformanceMetricSelector(names,selected){
+  return `<div class="p146-metric-switch">${names.slice(0,8).map(name=>`<button class="${name===selected?'active':''}" data-progress-metric="${encodeURIComponent(name)}">${esc(name)}</button>`).join('')}</div>`;
+}
+function v10146VolumeData(bounds=v10146PeriodBounds()){
+  const by=new Map();let reps=0,holdSeconds=0,sets=0;
+  const add=e=>{const r=repValueForEntry(e),h=holdSecondsForEntry(e);if(!(r>0||h>0))return;const name=e.exercise||'Exercice',row=by.get(name)||{name,reps:0,holdSeconds:0,sets:0};row.reps+=r;row.holdSeconds+=h;row.sets++;by.set(name,row);reps+=r;holdSeconds+=h;sets++;};
+  getHistory().forEach(session=>{if(v10146InPeriod(session.date,bounds))(session.entries||[]).forEach(add);});
+  getQuickLogs().forEach(log=>{if(v10146InPeriod(log.date,bounds))add(log);});
+  const rows=[...by.values()].sort((a,b)=>(b.reps-a.reps)||(b.holdSeconds-a.holdSeconds));
+  return {rows,reps,holdSeconds,sets,exerciseCount:rows.length};
+}
+function v10146CompactVolume(){
+  const d=v10146VolumeData();
+  return `<details class="p146-secondary"><summary><div><strong>Volume d’entraînement</strong><span>${d.reps.toLocaleString('fr-FR')} répétitions · ${d.sets} séries · ${d.exerciseCount} exercices</span></div><b>↓</b></summary><div class="p146-secondary-body"><div class="p146-volume-mini">${d.rows.slice(0,8).map(r=>`<div><span>${esc(r.name)}</span><strong>${r.reps?r.reps.toLocaleString('fr-FR')+' reps':Math.round(r.holdSeconds/60)+' min'}</strong></div>`).join('')||'<span class="p146-empty">Aucun volume sur cette période.</span>'}</div></div></details>`;
+}
+renderProgressPerformance=function(){
+  const bounds=v10146PeriodBounds(),names=v10146MetricNames();
+  let selected=state.progressMetric&&names.includes(state.progressMetric)?state.progressMetric:null;
+  if(!selected)selected=v10146PrimaryMetrics()[0]||names[0]||'Tractions strictes';state.progressMetric=selected;
+  const s=v10146PerformanceSummary(selected,bounds),digits=0;
+  return `<section class="p146-performance-head"><div><div class="kicker">Performances · ${esc(bounds.label)}</div><h1>${esc(selected)}</h1><p>Une seule métrique à la fois pour lire clairement la progression.</p></div></section>
+    ${v10146PerformanceMetricSelector(names,selected)}
+    <section class="p146-main-chart">
+      <div class="p146-chart-kpis"><div><span>Meilleur</span><strong>${s.best!=null?`${v10146Number(s.best,digits)} ${s.unit}`:'—'}</strong></div><div><span>Référence de départ</span><strong>${s.first!=null?`${v10146Number(s.first,digits)} ${s.unit}`:'—'}</strong></div><div><span>Progression</span><strong>${s.delta!=null&&s.points.length>1?v10146Signed(s.delta,s.unit,digits):'—'}</strong><small>${s.pct!=null&&s.points.length>1?v10146Signed(s.pct,'%',0):'Pas assez de données'}</small></div><div><span>Dernier record</span><strong>${s.lastPr?formatShortDate(s.lastPr):'—'}</strong></div></div>
+      ${s.points.length>=2?v10146SparkSvg(s.points,{unit:s.unit,digits}):`<div class="p146-chart-empty"><strong>${s.points.length?'Première référence enregistrée':'Aucune performance enregistrée'}</strong><span>${s.points.length?'Une seconde référence comparable fera apparaître la courbe.':'Utilise une séance ou Quick Log pour commencer.'}</span></div>`}
+    </section>
+    <section class="p146-section"><div class="p146-section-head"><div><div class="kicker">Records personnels</div><h2>Meilleures performances</h2></div><span>${currentRecords().length}</span></div>${v10146CompactRecords(10)}</section>
+    ${v10146CompactVolume()}
+    <details class="p146-secondary"><summary><div><strong>Évaluations standardisées</strong><span>${testDueSummary().label} · pour confirmer les repères importants</span></div><b>↓</b></summary><div class="p146-secondary-body"><p class="p146-evidence-note">Une performance enregistrée reste une référence utile ; seule une validation guidée KINETIK confirme un protocole standardisé.</p><button class="btn btn-outline compact" data-view="assessment">Ouvrir le Centre d’évaluation →</button></div></details>
+    ${state.exerciseDetailName?renderExerciseProgressDetail(state.exerciseDetailName):''}`;
+};
+
+renderProgressSkills=function(){
+  const focus=primarySkillTree(),rank=getRankState(),caps=capabilityScores(),ordered=[focus,...SKILL_TREES.filter(t=>t.id!==focus.id)];
+  return `<section class="p146-skills-head"><div><div class="kicker">Skills</div><h1>Compétences techniques</h1><p>Les performances sont des mesures. Les skills sont des parcours à maîtriser.</p></div><button class="btn btn-outline compact" data-view="skills">Voir toutes les capacités →</button></section>
+    <section class="p146-skill-focus"><div><div class="kicker">Objectif technique principal</div><h2>${esc(focus.name)}</h2><p>${esc(focus.description)}</p></div>${(()=>{const p=skillTreeProgress(focus);return `<div class="p146-focus-score"><strong>${p.pct}%</strong><span>${p.next?`Prochaine étape · ${esc(p.next.name)}`:'Parcours validé'}</span></div>`})()}</section>
+    <section class="p146-section"><div class="p146-section-head"><div><div class="kicker">Parcours</div><h2>Où tu en es</h2></div></div><div class="p146-skills-grid">${ordered.map(tree=>{const p=skillTreeProgress(tree);return `<article class="${tree.id===focus.id?'focus':''}"><div><strong>${esc(tree.name)}</strong><span>${p.next?`Prochaine étape · ${esc(p.next.name)}`:'Validé'}</span></div><b>${p.pct}%</b><i><u style="width:${p.pct}%"></u></i></article>`;}).join('')}</div></section>
+    <section class="p146-section"><div class="p146-section-head"><div><div class="kicker">Capacités fondamentales</div><h2>Le socle derrière les skills</h2></div><button data-view="skills">Analyse complète →</button></div><div class="p146-cap-grid">${caps.map(c=>`<div class="${c.assessed?'':'empty'}"><span>${esc(c.label)}</span><strong>${c.assessed?c.score:'—'}</strong><small>${esc(c.level||'À évaluer')}</small><i><u style="width:${c.assessed?c.score:0}%"></u></i></div>`).join('')}</div></section>
+    ${v10146RankCompact()}`;
+};
+
+function v10146BodyMetricSelector(){
+  const defs=[['weight','Poids'],['waist','Tour de taille'],['bodyFat','Masse grasse']];
+  return `<div class="p146-metric-switch p146-body-switch">${defs.map(([id,label])=>`<button class="${state.progressBodyMetric===id?'active':''}" data-progress-body-metric="${id}">${label}</button>`).join('')}</div>`;
+}
+renderProgressBody=function(){
+  const bounds=v10146PeriodBounds(),metric=state.progressBodyMetric||'weight',s=v10146BodySummary(metric,bounds),latest=getBodyLogs().slice().sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;
+  const derived=latest?bodyDerived(latest):{};
+  return `<section class="p146-body-head"><div><div class="kicker">Corps · ${esc(bounds.label)}</div><h1>Mesures corporelles</h1><p>Une courbe à la fois, avec la variation réelle sur la période.</p></div><button class="btn btn-outline compact" data-view="measurements">Toutes les mesures →</button></section>
+    ${v10146BodyMetricSelector()}
+    <section class="p146-main-chart p146-body-chart">
+      <div class="p146-chart-kpis"><div><span>Actuel</span><strong>${s.last!=null?`${v10146Number(s.last,s.digits)} ${s.unit}`:'—'}</strong></div><div><span>Début période</span><strong>${s.first!=null?`${v10146Number(s.first,s.digits)} ${s.unit}`:'—'}</strong></div><div><span>Variation</span><strong>${s.delta!=null&&s.points.length>1?v10146Signed(s.delta,s.unit,s.digits):'—'}</strong></div><div><span>Mesures</span><strong>${s.points.length}</strong></div></div>
+      ${s.points.length>=2?v10146SparkSvg(s.points,{unit:s.unit,digits:s.digits}):`<div class="p146-chart-empty"><strong>${s.points.length?'Première référence enregistrée':'Aucune mesure sur cette période'}</strong><span>${s.points.length?'Une seconde mesure fera apparaître la courbe.':'Ajoute une mesure depuis + Ajouter ou Mesures corporelles.'}</span></div>`}
+    </section>
+    <section class="p146-section"><div class="p146-section-head"><div><div class="kicker">Dernier relevé</div><h2>Composition & repères</h2></div><button data-view="measurements">Détails →</button></div><div class="p146-body-kpis"><div><span>Poids</span><strong>${latest&&bodyValue(latest,'weight')?`${v10146Number(bodyValue(latest,'weight'),1)} kg`:'—'}</strong></div><div><span>Tour de taille</span><strong>${latest&&bodyValue(latest,'waist')?`${v10146Number(bodyValue(latest,'waist'),1)} cm`:'—'}</strong></div><div><span>Masse grasse estimée</span><strong>${derived.bf!=null?`${v10146Number(derived.bf,1)} %`:'—'}</strong></div><div><span>Masse maigre estimée</span><strong>${derived.lean!=null?`${v10146Number(derived.lean,1)} kg`:'—'}</strong></div></div></section>`;
+};
+
+function v10146SkillExerciseSet(){
+  const set=new Set();SKILL_TREES.forEach(t=>t.levels.forEach(l=>{if(l.auto?.exercise)set.add(l.auto.exercise);}));return set;
+}
+function v10146UnifiedHistory(){
+  const skillSet=v10146SkillExerciseSet(),rows=[];
+  getHistory().forEach(s=>{
+    const entries=(s.entries||[]).filter(e=>e.type!=='timer'),skillCount=entries.filter(e=>skillSet.has(e.exercise)||/handstand|muscle.?up|front lever|human flag|l-sit|hspu/i.test(e.exercise||'')).length;
+    rows.push({id:`session:${s.id}`,rawId:s.id,date:s.date,category:entries.length&&skillCount>=Math.max(1,entries.length/2)?'skills':'force',kind:'session',title:s.name||'Séance KINETIK',detail:`${s.durationMinutes||0} min · effort ${s.rpe||'—'}/10`,action:true});
+  });
+  getQuickLogs().forEach(q=>{const skill=skillSet.has(q.exercise)||/handstand|muscle.?up|front lever|human flag|l-sit|hspu/i.test(q.exercise||'');rows.push({id:`quick:${q.id}`,date:q.date,category:skill?'skills':'force',kind:'quick',title:q.exercise||'Performance rapide',detail:`${quickLogJournalValue(q)} · Quick Log`});});
+  getActivities().forEach(a=>{const t=activityType(a.type);rows.push({id:`activity:${a.id}`,date:a.date,category:a.type==='mobility'?'body':'cardio',kind:'activity',title:t.label,detail:`${a.duration||0} min${a.distance?` · ${a.distance} ${t.metric||'km'}`:''} · effort ${a.rpe||'—'}/10`});});
+  getFlexLogs().forEach(f=>rows.push({id:`flex:${f.id}`,date:f.date,category:'body',kind:'mobility',title:f.name||'Mobilité',detail:`${f.durationMinutes||0} min · confort ${f.comfort||'—'}/5`}));
+  getBodyLogs().forEach(b=>{const w=bodyValue(b,'weight'),wa=bodyValue(b,'waist');if(w==null&&wa==null)return;rows.push({id:`body:${b.id||b.date}`,date:b.date,category:'body',kind:'body',title:'Mesures corporelles',detail:`${w!=null?`${v10146Number(w,1)} kg`:''}${w!=null&&wa!=null?' · ':''}${wa!=null?`taille ${v10146Number(wa,1)} cm`:''}`});});
+  return rows.sort((a,b)=>new Date(b.date)-new Date(a.date));
+}
+function v10146HistoryRowHtml(r){
+  const label=({force:'Force',skills:'Skill',body:'Corps',cardio:'Cardio'}[r.category]||'');
+  const inner=`<span class="p146-history-dot ${r.category}"></span><div><strong>${esc(r.title)}</strong><small>${formatDate(r.date)} · ${esc(r.detail)}</small></div><b>${r.action?'Voir →':label}</b>`;
+  return r.action?`<button class="p146-history-row" data-history="${esc(String(r.rawId))}">${inner}</button>`:`<div class="p146-history-row">${inner}</div>`;
+}
+renderProgressHistory=function(){
+  const bounds=v10146PeriodBounds(),filter=state.progressHistoryFilter||'all',all=v10146UnifiedHistory().filter(x=>v10146InPeriod(x.date,bounds)),rows=all.filter(x=>filter==='all'||x.category===filter);
+  const filters=[['all','Tout'],['force','Force'],['skills','Skills'],['body','Corps'],['cardio','Cardio']];
+  return `<section class="p146-history-head"><div><div class="kicker">Historique · ${esc(bounds.label)}</div><h1>Journal de progression</h1><p>Séances, performances rapides, corps et cardio réunis chronologiquement.</p></div><strong>${rows.length}</strong></section>
+    <div class="p146-history-filters">${filters.map(([id,label])=>`<button class="${filter===id?'active':''}" data-progress-history-filter="${id}">${label}</button>`).join('')}</div>
+    <section class="p146-history-list">${rows.length?rows.slice(0,60).map(v10146HistoryRowHtml).join(''):'<div class="p146-empty"><strong>Aucune donnée dans ce filtre.</strong><span>Change de période ou de catégorie.</span></div>'}</section>
+    ${state.selectedHistoryId?v1080HistoryDetail(state.selectedHistoryId):''}`;
+};
+
+renderProgress=function(){
+  if(!['overview','performance','skills','body','history'].includes(state.progressTab))state.progressTab='overview';
+  const content=state.progressTab==='performance'?renderProgressPerformance():state.progressTab==='skills'?renderProgressSkills():state.progressTab==='body'?renderProgressBody():state.progressTab==='history'?renderProgressHistory():renderProgressOverview();
+  const showPeriod=state.progressTab!=='skills';
+  return shell(`<header class="topbar p146-topbar"><div><div class="brand">Progression</div><div class="daylabel">Est-ce que je progresse · sur quoi · depuis quand</div></div></header>
+    ${renderProgressTabs()}
+    ${showPeriod?v10146PeriodControl():''}
+    <div class="p146-content">${content}</div>`, 'progress');
+};
+
+const _bindEventsV10146=bindEvents;
+bindEvents=function(){
+  _bindEventsV10146();
+  document.querySelectorAll('[data-progress-period]').forEach(b=>b.onclick=()=>{state.progressPeriod=b.dataset.progressPeriod||'30d';state.selectedHistoryId=null;render();});
+  document.querySelectorAll('[data-progress-metric]').forEach(b=>b.onclick=()=>{try{state.progressMetric=decodeURIComponent(b.dataset.progressMetric||'');}catch(e){state.progressMetric=b.dataset.progressMetric||null;}render();});
+  document.querySelectorAll('[data-progress-body-metric]').forEach(b=>b.onclick=()=>{state.progressBodyMetric=b.dataset.progressBodyMetric||'weight';render();});
+  document.querySelectorAll('[data-progress-history-filter]').forEach(b=>b.onclick=()=>{state.progressHistoryFilter=b.dataset.progressHistoryFilter||'all';state.selectedHistoryId=null;render();});
+};

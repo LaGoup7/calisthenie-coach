@@ -39,6 +39,6 @@ ok(result.evolved.includes('Depuis la première référence')&&result.evolved.in
 ok(result.done.includes('Routine terminée aujourd’hui')&&result.done.includes('confort 4/5'),'today mobility completion state missing');
 ok(result.levels.join('|')==='À travailler|À améliorer|Correcte|Bonne|Excellente','mobility score vocabulary thresholds incorrect');
 const progress=fs.readFileSync(__dirname+'/app-progress.js','utf8'),styles=fs.readFileSync(__dirname+'/styles.css','utf8');
-ok(progress.includes('V10.145 · Mobility finalisation'),'v10.145 mobility runtime marker missing');
-ok(styles.includes('KINETIK v10.145 · Mobility finalisation'),'v10.145 mobility CSS marker missing');
+ok(progress.includes('V10.145 · Mobility finalisation'),'v10.146 mobility runtime marker missing');
+ok(styles.includes('KINETIK v10.145 · Mobility finalisation'),'v10.146 mobility CSS marker missing');
 if(failures.length){console.error(`MOBILITY_FINAL_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1)}console.log(`MOBILITY_FINAL_OK ${checks} checks`);

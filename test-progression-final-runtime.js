@@ -1,0 +1,57 @@
+const fs=require('fs'),vm=require('vm');const {APP_SOURCE_FILES}=require('./test-app-source');
+const failures=[];let checks=0;const ok=(v,m)=>{checks++;if(!v)failures.push(m)};
+const store=new Map(),sessionStore=new Map();
+const localStorage={getItem:k=>store.has(k)?store.get(k):null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k),clear:()=>store.clear()};
+const sessionStorage={getItem:k=>sessionStore.has(k)?sessionStore.get(k):null,setItem:(k,v)=>sessionStore.set(k,String(v)),removeItem:k=>sessionStore.delete(k),clear:()=>sessionStore.clear()};
+const appNode={innerHTML:'',dataset:{},classList:{add(){},remove(){},toggle(){}},querySelectorAll(){return[]}};
+const document={visibilityState:'hidden',hasFocus:()=>false,getElementById:id=>id==='app'?appNode:null,querySelectorAll:()=>[],querySelector:()=>null,addEventListener(){},removeEventListener(){},documentElement:{style:{setProperty(){}},dataset:{},classList:{add(){},remove(){},toggle(){}}},body:{appendChild(){},classList:{add(){},remove(){},toggle(){}}},createElement:tag=>({tagName:String(tag).toUpperCase(),style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},appendChild(){},remove(){},click(){},setAttribute(){},getContext(){return null}})};
+const sandbox={console,localStorage,sessionStorage,document,navigator:{serviceWorker:undefined,userAgent:'Node'},location:{origin:'https://kinetik.example',pathname:'/',search:'',href:'https://kinetik.example/'},history:{replaceState(){}},URL,URLSearchParams,Blob,FileReader:function(){},setTimeout,clearTimeout,setInterval,clearInterval,requestAnimationFrame:fn=>setTimeout(fn,0),cancelAnimationFrame:clearTimeout,confirm:()=>true,prompt:()=>null,alert(){},fetch:async()=>({ok:false,status:503,json:async()=>({})}),performance:{now:()=>Date.now()},indexedDB:undefined,crypto:global.crypto,queueMicrotask:fn=>fn(),Intl,atob,btoa,Uint8Array};sandbox.window=sandbox;sandbox.self=sandbox;sandbox.window.addEventListener=()=>{};sandbox.window.removeEventListener=()=>{};sandbox.window.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});vm.createContext(sandbox);
+for(const file of APP_SOURCE_FILES)vm.runInContext(fs.readFileSync(__dirname+'/'+file,'utf8'),sandbox,{filename:file});
+const result=vm.runInContext(`(()=>{
+  const day=n=>{const d=new Date();d.setDate(d.getDate()+n);d.setHours(12,0,0,0);return d.toISOString()};
+  setHistory([
+    {id:'s1',date:day(-25),name:'Pull',durationMinutes:45,rpe:6,entries:[{exercise:'Tractions strictes',type:'reps',value:5,set:1},{exercise:'Dips',type:'reps',value:5,set:1},{exercise:'Dead hang',type:'hold',value:45,set:1}]},
+    {id:'s2',date:day(-2),name:'Push + Pull',durationMinutes:55,rpe:7,entries:[{exercise:'Tractions strictes',type:'reps',value:10,set:1},{exercise:'Dips',type:'reps',value:8,set:1},{exercise:'Dead hang',type:'hold',value:60,set:1}]}
+  ]);
+  setQuickLogs([{id:'q1',date:day(-1),exercise:'Pompes',type:'reps',value:25,source:'quick'}]);
+  setBodyLogs([{id:'b2',date:day(-2),weight:88.5,waist:93,neck:41},{id:'b1',date:day(-25),weight:90,waist:96,neck:41}]);
+  setActivities([{id:'a1',date:day(-3),type:'running',duration:40,distance:7,rpe:6}]);
+  setFlexLogs([{id:'f1',date:day(-4),name:'Épaules ciblée',durationMinutes:12,comfort:4,entries:[]}]);
+  state.view='progress';state.progressPeriod='30d';state.progressTab='overview';
+  const overview=renderProgress();
+  state.progressTab='performance';state.progressMetric='Tractions strictes';const performance=renderProgress();
+  state.progressTab='skills';const skills=renderProgress();
+  state.progressTab='body';state.progressBodyMetric='weight';const body=renderProgress();
+  state.progressTab='history';state.progressHistoryFilter='all';const history=renderProgress();
+  state.progressHistoryFilter='cardio';const cardio=renderProgress();
+  const pull=v10146PerformanceSummary('Tractions strictes',v10146PeriodBounds('30d'));
+  const weight=v10146BodySummary('weight',v10146PeriodBounds('30d'));
+  return {overview,performance,skills,body,history,cardio,pull,weight,tabs:renderProgressTabs()};
+})()`,sandbox);
+ok(result.tabs.includes('Performances')&&result.tabs.includes('Skills')&&result.tabs.includes('Corps')&&!result.tabs.includes('Volume</strong>'),'final progress taxonomy missing');
+ok(result.overview.includes('Est-ce que tu progresses ?'),'overview question missing');
+ok(result.overview.includes('Tractions')&&result.overview.includes('+5 reps'),'overview performance delta missing');
+ok(result.overview.includes('Poids')&&result.overview.includes('-1,5 kg'),'overview body delta missing');
+ok(result.overview.includes('Ce qui progresse · ce qui stagne'),'trend intelligence block missing');
+ok(result.overview.includes('Records personnels')&&result.overview.includes('Parcours techniques'),'overview records/skills split missing');
+ok(!result.overview.includes('Ton corps en un coup d’œil'),'legacy body-map overview still primary');
+ok(result.performance.includes('Une seule métrique à la fois'),'single metric performance concept missing');
+ok(result.performance.includes('p146-chart-svg')&&result.performance.includes('10 reps'),'performance chart not rendered from two references');
+ok(result.performance.includes('Volume d’entraînement')&&result.performance.includes('Évaluations standardisées'),'secondary performance details missing');
+ok(result.pull.best===10&&result.pull.first===5&&Math.round(result.pull.pct)===100,'performance progression calculation incorrect');
+ok(result.skills.includes('Compétences techniques')&&result.skills.includes('Objectif technique principal'),'Skills progression page missing');
+ok(result.skills.includes('Capacités fondamentales')&&result.skills.includes('Rang'),'skills/rank compact structure missing');
+ok(result.body.includes('Mesures corporelles')&&result.body.includes('p146-chart-svg'),'body single chart missing');
+ok(result.body.includes('Tour de taille')&&result.body.includes('Masse grasse estimée'),'body metric structure incomplete');
+ok(Math.abs(result.weight.delta+1.5)<0.001,'body delta calculation incorrect');
+ok(result.history.includes('Journal de progression')&&result.history.includes('Force')&&result.history.includes('Cardio'),'filtered unified history missing');
+ok(result.history.includes('Mesures corporelles')&&result.history.includes('Course'),'unified body/cardio entries missing');
+ok(result.cardio.includes('Course')&&!result.cardio.includes('Mesures corporelles'),'cardio history filter not applied');
+ok(result.overview.includes('data-progress-period="90d"')&&result.performance.includes('30 derniers jours'),'shared progress period control missing');
+const progress=fs.readFileSync(__dirname+'/app-progress.js','utf8'),styles=fs.readFileSync(__dirname+'/styles.css','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8'),sw=fs.readFileSync(__dirname+'/sw.js','utf8'),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
+ok(progress.includes('KINETIK v10.146 · Progression finalisation'),'v10.146 Progression runtime marker missing');
+ok(styles.includes('KINETIK v10.146 · Progression finalisation'),'v10.146 Progression CSS marker missing');
+ok(html.includes('app-progress.js?v=10.146')&&html.includes('styles.css?v=10.146'),'v10.146 assets missing');
+ok(sw.includes('kinetik-v10-146-progression-final')&&sw.includes('app-progress.js?v=10.146'),'v10.146 service worker cache missing');
+ok(pkg.version==='10.146.0','package version mismatch');
+if(failures.length){console.error(`PROGRESSION_FINAL_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1)}console.log(`PROGRESSION_FINAL_OK ${checks} checks`);

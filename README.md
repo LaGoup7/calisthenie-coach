@@ -443,3 +443,6 @@ La page Planning > Programmes est désormais centrée sur la gestion du programm
 
 ## v10.145 — Mobilité finalisée
 La page Mobilité suit désormais une hiérarchie simple : **Aujourd'hui → Bilan mobilité → Progression → détails secondaires**. Profil et Évaluation ont été fusionnés, les scores sont traduits en niveaux lisibles, la fraîcheur des mesures suit le repère de 28 jours et le graphique n'apparaît qu'à partir de deux dates de mesure.
+
+### v10.146 — Progression finalisée
+La page Progression répond désormais directement à « est-ce que je progresse ? ». Elle sépare Vue d'ensemble, Performances, Skills, Corps et Historique. Les comparaisons utilisent une période commune (30 jours, 3 mois, 6 mois ou tout), les graphiques ne s'affichent qu'avec au moins deux références, et l'historique réunit séances, Quick Logs, activités, mobilité et mesures corporelles avec filtres. Le volume reste disponible comme information secondaire dans Performances.

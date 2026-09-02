@@ -95,7 +95,7 @@ vm.runInContext(appSource+'\n'+dailySource+'\n'+localSource+'\n'+pushSource,sand
 
   const sw=fs.readFileSync(__dirname+'/sw.js','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8'),appText=loadAppSource(__dirname),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
   ok(sw.includes("addEventListener('push'")&&sw.includes('registration.showNotification'),'service worker push event is missing');
-  ok(sw.includes('web-push-manager.js?v=10.145')&&html.includes('web-push-manager.js?v=10.145'),'Web Push manager is not in PWA asset chain');
+  ok(sw.includes('web-push-manager.js?v=10.146')&&html.includes('web-push-manager.js?v=10.146'),'Web Push manager is not in PWA asset chain');
   ok(pkg.dependencies&&pkg.dependencies['web-push'],'server web-push dependency missing');
   ok(appText.includes('webPushDeviceState: "cc_web_push_device_v1"'),'device Web Push state not registered for reset');
   ok(appText.includes('function backupStorageEntries()')&&appText.includes("'localNotificationState','webPushDeviceState','skillPriorities'"),'device push state would leak into user backup');

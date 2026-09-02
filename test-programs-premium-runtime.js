@@ -32,9 +32,9 @@ ok(result.editor.includes('custom-editor-impact-v10144'),'session impact preview
 ok(result.editor.includes('Durée estimée')&&result.editor.includes('Zones sollicitées')&&result.editor.includes('Matériel'),'impact vocabulary incomplete');
 ok(result.impact.steps>0&&result.impact.minutes>0,'impact helper does not calculate session content');
 const planning=fs.readFileSync(__dirname+'/app-planning.js','utf8'),styles=fs.readFileSync(__dirname+'/styles.css','utf8'),html=fs.readFileSync(__dirname+'/index.html','utf8'),sw=fs.readFileSync(__dirname+'/sw.js','utf8'),pkg=JSON.parse(fs.readFileSync(__dirname+'/package.json','utf8'));
-ok(planning.includes('KINETIK v10.145 · Programmes premium management'),'Programs v10.145 runtime marker missing');
-ok(styles.includes('KINETIK v10.145 · Programmes premium management'),'Programs v10.145 CSS marker missing');
-ok(html.includes('app-planning.js?v=10.145'),'v10.145 planning asset missing');
-ok(sw.includes('kinetik-v10-145-mobility-final'),'v10.145 service worker cache missing');
-ok(pkg.version==='10.145.0','package version mismatch');
+ok(planning.includes('KINETIK v10.145 · Programmes premium management'),'Programs v10.146 runtime marker missing');
+ok(styles.includes('KINETIK v10.145 · Programmes premium management'),'Programs v10.146 CSS marker missing');
+ok(html.includes('app-planning.js?v=10.146'),'v10.146 planning asset missing');
+ok(sw.includes('kinetik-v10-146-progression-final'),'v10.146 service worker cache missing');
+ok(pkg.version==='10.146.0','package version mismatch');
 if(failures.length){console.error(`PROGRAMS_PREMIUM_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1)}console.log(`PROGRAMS_PREMIUM_OK ${checks} checks`);
