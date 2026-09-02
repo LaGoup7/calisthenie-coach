@@ -392,3 +392,7 @@ Correction ciblée après le LOT B : le cockpit Aujourd’hui possède désormai
 ## V10.135 · Hub Ajouter premium
 
 Le bouton flottant **Ajouter** devient un centre de saisie rapide : dernière activité à reprendre, sports favoris calculés automatiquement, Performance rapide, Gainage, Mesure et planification. Une reprise d’activité préremplit durée, distance et RPE sans transformer l’ancienne activité.
+
+## V10.136 · Favoris pour Enregistrement rapide
+
+Le Quick Log devient personnalisable : jusqu'à 8 exercices favoris, ordre manuel, recherche/catégories, suggestions basées sur l'usage réel et valeurs de saisie rapides adaptées à chaque exercice. Les favoris sont locaux, sauvegardables et n'influencent jamais le programme ou les objectifs.

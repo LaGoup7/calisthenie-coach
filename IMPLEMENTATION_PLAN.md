@@ -258,3 +258,11 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - Reprise de la dernière activité avec préremplissage.
 - Accès secondaire à toutes les disciplines.
 - Planification accessible depuis le même hub.
+
+### V10.136 — Favoris Enregistrement rapide ✅
+- jusqu'à 8 exercices rapides configurables ;
+- gestion intégrée (recherche, catégories, étoile, ordre) ;
+- suggestions triées selon l'usage sur 90 jours ;
+- dernière valeur + valeurs rapides + saisie exacte ;
+- bandes conservées pour les mouvements assistés ;
+- stockage `cc_quick_favorites_v1` inclus dans backup/import.
