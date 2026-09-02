@@ -279,3 +279,11 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - Valeur exacte conservée.
 - Recherche exercice/favoris réparée et normalisée.
 - Préférences incluses dans la sauvegarde locale.
+
+
+## V10.139 — Hotfix recherche Quick Log — TERMINÉ
+- Recherche favoris et bibliothèque Quick Log durcie.
+- Masquage des cartes via classe CSS `quick-search-hidden` + `style.display` explicite.
+- Recherche insensible aux accents conservée.
+- Recherche texte prioritaire sur les filtres de catégorie.
+- Test navigateur/DOM simulé dédié : `test-search-hotfix-runtime.js`.

@@ -410,3 +410,9 @@ Le Quick Log devient personnalisable : jusqu'à 8 exercices favoris, ordre manue
 - La saisie exacte reste toujours disponible.
 - Les valeurs sont éditables depuis **Gérer mes favoris** et sauvegardées localement / dans les backups KINETIK.
 - Recherche d'exercices renforcée : insensible aux accents et étendue automatiquement à toutes les catégories dès qu'une recherche est saisie.
+
+
+## V10.139 · Correctif recherche Quick Log
+- Correction du filtrage visuel des recherches d’exercices et de favoris.
+- Les résultats non correspondants utilisent désormais un masquage explicite `display:none`, robuste face aux cartes en `display:grid`.
+- La recherche reste insensible aux accents et repasse automatiquement sur Toutes les catégories lorsqu’un texte est saisi.

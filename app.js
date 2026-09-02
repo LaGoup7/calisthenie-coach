@@ -1,4 +1,4 @@
-/* KINETIK v10.138 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.139 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -1332,12 +1332,24 @@ function renderQuickFavoritesManager(){
   const selected=getQuickFavorites(),candidates=quickFavoriteCandidates(),categories=[...new Set(candidates.map(x=>x.category))].sort((a,b)=>a.localeCompare(b,'fr'));
   return `<div class="quick-favorite-manager"><div class="quick-favorite-manager-head"><div><div class="kicker">Personnalisation · ${selected.length}/8</div><h3>Mes exercices rapides</h3><p>Épingle jusqu’à 8 exercices et définis 3 valeurs rapides pour chacun. La saisie exacte reste toujours disponible.</p></div><button type="button" class="btn btn-primary compact" id="doneQuickFavorites">Terminé</button></div>${state.quickFavoriteMessage?`<div class="quick-favorite-message">${esc(state.quickFavoriteMessage)}</div>`:''}${selected.length?`<div class="quick-favorite-selected">${selected.map((name,i)=>{const type=exerciseInfo(name)?.prescription?.type||'reps',values=quickFavoriteAddValues(name,type),unit=type.startsWith('hold')?'sec':'reps';return `<div class="quick-favorite-selected-row"><div class="quick-favorite-selected-main"><span><b>${i+1}</b><strong>${esc(name)}</strong></span><span class="quick-favorite-order"><button type="button" data-quick-favorite-move="up" data-quick-favorite-name="${encodeURIComponent(name)}" ${i===0?'disabled':''}>↑</button><button type="button" data-quick-favorite-move="down" data-quick-favorite-name="${encodeURIComponent(name)}" ${i===selected.length-1?'disabled':''}>↓</button><button type="button" class="remove" data-quick-favorite-toggle="${encodeURIComponent(name)}">×</button></span></div><div class="quick-favorite-presets-editor"><span>Valeurs rapides</span>${values.map((v,j)=>`<label><small>${j+1}</small><input type="number" min="1" step="1" inputmode="numeric" value="${v}" data-quick-favorite-preset-name="${encodeURIComponent(name)}" data-quick-favorite-preset-index="${j}" aria-label="Valeur rapide ${j+1} pour ${esc(name)}"></label>`).join('')}<em>${unit}</em></div></div>`}).join('')}</div>`:''}<div class="quick-favorite-picker"><div class="quick-search-wrap"><span aria-hidden="true">⌕</span><input id="quickFavoriteSearch" type="search" placeholder="Rechercher un exercice…" autocomplete="off"></div><div class="quick-category-tabs favorite-tabs" role="tablist"><button type="button" class="quick-favorite-category ${state.quickFavoriteCategory==='Tous'?'active':''}" data-quick-favorite-category="Tous">Tous</button>${categories.map(c=>`<button type="button" class="quick-favorite-category ${state.quickFavoriteCategory===c?'active':''}" data-quick-favorite-category="${esc(c)}">${esc(c)}</button>`).join('')}</div><div class="quick-favorite-list" id="quickFavoriteList">${candidates.map(item=>{const active=selected.includes(item.name),usage=quickFavoriteUsageScore(item.name);return `<button type="button" class="quick-favorite-option ${active?'active':''}" data-quick-favorite-toggle="${encodeURIComponent(item.name)}" data-quick-favorite-category-name="${esc(item.category)}" data-quick-favorite-search="${esc((item.name+' '+item.category+' '+item.level+' '+(item.muscles||[]).join(' ')).toLowerCase())}"><span>${quickExerciseThumb(item.name)}</span><span><strong>${esc(item.name)}</strong><small>${esc(item.category)}${usage?` · utilisé récemment`:''}</small></span><b>${active?'★':'☆'}</b></button>`}).join('')}</div><div class="quick-exercise-empty" id="quickFavoriteEmpty" hidden>Aucun exercice ne correspond à cette recherche.</div></div></div>`;
 }
+function setQuickSearchVisibility(card,show){
+  if(!card)return;
+  card.hidden=!show;
+  card.classList?.toggle('quick-search-hidden',!show);
+  if(card.style)card.style.display=show?'':'none';
+}
+function setQuickSearchEmptyState(element,show){
+  if(!element)return;
+  element.hidden=!show;
+  element.classList?.toggle('quick-search-hidden',!show);
+  if(element.style)element.style.display=show?'':'none';
+}
 function filterQuickFavoritePicker(){
   const q=normalizeQuickSearchText(document.getElementById('quickFavoriteSearch')?.value||'');
   if(q){state.quickFavoriteCategory='Tous';document.querySelectorAll('[data-quick-favorite-category]').forEach(tab=>tab.classList.toggle('active',tab.dataset.quickFavoriteCategory==='Tous'));}
   const cat=q?'Tous':(state.quickFavoriteCategory||'Tous');let visible=0;
-  document.querySelectorAll('.quick-favorite-option').forEach(card=>{const hay=normalizeQuickSearchText(card.dataset.quickFavoriteSearch||''),show=(cat==='Tous'||card.dataset.quickFavoriteCategoryName===cat)&&(!q||hay.includes(q));card.hidden=!show;if(show)visible++;});
-  const empty=document.getElementById('quickFavoriteEmpty');if(empty)empty.hidden=visible!==0;
+  document.querySelectorAll('.quick-favorite-option').forEach(card=>{const hay=normalizeQuickSearchText(card.dataset.quickFavoriteSearch||''),show=(cat==='Tous'||card.dataset.quickFavoriteCategoryName===cat)&&(!q||hay.includes(q));setQuickSearchVisibility(card,show);if(show)visible++;});
+  setQuickSearchEmptyState(document.getElementById('quickFavoriteEmpty'),visible===0);
 }
 function toggleQuickFavorite(name){
   const list=getQuickFavorites(),i=list.indexOf(name);
@@ -1491,7 +1503,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.138',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.139',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -2018,10 +2030,11 @@ function filterQuickExercisePicker(){
     const okCategory=active==='Tous'||card.dataset.quickExerciseCategory===active;
     const hay=normalizeQuickSearchText(card.dataset.quickExerciseSearch||'');
     const okSearch=!q||hay.includes(q);
-    const show=okCategory&&okSearch;card.hidden=!show;if(show){visible++;if(!firstVisible)firstVisible=card;}
+    const show=okCategory&&okSearch;setQuickSearchVisibility(card,show);if(show){visible++;if(!firstVisible)firstVisible=card;}
   });
-  const empty=document.getElementById('quickExerciseEmpty');if(empty)empty.hidden=visible!==0;
-  if(q&&firstVisible&&!document.querySelector('.quick-exercise-card.selected:not([hidden])'))selectQuickExerciseCard(firstVisible);
+  setQuickSearchEmptyState(document.getElementById('quickExerciseEmpty'),visible===0);
+  const selectedVisible=document.querySelector('.quick-exercise-card.selected:not(.quick-search-hidden)');
+  if(q&&firstVisible&&!selectedVisible)selectQuickExerciseCard(firstVisible);
 }
 function selectQuickExerciseCard(card){
   const input=document.getElementById('quickExercise');if(!input||!card)return;

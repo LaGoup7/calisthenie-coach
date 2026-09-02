@@ -1,4 +1,4 @@
-/* KINETIK v10.138 · Adaptive coaching, assessment and progression intelligence. */
+/* KINETIK v10.139 · Adaptive coaching, assessment and progression intelligence. */
 /* V10.0 · Adaptive Local Coach                                                */
 /* Cloud/onboarding intentionally excluded.                                    */
 /* ========================================================================== */

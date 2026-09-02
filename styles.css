@@ -4120,7 +4120,7 @@ html[data-theme="dark"] .quick-log-journal-list,
 html[data-theme="dark"] .quick-log-delete,
 html[data-theme="dark"] .quick-log-journal-empty{background:var(--surface-2)}
 
-/* v10.138 · Quick favorite custom presets + search repair */
+/* v10.139 · Quick favorite custom presets + search repair */
 .quick-favorite-card .quick-preset-actions{gap:6px}
 .quick-favorite-card .quick-preset-actions .quick-favorite-value{min-width:40px;flex:0 0 auto}
 .quick-favorite-selected{gap:9px}
@@ -4153,3 +4153,9 @@ html[data-theme="dark"] .quick-log-journal-empty{background:var(--surface-2)}
   .quick-favorite-presets-editor>span{grid-column:1/-1}
   .quick-favorite-presets-editor>em{display:none}
 }
+
+/* v10.139 · Quick exercise search hardening */
+.quick-search-hidden{display:none!important}
+
+/* v10.139 · Quick exercise search hardening */
+.quick-search-hidden{display:none!important}
