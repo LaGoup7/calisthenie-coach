@@ -1,4 +1,4 @@
-/* KINETIK v10.148 · Mobility, progression UX and product-coaching layers. */
+/* KINETIK v10.149 · Mobility, progression UX and product-coaching layers. */
 /* V10.145 · Mobility finalisation                                            */
 /* Today → Mobility balance → Progression → Secondary details                 */
 /* ========================================================================== */
@@ -930,7 +930,7 @@ function v1088ConnectionSection(){
 }
 function v1088ProfileContext(p){
   const sports=(p.sports||[]).map(athleteSportLabel),places=(p.locations||[]).map(x=>({home:'Maison',outdoor:'Parc / extérieur',gym:'Salle',club:'Club / box'}[x]||x));
-  return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Contexte sportif</div><h2>Où et comment tu t’entraînes</h2></div><button id="editAthleteProfile">Modifier →</button></div>
+  return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Contexte sportif</div><h2>Où et comment tu t’entraînes</h2></div><button data-edit-athlete-profile>Modifier →</button></div>
     <div class="p88-context-grid">
       <div><span>Sports</span><strong>${sports.join(' · ')||'Non renseignés'}</strong></div>
       <div><span>Lieux</span><strong>${places.join(' · ')||'Non renseignés'}</strong></div>
@@ -942,24 +942,56 @@ function v1088ProfileContext(p){
 function v1088EquipmentSection(){
   const setup=getEquipmentSetup(),equipment=EQUIPMENT_CATALOG.filter(x=>setup[x.id]),active=getActiveTrainingCycle(),missing=[];
   Object.values(active.days||{}).forEach(w=>(w.exercises||[]).forEach(e=>{const a=exerciseAdaptation(e.name);if(!a.equipment.available&&exerciseInfo(e.name))missing.push(e.name);}));
-  return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Matériel</div><h2>${equipment.length} équipement${equipment.length>1?'s':''} disponible${equipment.length>1?'s':''}</h2></div><button id="editAthleteProfile">Modifier →</button></div>
+  const missingNames=[...new Set(missing)];
+  return `<section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Matériel</div><h2>${equipment.length} équipement${equipment.length>1?'s':''} disponible${equipment.length>1?'s':''}</h2></div><button data-edit-athlete-profile>Modifier →</button></div>
     ${equipment.length?`<div class="p88-equipment">${equipment.map(x=>`<div>${equipmentVisualIcon(x.label)}<span>${esc(x.label)}</span></div>`).join('')}</div>`:'<p class="p88-muted">Aucun matériel renseigné.</p>'}
-    ${missing.length?`<div class="p88-equipment-warning"><strong>${[...new Set(missing)].length} exercice${[...new Set(missing)].length>1?'s':''} du cycle à adapter</strong><span>KINETIK signalera une variante compatible au moment utile.</span></div>`:'<div class="p88-equipment-ok">Cycle actuel compatible avec ton matériel.</div>'}
+    ${missingNames.length?`<div class="p88-equipment-warning"><div><strong>${missingNames.length} exercice${missingNames.length>1?'s':''} du cycle à adapter</strong><span>${missingNames.map(esc).join(' · ')}</span></div><button data-view="week">Voir dans le planning →</button></div>`:'<div class="p88-equipment-ok">Cycle actuel compatible avec ton matériel.</div>'}
   </section>`;
 }
 
+function v10149ProfileStatus(p){
+  const raw=parse(STORAGE.athleteProfile,{}),setupRaw=parse(STORAGE.equipmentSetup,{}),gaps=[];
+  const checks=[
+    [raw.name,'Ajouter ton prénom ou pseudo'],
+    [raw.age,'Renseigner ton âge'],
+    [p.height,'Renseigner ta taille'],
+    [p.weight,'Enregistrer ton poids actuel'],
+    [raw.primaryGoal&&raw.primaryGoal!=='Progression générale','Définir un objectif précis'],
+    [raw.secondaryGoal||raw.goalHorizon,'Ajouter un objectif secondaire ou un horizon'],
+    [Array.isArray(raw.trainingDays)&&raw.trainingDays.length,'Confirmer tes jours d’entraînement'],
+    [Array.isArray(raw.sports)&&raw.sports.length,'Confirmer tes sports'],
+    [Array.isArray(raw.locations)&&raw.locations.length,'Confirmer tes lieux'],
+    [Object.keys(setupRaw).length,'Confirmer ton matériel']
+  ];
+  checks.forEach(([ok,label])=>{if(!ok)gaps.push(label);});
+  return {completion:Math.round((checks.length-gaps.length)/checks.length*100),gaps};
+}
+function v10149ProfileFacts(p){
+  const facts=[];
+  if(p.age)facts.push(`<div><span>Âge</span><strong>${p.age} ans</strong></div>`);
+  if(p.height)facts.push(`<div><span>Taille</span><strong>${Number(p.height).toFixed(0)} cm</strong></div>`);
+  if(p.weight)facts.push(`<div><span>Poids actuel</span><strong>${Number(p.weight).toFixed(1)} kg</strong></div>`);
+  return facts.length?`<div class="p149-identity-facts">${facts.join('')}</div>`:'';
+}
+function v10149ProfileNext(status){
+  if(!status.gaps.length)return `<section class="p149-profile-ready"><div><span>Profil prêt</span><strong>KINETIK dispose des informations essentielles pour personnaliser ton programme.</strong></div><b>✓</b></section>`;
+  return `<section class="p149-profile-next"><div><div class="kicker">À compléter</div><h2>${status.gaps.length} information${status.gaps.length>1?'s':''} utile${status.gaps.length>1?'s':''}</h2><p>${status.gaps.slice(0,3).map(esc).join(' · ')}${status.gaps.length>3?' · …':''}</p></div><button class="btn btn-primary compact" data-edit-athlete-profile>Compléter</button></section>`;
+}
+
 renderMore=function(){
-  const p=getAthleteProfile(),cycle=getActiveTrainingCycle(),cs=getCycleState(),completion=athleteProfileCompletion(p),rank=getRankState();
-  return shell(`<header class="topbar p88-topbar"><div><div class="brand">Profil</div><div class="daylabel">Qui tu es · ce que tu vises · ce dont KINETIK dispose</div></div><button class="btn btn-primary compact" id="editAthleteProfile">Modifier</button></header>
+  const p=getAthleteProfile(),cycle=getActiveTrainingCycle(),cs=getCycleState(),status=v10149ProfileStatus(p),rank=getRankState();
+  return shell(`<header class="topbar p88-topbar"><div><div class="brand">Profil</div><div class="daylabel">Tes objectifs, ton rythme et le contexte utilisé par KINETIK</div></div><button class="btn btn-primary compact" data-edit-athlete-profile>Modifier</button></header>
 
     <section class="p88-identity">
       <div class="athlete-avatar large">${athleteInitials(p.name)}</div>
-      <div><div class="kicker">Identité sportive</div><h1>${esc(p.name||'Mon profil')}</h1><p>${esc(p.experience)}${p.yearsTraining?` · ${p.yearsTraining} an${p.yearsTraining>1?'s':''} de pratique`:''}${p.age?` · ${p.age} ans`:''}</p></div>
-      <div class="p88-completion"><strong>${completion}%</strong><span>profil renseigné</span></div>
+      <div><div class="kicker">Identité sportive</div><h1>${esc(p.name||'Mon profil')}</h1><p>${esc(p.experience)}${p.yearsTraining?` · ${p.yearsTraining} an${p.yearsTraining>1?'s':''} de pratique`:''}</p>${v10149ProfileFacts(p)}</div>
+      <div class="p88-completion"><strong>${status.completion}%</strong><span>personnalisation</span><i><b style="width:${status.completion}%"></b></i></div>
     </section>
 
+    ${v10149ProfileNext(status)}
+
     <section class="p88-goal">
-      <div class="p88-section-head"><div><div class="kicker">Objectifs</div><h2>${esc(p.primaryGoal)}</h2></div><button id="editAthleteProfile">Modifier →</button></div>
+      <div class="p88-section-head"><div><div class="kicker">Objectifs</div><h2>${esc(p.primaryGoal)}</h2></div><button data-edit-athlete-profile>Modifier →</button></div>
       ${p.secondaryGoal?`<p><span>Secondaire</span><strong>${esc(p.secondaryGoal)}</strong></p>`:''}
       <div class="p88-goal-cycle"><div><span>Cycle actuel</span><strong>${esc(cycle.name)} · S${cs.week}/${cs.weekCount}</strong></div>${p.goalHorizon?`<div><span>Horizon</span><strong>${esc(p.goalHorizon)}</strong></div>`:''}</div>
       <button class="p88-inline-link" data-view="week">Voir le programme actuel →</button>

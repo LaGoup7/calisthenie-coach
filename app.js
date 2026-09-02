@@ -1,4 +1,4 @@
-/* KINETIK v10.148 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.149 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -1503,7 +1503,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.148',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.149',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -4162,7 +4162,7 @@ async function hydrateBodyPhotos(){const imgs=[...document.querySelectorAll('[da
 
 function bindEvents(){
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;state.selectedHistoryId=null;render();});
-  const editAthlete=document.getElementById('editAthleteProfile');if(editAthlete)editAthlete.onclick=()=>{state.athleteProfileEditor=true;render();};
+  document.querySelectorAll('#editAthleteProfile,[data-edit-athlete-profile]').forEach(editAthlete=>editAthlete.onclick=()=>{state.athleteProfileEditor=true;render();});
   document.querySelectorAll('.athlete-training-day,.athlete-sport-check,.athlete-location-check,.athlete-equipment-check').forEach(el=>el.onchange=()=>el.closest('label')?.classList.toggle('selected',el.checked));
   const cancelAthlete=document.getElementById('cancelAthleteProfile');if(cancelAthlete)cancelAthlete.onclick=()=>{state.athleteProfileEditor=false;render();};
   const saveAthlete=document.getElementById('saveAthleteProfile');if(saveAthlete)saveAthlete.onclick=()=>{
