@@ -1,4 +1,4 @@
-/* KINETIK v10.139 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.140 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -1503,7 +1503,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.139',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.140',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -4203,6 +4203,7 @@ function bindEvents(){
   document.querySelectorAll('[data-progress-tab]').forEach(b=>b.onclick=()=>{state.progressTab=b.dataset.progressTab;state.selectedHistoryId=null;render();});
   document.querySelectorAll('[data-today-progress]').forEach(b=>b.onclick=()=>{state.view='progress';state.progressTab=b.dataset.todayProgress||'performance';state.selectedHistoryId=null;render();});
   const openAddHub=document.getElementById('openAddHub');if(openAddHub)openAddHub.onclick=()=>{state.addHubOpen=true;state.quickEditor=false;state.quickToast=null;render();};
+  document.querySelectorAll('[data-open-add-hub]').forEach(b=>b.onclick=()=>{state.addHubOpen=true;state.quickEditor=false;state.quickToast=null;render();});
   const closeAddHub=document.getElementById('closeAddHub');if(closeAddHub)closeAddHub.onclick=()=>{state.addHubOpen=false;render();};
   document.querySelectorAll('[data-add-action]').forEach(b=>b.onclick=()=>{const action=b.dataset.addAction;state.addHubOpen=false;if(action==='quick'){state.quickEditor=true;state.quickToast=null;render();return;}if(action==='activity'){state.activityPresetData=null;state.activityPresetType=b.dataset.activityType||addHubPreferredActivityType();state.activityEditId=null;state.activityEditor=true;render();return;}if(action==='core'){state.coreTimerOpen=true;render();return;}if(action==='measure'){state.bodyEditor=true;state.bodyEditorMode='quick';render();return;}if(action==='plan'){state.planningEditor=true;state.planningEditId=null;state.planningEditorDate=localDateKey();state.view='week';render();return;}});
   document.querySelectorAll('[data-add-activity-type]').forEach(b=>b.onclick=()=>{state.addHubOpen=false;state.activityEditId=null;state.activityPresetData=null;state.activityPresetType=b.dataset.addActivityType||'running';state.activityEditor=true;render();});

@@ -1,4 +1,4 @@
-/* KINETIK v10.139 · Daily journey, reminders, shortcuts and Web Push settings UI. */
+/* KINETIK v10.140 · Daily journey, reminders, shortcuts and Web Push settings UI. */
 /* KINETIK v10.120 · Step 6 · Today Agenda                                   */
 /* One compact surface for the Daily Tasks Engine.                            */
 /* Completed tasks leave the active list and feed the daily progress.         */
@@ -82,7 +82,7 @@ function renderTodayPrimaryShortcuts(){
   const rank=getRankState();
   const core=typeof coreTimerTodaySummary==='function'?coreTimerTodaySummary():{sets:0,seconds:0};
   const activity=todayActivityShortcutMeta();
-  return `<button class="cockpit-card rank-cockpit" data-view="skills"><span>${uiIcon('award')}</span><strong>${esc(rank.displayName||rank.current.name)}</strong><small>${rank.next?`${Math.round(rank.readiness*100)}% vers ${esc(rank.next.name)}`:'Rang maximal'}</small></button><button class="cockpit-card today-action-card core-cockpit" type="button" data-open-core-timer="true"><span>${uiIcon('clock')}</span><strong>Gainage</strong><small>${core.sets?`${core.sets} maintien${core.sets>1?'s':''} · ${coreTimerFormat(core.seconds)} aujourd’hui`:'Chronomètre + routines personnalisées'}</small></button><button class="cockpit-card today-action-card today-add-session-card" type="button" data-open-activity="true" data-activity-type="running"><span>${uiIcon('sessions')}</span><strong>Ajouter une session</strong><small>${activity.subtitle}</small></button>`;
+  return `<button class="cockpit-card rank-cockpit rank-${esc(rank.current.id)}" data-view="skills"><span>${uiIcon('award')}</span><strong>${esc(rank.displayName||rank.current.name)}</strong><small>${rank.next?`${Math.round(rank.readiness*100)}% vers ${esc(rank.next.name)}`:'Rang maximal'}</small></button><button class="cockpit-card today-action-card core-cockpit" type="button" data-open-core-timer="true"><span>${uiIcon('clock')}</span><strong>Gainage</strong><small>${core.sets?`${core.sets} maintien${core.sets>1?'s':''} · ${coreTimerFormat(core.seconds)} aujourd’hui`:'Chronomètre + routines personnalisées'}</small></button><button class="cockpit-card today-action-card today-add-session-card" type="button" data-open-activity="true" data-activity-type="running"><span>${uiIcon('sessions')}</span><strong>Ajouter une session</strong><small>${activity.subtitle}</small></button>`;
 }
 function removeFirstSectionByClass(html,className){
   const rx=new RegExp(`<section[^>]*class="[^"]*${className}[^"]*"[^>]*>[\\s\\S]*?<\\/section>`);

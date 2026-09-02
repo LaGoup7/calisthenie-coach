@@ -34,7 +34,7 @@ ok(!planning.includes('<section class="today-cockpit today-primary-actions">'),'
 ok(!journey.includes("const marker='<section class=\"today-cockpit today-primary-actions\">';"),'journey still depends on exact cockpit class string');
 ok(!adaptive.includes("marker='<section class=\"today-cockpit today-primary-actions\">';"),'adaptive still depends on exact cockpit class string');
 const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8'); const sw=fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'); const pkg=JSON.parse(fs.readFileSync(path.join(__dirname,'package.json'),'utf8'));
-ok(html.includes('app.js?v=10.139')&&html.includes('app-journey.js?v=10.139'),'v10.139 assets missing');
-ok(sw.includes('kinetik-v10-139-search-hotfix'),'v10.139 service worker cache missing');
-ok(pkg.version==='10.139.0','package is not v10.139.0');
+ok(html.includes('app.js?v=10.140')&&html.includes('app-journey.js?v=10.140'),'v10.140 assets missing');
+ok(sw.includes('kinetik-v10-140-today-activity'),'v10.140 service worker cache missing');
+ok(pkg.version==='10.140.0','package is not v10.140.0');
 if(failures.length){console.error(`TODAY_HOTFIX_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error('-',x));process.exit(1);}else console.log(`TODAY_HOTFIX_OK ${checks} checks`);

@@ -287,3 +287,12 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - Recherche insensible aux accents conservée.
 - Recherche texte prioritaire sur les filtres de catégorie.
 - Test navigateur/DOM simulé dédié : `test-search-hotfix-runtime.js`.
+
+## V10.140 — Fusion activité Aujourd’hui — TERMINÉ
+
+- [x] Fusionner Charge sportive et Volume journalier.
+- [x] Remplacer le vocabulaire technique du bloc par des métriques compréhensibles.
+- [x] Masquer l’ancienne carte Volume journalier au runtime.
+- [x] Relier `+ Ajouter` au hub universel.
+- [x] Corriger la classe de palette du Rang sur Aujourd’hui.
+- [x] Ajouter une non-régression dédiée au bloc fusionné et au Rang Bronze.
