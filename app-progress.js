@@ -1,4 +1,4 @@
-/* KINETIK v10.146 · Mobility, progression UX and product-coaching layers. */
+/* KINETIK v10.147 · Mobility, progression UX and product-coaching layers. */
 /* V10.145 · Mobility finalisation                                            */
 /* Today → Mobility balance → Progression → Secondary details                 */
 /* ========================================================================== */
@@ -1728,7 +1728,7 @@ bindEvents=function(){
 /* ========================================================================== */
 
 /* ========================================================================== */
-/* KINETIK v10.146 · Progression finalisation                                */
+/* KINETIK v10.147 · Progression finalisation                                */
 /* Résumé → Performances → Skills → Corps → Historique                       */
 /* ========================================================================== */
 Object.assign(state,{

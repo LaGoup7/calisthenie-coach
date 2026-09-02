@@ -1,4 +1,4 @@
-/* KINETIK v10.146 · Body map, anatomy, body-system consistency and measurements. */
+/* KINETIK v10.147 · Body map, anatomy, body-system consistency and measurements. */
 /* V10.100 · Body Map V2 — anatomie + confiance + statuts fiables             */
 /* ========================================================================== */
 
@@ -1664,7 +1664,7 @@ bindEvents=function(){
 /* V10.108 · Correctif renderer Body Map 3D                                   */
 /* Le renderer Progression gardait encore la référence V7 2D.                 */
 /* ========================================================================== */
-/* v10.146: Progression owns its overview renderer; Body no longer overrides it. */
+/* v10.147: Progression owns its overview renderer; Body no longer overrides it. */
 
 applyAppTheme();
 
