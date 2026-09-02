@@ -327,3 +327,13 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - Éditeur : réordre ↑/↓ explicite + aperçu d'impact avant sauvegarde.
 - Actions de programme regroupées en bas.
 - Navigation principale Planning correctement active depuis Programmes.
+
+## v10.145 — Mobilité finalisée ✅
+- [x] Fusion Profil + Évaluation en Bilan mobilité
+- [x] Niveau lisible + score + fraîcheur par zone
+- [x] Fraîcheur alignée sur Daily Tasks (28 jours)
+- [x] Progression intelligente selon le nombre de dates de mesure
+- [x] Historique / méthodologie / réglages / sécurité au second niveau
+- [x] Vocabulaire Recovery/Priorité nettoyé
+- [x] État routine terminée aujourd'hui
+- [x] Tests dédiés + non-régression complète

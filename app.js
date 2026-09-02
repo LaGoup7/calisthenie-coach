@@ -1,4 +1,4 @@
-/* KINETIK v10.144 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.145 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -1503,7 +1503,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.144',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.145',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);

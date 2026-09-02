@@ -18,7 +18,7 @@ ok(weekSource.includes('planning-calendar-heatmap'),'calendar heatmap wrapper mi
 ok(weekSource.includes('renderCycleHeatmap(16)'),'calendar does not render GitHub heatmap');
 ok(weekSource.indexOf('planning-calendar-heatmap')>weekSource.indexOf("renderPlanningTabs('calendar')"),'heatmap is not after tabs');
 ok(weekSource.indexOf('planning-calendar-heatmap')<weekSource.indexOf('planning-week-header-v1076'),'heatmap is not at the top of Calendrier');
-ok(html.includes('app-planning.js?v=10.144'),'v10.144 Planning asset missing');
-ok(sw.includes('kinetik-v10-144-programs-premium'),'v10.144 cache missing');
-ok(pkg.version==='10.144.0','package version mismatch');
+ok(html.includes('app-planning.js?v=10.145'),'v10.145 Planning asset missing');
+ok(sw.includes('kinetik-v10-145-mobility-final'),'v10.145 cache missing');
+ok(pkg.version==='10.145.0','package version mismatch');
 console.log(`PLANNING_HEATMAP_OK ${checks} checks`);

@@ -1,4 +1,4 @@
-/* KINETIK v10.144 · Multisport planning, timers and planning presentation. */
+/* KINETIK v10.145 · Multisport planning, timers and planning presentation. */
 /* V10.70 · Multisport Planning                                               */
 /* Planned vs completed · weekly load forecast · conflicts · opt-in optimizer */
 /* ========================================================================== */
@@ -905,7 +905,7 @@ renderCycleHeatmap=function(weeks=16){
 /* ========================================================================== */
 
 /* ========================================================================== */
-/* KINETIK v10.144 · Planning finalisation                                    */
+/* KINETIK v10.145 · Planning finalisation                                    */
 /* Week navigation + explicit day states + one-off workout moves + multisport */
 /* ========================================================================== */
 STORAGE.workoutMoves='kinetik_workout_moves_v1';
@@ -1064,7 +1064,7 @@ dailyCycleStatus=function(value){
 };
 
 /* ========================================================================== */
-/* KINETIK v10.144 · Programmes premium management                            */
+/* KINETIK v10.145 · Programmes premium management                            */
 /* Active program first · week template · session impact · settings/actions   */
 /* ========================================================================== */
 function v10144ProgramImpact(w){

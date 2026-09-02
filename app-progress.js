@@ -1,95 +1,152 @@
-/* KINETIK v10.144 · Mobility, progression UX and product-coaching layers. */
-/* V10.79 · Mobility Visual Clarity                                           */
-/* Today → Profile → Assessment → Progression → Details                        */
+/* KINETIK v10.145 · Mobility, progression UX and product-coaching layers. */
+/* V10.145 · Mobility finalisation                                            */
+/* Today → Mobility balance → Progression → Secondary details                 */
 /* ========================================================================== */
-function v1079MobilityProfile(profiles,priority,chartZone){
-  return `<section class="mob79-profile">
-    <div class="mob79-section-head"><div><div class="kicker">Ton profil</div><h2>6 zones à comprendre d’un coup d’œil</h2></div><span>${profiles.filter(x=>x.assessed).length}/${profiles.length} évaluées</span></div>
-    <div class="mob79-zone-grid">${profiles.map(p=>`
-      <button type="button" class="mob79-zone ${p.id===priority?.id?'priority':''} ${p.id===chartZone?'selected':''} ${p.assessed?'':'unassessed'}" data-mobility-zone="${p.id}">
-        <div><strong>${p.label}</strong>${p.id===priority?.id?'<em>Priorité</em>':''}</div>
-        <b>${p.assessed?p.score:'—'}</b>
-        <span>${p.assessed?(p.asymmetry!=null?`Asymétrie ${p.asymmetry.toFixed(1)} ${p.asymmetryUnit||''}`:(p.complete?'Mesuré':'Évaluation partielle')):'À évaluer'}</span>
-        <i><u style="width:${p.assessed?p.score:0}%"></u></i>
-      </button>`).join('')}
+const V10145_MOBILITY_STALE_DAYS=28;
+function v10145MobilityLevel(score){
+  const n=Number(score);
+  if(!Number.isFinite(n))return {label:'À évaluer',tone:'unassessed'};
+  if(n<50)return {label:'À travailler',tone:'work'};
+  if(n<65)return {label:'À améliorer',tone:'improve'};
+  if(n<80)return {label:'Correcte',tone:'correct'};
+  if(n<90)return {label:'Bonne',tone:'good'};
+  return {label:'Excellente',tone:'excellent'};
+}
+function v10145DaysSince(value){
+  if(!value)return null;
+  const d=new Date(value);if(Number.isNaN(d.getTime()))return null;
+  const now=new Date(),a=new Date(now.getFullYear(),now.getMonth(),now.getDate()),b=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  return Math.max(0,Math.floor((a-b)/86400000));
+}
+function v10145MobilityFreshness(profile){
+  if(!profile?.assessed||!profile.latest)return {label:'À évaluer',detail:'Aucune référence',tone:'unassessed',age:null,stale:true};
+  const age=v10145DaysSince(profile.latest)??0;
+  const partial=!profile.complete;
+  if(partial)return {label:'Bilan partiel',detail:`${age===0?'Mesuré aujourd’hui':age===1?'Mesuré hier':`Dernière mesure · ${age} j`}`,tone:'partial',age,stale:true};
+  if(age>=V10145_MOBILITY_STALE_DAYS)return {label:'À actualiser',detail:`Dernière mesure · ${age} j`,tone:'stale',age,stale:true};
+  if(age===0)return {label:'À jour',detail:'Mesuré aujourd’hui',tone:'fresh',age,stale:false};
+  if(age===1)return {label:'À jour',detail:'Mesuré hier',tone:'fresh',age,stale:false};
+  return {label:'À jour',detail:`Mesuré il y a ${age} jours`,tone:'fresh',age,stale:false};
+}
+function v10145ZoneDefs(zone){return (zone?.tests||[]).map(id=>MOBILITY_TESTS.find(t=>t.id===id)).filter(Boolean);}
+function v10145ZoneLatestRows(zone){
+  return v10145ZoneDefs(zone).map(def=>({def,value:latestMobilityValue(def.id)}));
+}
+function v10145ZoneScoreAt(zone,cutoff){
+  const defs=v10145ZoneDefs(zone).filter(d=>d.score!==false),logs=getMobilityTests();
+  const rows=defs.map(def=>{
+    const row=logs.filter(x=>x.testId===def.id&&new Date(x.date).getTime()<=cutoff).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+    const value=row?Number(row.value):null;return {def,value,score:mobilityTestScore(def,value)};
+  }).filter(x=>x.score!=null);
+  if(!rows.length)return null;
+  let score=rows.reduce((sum,x)=>sum+x.score,0)/rows.length;
+  const sides=rows.filter(x=>x.def.side&&Number.isFinite(Number(x.value)));
+  if(sides.length>=2){const target=Math.max(1,Number(sides[0].def.target||1)),asym=Math.abs(Number(sides[0].value)-Number(sides[1].value));score-=Math.min(15,(asym/target)*45);}
+  return Math.round(clamp(score,0,100));
+}
+function v10145ZoneScoreHistory(zoneId){
+  const zone=MOBILITY_ZONES.find(z=>z.id===zoneId)||MOBILITY_ZONES[0],ids=new Set(zone.tests||[]),logs=getMobilityTests().filter(x=>ids.has(x.testId)&&Number.isFinite(new Date(x.date).getTime()));
+  const days=[...new Set(logs.map(x=>localDateKey(new Date(x.date))))].sort();
+  return days.map(key=>{const d=new Date(`${key}T23:59:59.999`),score=v10145ZoneScoreAt(zone,d.getTime());return {key,date:d,score};}).filter(x=>x.score!=null);
+}
+function v10145TodayFlexLog(){
+  const key=localDateKey();return getFlexLogs().filter(x=>localDateKey(new Date(x.date))===key).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;
+}
+function v10145MobilityToday(priority,recommended,targeted,cfg,mode){
+  const goal=typeof getAthleteProfile==='function'?getAthleteProfile().primaryGoal||'Progression générale':'Progression générale',done=v10145TodayFlexLog();
+  const priorityReason=!priority?.id
+    ?'Quelques mesures suffisent pour que KINETIK identifie la zone la plus utile à travailler.'
+    :priority.assessed
+      ?`${priority.label} ressort de tes mesures${mobilityGoalWeights()[priority.id]>0?` et de ton objectif « ${esc(goal)} »`:''}.`
+      :`${priority.label} est liée à ton objectif actuel. Une mesure permettra de confirmer ce choix.`;
+  const impact=priority?.id?(priority.impact||[]).slice(0,3).join(' · '):'';
+  const modeLabel=mode==='Recovery'?'Récupération':'Progression';
+  return `<section class="mob145-today">
+    <div class="mob145-today-copy">
+      <div class="kicker">Aujourd’hui${priority?.id?` · ${modeLabel}`:''}</div>
+      <div class="mob145-priority-line"><span>Zone à travailler</span><strong>${priority?.id?priority.label:'Bilan à compléter'}</strong>${priority?.assessed?`<b>${v10145MobilityLevel(priority.score).label} · ${priority.score}</b>`:''}</div>
+      <h1>${priority?.id?recommended.name:'Construis ton bilan mobilité'}</h1>
+      <p>${priorityReason}</p>
+      ${impact?`<div class="mob145-why"><span>Pourquoi c’est utile</span><strong>${esc(impact)}</strong>${priority?.asymmetry!=null?`<small>Écart gauche / droite · ${priority.asymmetry.toFixed(1)} ${priority.asymmetryUnit||''}</small>`:''}</div>`:''}
+      ${priority?.id?`<div class="mob145-routine-meta"><span>${recommended.duration} min</span><span>${recommended.focus}</span><span>Intensité douce · ${cfg.intensityMin}–${cfg.intensityMax}/10</span></div>`:''}
+      ${done?`<div class="mob145-done"><span>✓</span><div><strong>Routine terminée aujourd’hui</strong><small>${Number(done.durationMinutes||0)||'—'} min${done.comfort?` · confort ${done.comfort}/5`:''}</small></div></div>`:''}
     </div>
+    ${priority?.id?`<button class="btn btn-primary mob145-start start-flex" data-flex="${recommended.id}">${done?'Refaire une routine':'Commencer'}</button>`:`<button class="btn btn-primary mob145-start" id="openMobilityAssessment">Compléter mon bilan</button>`}
+    <details class="mob145-formats"><summary>Choisir un autre format</summary><div>
+      <button class="start-flex" data-flex="reset-10"><strong>Récupération</strong><span>≈ 10 min · doux</span></button>
+      <button class="start-flex" data-flex="${targeted.id}"><strong>Ciblée</strong><span>≈ ${targeted.duration} min · ${priority?.label||targeted.focus}</span></button>
+      <button class="start-flex" data-flex="full-25"><strong>Complète</strong><span>≈ 25 min · corps entier</span></button>
+    </div></details>
   </section>`;
 }
-function v1079MobilityAssessment(assessedCount){
-  const grouped=MOBILITY_ZONES.map(zone=>({zone,defs:zone.tests.map(id=>MOBILITY_TESTS.find(t=>t.id===id)).filter(Boolean)}));
-  return `<details class="mob79-assessment" id="mobilityAssessment">
-    <summary>
-      <div><div class="kicker">Évaluation</div><strong>${assessedCount}/${MOBILITY_ZONES.length} zones évaluées</strong><span>${assessedCount===MOBILITY_ZONES.length?'Bilan complété · actualise tes mesures quand nécessaire.':'Complète quelques tests pour améliorer les recommandations.'}</span></div>
-      <b>${assessedCount===MOBILITY_ZONES.length?'Voir les tests':'Compléter mon bilan'} →</b>
-    </summary>
-    <div class="mob79-assessment-body">
-      <p>Mesure dans des conditions comparables. L’objectif est une amplitude fonctionnelle reproductible, pas de forcer une position.</p>
-      ${grouped.map(({zone,defs})=>{
-        const done=defs.filter(d=>latestMobilityValue(d.id)!=null).length;
-        return `<details class="mob-test-group">
-          <summary><strong>${zone.label}</strong><span>${done}/${defs.length} mesurés</span></summary>
-          <div>${defs.map(d=>{
-            const latest=latestMobilityValue(d.id);
-            return `<div class="mob-test-row"><div><strong>${d.name}</strong><small>${d.note}</small></div><div class="mob-test-current">${latest==null?'—':latest+' '+d.unit}</div><div class="mobility-entry"><input id="mob_${d.id}" type="number" inputmode="decimal" min="${d.min}" ${d.max!=null?`max="${d.max}"`:''} step="${d.step}" placeholder="${d.unit}"><button class="btn btn-secondary compact save-mobility" data-test="${d.id}">OK</button></div></div>`;
-          }).join('')}</div>
-        </details>`;
-      }).join('')}
-    </div>
-  </details>`;
+function v10145MobilityBalance(profiles,priority){
+  const assessed=profiles.filter(x=>x.assessed).length;
+  return `<section class="mob145-balance" id="mobilityAssessment">
+    <div class="mob145-section-head"><div><div class="kicker">Ton bilan mobilité</div><h2>6 zones · une lecture simple</h2><p>Le score mesure ta distance à une amplitude fonctionnelle. Ouvre une zone pour voir ou mettre à jour ses mesures.</p></div><span>${assessed}/${profiles.length} évaluées</span></div>
+    <div class="mob145-zone-grid">${profiles.map(p=>{
+      const level=v10145MobilityLevel(p.score),fresh=v10145MobilityFreshness(p),defs=v10145ZoneDefs(p),done=defs.filter(d=>latestMobilityValue(d.id)!=null).length;
+      return `<details class="mob145-zone mob-test-group ${level.tone} ${p.id===priority?.id?'priority':''}">
+        <summary>
+          <div class="mob145-zone-title"><strong>${p.label}</strong>${p.id===priority?.id?'<em>Zone à travailler</em>':''}</div>
+          <div class="mob145-zone-score"><b>${p.assessed?p.score:'—'}</b><span>${level.label}</span></div>
+          <div class="mob145-zone-meta"><span class="${fresh.tone}">${fresh.label}</span><small>${fresh.detail}${p.asymmetry!=null?` · écart ${p.asymmetry.toFixed(1)} ${p.asymmetryUnit||''}`:''}</small></div>
+          <i><u style="width:${p.assessed?p.score:0}%"></u></i>
+          <span class="mob145-zone-open">${done}/${defs.length} mesures · détails →</span>
+        </summary>
+        <div class="mob145-zone-body">
+          ${defs.map(def=>{const latest=latestMobilityValue(def.id);return `<div class="mob-test-row"><div><strong>${def.name}</strong><small>${def.note}</small></div><div class="mob-test-current">${latest==null?'—':latest+' '+def.unit}</div><div class="mobility-entry"><input id="mob_${def.id}" type="number" inputmode="decimal" min="${def.min}" ${def.max!=null?`max="${def.max}"`:''} step="${def.step}" placeholder="${def.unit}"><button class="btn btn-secondary compact save-mobility" data-test="${def.id}">OK</button></div></div>`}).join('')}
+          <div class="mob145-zone-footer"><button type="button" class="mob145-progress-link" data-mobility-zone="${p.id}">Voir la progression de ${p.label.toLowerCase()} →</button></div>
+        </div>
+      </details>`;
+    }).join('')}</div>
+  </section>`;
 }
-function v1079MobilityHistory(logs){
-  return `<details class="mob79-lower">
-    <summary><div><div class="kicker">Historique</div><strong>${logs.length} routine${logs.length>1?'s':''} enregistrée${logs.length>1?'s':''}</strong></div><span>⌄</span></summary>
-    <div class="mob79-lower-body">${logs.length?`<div class="mob-history">${logs.slice(0,8).map(l=>`<div><span>${formatDate(l.date)}</span><strong>${esc(l.name)}</strong><span>${l.durationMinutes} min</span><span>confort ${l.comfort||'—'}/5</span></div>`).join('')}</div>`:'<p class="muted">Ta première routine apparaîtra ici.</p>'}</div>
-  </details>`;
+function v10145MobilityProgress(profiles,chartZone){
+  const zone=MOBILITY_ZONES.find(z=>z.id===chartZone)||MOBILITY_ZONES[0],profile=profiles.find(p=>p.id===zone.id)||mobilityZoneProfile(zone),history=v10145ZoneScoreHistory(zone.id),level=v10145MobilityLevel(profile.score),fresh=v10145MobilityFreshness(profile);
+  let content='';
+  if(!history.length){
+    content=`<div class="mob145-progress-empty"><strong>Aucune référence pour ${zone.label.toLowerCase()}</strong><span>Enregistre les premières mesures de cette zone pour créer ton point de départ.</span><button class="btn btn-outline compact" id="openMobilityAssessmentSecondary">Évaluer</button></div>`;
+  }else if(history.length===1){
+    content=`<div class="mob145-progress-baseline"><div><span>Première référence</span><strong>${profile.score} · ${level.label}</strong><small>${fresh.detail}</small></div><p>Une seule date de mesure pour le moment. Refais ce bilan dans quelques semaines pour visualiser une vraie évolution.</p></div>`;
+  }else{
+    const first=history[0].score,last=history[history.length-1].score,delta=last-first;
+    content=`<div class="mob145-progress-summary"><div><span>Score actuel</span><strong>${last} · ${level.label}</strong></div><div><span>Depuis la première référence</span><strong>${delta>0?'+':''}${delta} pts</strong></div><div><span>Dernière mesure</span><strong>${fresh.age===0?'Aujourd’hui':fresh.age===1?'Hier':`${fresh.age} j`}</strong></div></div>${renderMobilityChart(zone.id)}`;
+  }
+  return `<section class="mob145-progress">
+    <div class="mob145-section-head"><div><div class="kicker">Progression</div><h2>Est-ce que ça s’améliore ?</h2></div></div>
+    <div class="mob145-zone-switch">${MOBILITY_ZONES.map(z=>`<button data-mobility-zone="${z.id}" class="${chartZone===z.id?'active':''}">${z.label}</button>`).join('')}</div>
+    ${content}
+  </section>`;
 }
+function v10145MobilityHistory(logs){
+  return `<details class="mob145-secondary"><summary><div><div class="kicker">Historique</div><strong>${logs.length} routine${logs.length>1?'s':''} enregistrée${logs.length>1?'s':''}</strong></div><span>⌄</span></summary><div class="mob145-secondary-body">${logs.length?`<div class="mob-history">${logs.slice(0,10).map(l=>`<div><span>${formatDate(l.date)}</span><strong>${esc(l.name)}</strong><span>${l.durationMinutes} min</span><span>confort ${l.comfort||'—'}/5</span></div>`).join('')}</div>`:'<p class="muted">Ta première routine apparaîtra ici.</p>'}</div></details>`;
+}
+function v10145MobilityUnderstanding(cfg){
+  return `<details class="mob145-secondary"><summary><div><div class="kicker">Comprendre</div><strong>Comment KINETIK choisit les recommandations</strong></div><span>⌄</span></summary><div class="mob145-secondary-body flex-research-body">
+    <div class="research-rule"><b>1</b><p><strong>Amplitude mesurée :</strong> les tests comptent davantage que le simple temps passé à s’étirer.</p></div>
+    <div class="research-rule"><b>2</b><p><strong>Objectif sportif :</strong> les zones utiles à tes skills et à ton programme sont davantage prioritaires.</p></div>
+    <div class="research-rule"><b>3</b><p><strong>Travail récent :</strong> une zone déjà beaucoup sollicitée cette semaine est temporairement moins prioritaire.</p></div>
+    <div class="research-rule"><b>4</b><p><strong>Actualisation :</strong> KINETIK conseille de rafraîchir un bilan après ${V10145_MOBILITY_STALE_DAYS} jours.</p></div>
+  </div></details>`;
+}
+function v10145MobilitySafety(cfg){
+  return `<details class="mob145-safety"><summary><span>ⓘ</span><strong>Ne force jamais une amplitude douloureuse.</strong><b>Consignes</b></summary><div>Recherche une tension confortable autour de ${cfg.intensityMin}–${cfg.intensityMax}/10. Arrête la routine en cas de douleur vive, pincement, engourdissement ou sensation électrique.</div></details>`;
+}
+function v1079MobilityProfile(profiles,priority,chartZone){return v10145MobilityBalance(profiles,priority);}
+
 renderFlexibility=function(){
-  const logs=getFlexLogs(),cfg=getFlexConfig(),recommended=recommendedFlexRoutine(),targeted=targetedFlexRoutine(),
-        priority=mobilityPriority(),profiles=mobilityProfiles(),assessed=profiles.filter(x=>x.assessed),
-        mode=mobilityRoutineMode(),chartZone=state.mobilityChartZone||priority?.id||'ankles';
-  const goal=typeof getAthleteProfile==='function'?getAthleteProfile().primaryGoal||'Progression générale':'Progression générale';
-  const priorityReason=!priority?.id
-    ?'Quelques mesures suffisent pour que KINETIK identifie une priorité réelle.'
-    :priority.assessed
-      ?`${priority.label} est actuellement la zone la plus pertinente d’après tes mesures${mobilityGoalWeights()[priority.id]>0?` et ton objectif « ${esc(goal)} »`:''}.`
-      :`${priority.label} est liée à ton objectif actuel. Une mesure permettra de confirmer cette priorité.`;
-  const impact=priority?.id?(priority.impact||[]).slice(0,3).join(' · '):'';
-  return shell(`<header class="topbar mobility-topbar mob79-topbar"><div><div class="brand">Mobilité</div><div class="daylabel">Quoi travailler aujourd’hui · où progresser</div></div></header>
-
-    <section class="mob79-today">
-      <div class="mob79-today-main">
-        <div class="kicker">Aujourd’hui${priority?.id?` · ${mode}`:''}</div>
-        <div class="mob79-priority-line"><span>Priorité</span><strong>${priority?.id?priority.label:'Profil à évaluer'}</strong>${priority?.assessed?`<b>${priority.score}/100</b>`:''}</div>
-        <h1>${priority?.id?recommended.name:'Construis ton profil mobilité'}</h1>
-        <p>${priorityReason}</p>
-        ${impact?`<div class="mob79-why"><span>Pourquoi c’est utile</span><strong>${esc(impact)}</strong>${priority?.asymmetry!=null?`<small>Asymétrie mesurée · ${priority.asymmetry.toFixed(1)} ${priority.asymmetryUnit||''}</small>`:''}</div>`:''}
-        ${priority?.id?`<div class="mob79-routine-meta"><span>${recommended.duration} min</span><span>${recommended.focus}</span><span>Tension ${cfg.intensityMin}–${cfg.intensityMax}/10</span></div>`:''}
-      </div>
-      ${priority?.id?`<button class="btn btn-primary mob79-start start-flex" data-flex="${recommended.id}">Commencer la routine</button>`:`<button class="btn btn-primary mob79-start" id="openMobilityAssessment">Faire mon bilan</button>`}
-      <details class="mob79-formats"><summary>Changer de format</summary><div>
-        <button class="start-flex" data-flex="reset-10"><strong>Recovery</strong><span>≈ 10 min · doux</span></button>
-        <button class="start-flex" data-flex="${targeted.id}"><strong>Ciblée</strong><span>≈ ${targeted.duration} min · ${priority?.label||targeted.focus}</span></button>
-        <button class="start-flex" data-flex="full-25"><strong>Complète</strong><span>≈ 25 min · corps entier</span></button>
-      </div></details>
-    </section>
-
-    ${v1079MobilityProfile(profiles,priority,chartZone)}
-
-    ${v1079MobilityAssessment(assessed.length)}
-
-    <section class="mob79-progress">
-      <div class="mob79-section-head"><div><div class="kicker">Progression</div><h2>Comment ta mobilité évolue</h2></div></div>
-      <div class="mob79-zone-switch">${MOBILITY_ZONES.map(z=>`<button data-mobility-zone="${z.id}" class="${chartZone===z.id?'active':''}">${z.label}</button>`).join('')}</div>
-      ${renderMobilityChart(chartZone)}
-    </section>
-
-    ${v1079MobilityHistory(logs)}
-    ${renderFlexResearch()}
-    ${renderFlexSettings()}
-    <div class="mob79-safety"><strong>Sécurité</strong><span>Tension ${cfg.intensityMin}–${cfg.intensityMax}/10. Arrête en cas de douleur vive, pincement, engourdissement ou sensation électrique.</span></div>`,
-  "flexibility");
+  const logs=getFlexLogs(),cfg=getFlexConfig(),recommended=recommendedFlexRoutine(),targeted=targetedFlexRoutine(),priority=mobilityPriority(),profiles=mobilityProfiles(),mode=mobilityRoutineMode(),chartZone=state.mobilityChartZone||priority?.id||'ankles';
+  return shell(`<header class="topbar mobility-topbar mob145-topbar"><div><div class="brand">Mobilité</div><div class="daylabel">Aujourd’hui · bilan · progression</div></div></header>
+    ${v10145MobilityToday(priority,recommended,targeted,cfg,mode)}
+    ${v10145MobilityBalance(profiles,priority)}
+    ${v10145MobilityProgress(profiles,chartZone)}
+    <section class="mob145-secondary-group">
+      ${v10145MobilityHistory(logs)}
+      ${v10145MobilityUnderstanding(cfg)}
+      ${renderFlexSettings()}
+      ${v10145MobilitySafety(cfg)}
+    </section>`,"flexibility");
 };
-
 
 /* ========================================================================== */
 /* V10.80 · Progression Visual Clarity                                        */

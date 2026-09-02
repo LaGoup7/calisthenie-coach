@@ -1,4 +1,4 @@
-/* KINETIK v10.144 · Daily journey, reminders, shortcuts and Web Push settings UI. */
+/* KINETIK v10.145 · Daily journey, reminders, shortcuts and Web Push settings UI. */
 /* KINETIK v10.120 · Step 6 · Today Agenda                                   */
 /* One compact surface for the Daily Tasks Engine.                            */
 /* Completed tasks leave the active list and feed the daily progress.         */
@@ -770,7 +770,7 @@ function renderSettings(){
 }
 
 /* ========================================================================== */
-/* KINETIK v10.144 · Date-aware moved workouts on Aujourd'hui                  */
+/* KINETIK v10.145 · Date-aware moved workouts on Aujourd'hui                  */
 /* Planning may move one cycle session inside the week without editing cycle. */
 /* ========================================================================== */
 const _preparedWorkoutV10143DateAware=preparedWorkout;

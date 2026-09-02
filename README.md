@@ -440,3 +440,6 @@ Le Calendrier devient la vue opérationnelle de la semaine : navigation entre se
 
 ## v10.144 · Programmes premium management
 La page Planning > Programmes est désormais centrée sur la gestion du programme actif : hero avec phase/objectif/rythme/formats, semaine type, liste des séances avec durée/étapes/zones/matériel, réglages de progression, autres cycles repliables, séances libres et actions de gestion. Les jours d'un cycle personnalisé restent éditables et peuvent être passés en repos. Une journée du programme peut être dupliquée en séance libre indépendante. L'éditeur de séance rend le réordre ↑/↓ explicite et affiche un aperçu d'impact avant sauvegarde (durée, étapes, zones sollicitées, matériel). La heatmap et les statistiques de progression restent hors de Programmes.
+
+## v10.145 — Mobilité finalisée
+La page Mobilité suit désormais une hiérarchie simple : **Aujourd'hui → Bilan mobilité → Progression → détails secondaires**. Profil et Évaluation ont été fusionnés, les scores sont traduits en niveaux lisibles, la fraîcheur des mesures suit le repère de 28 jours et le graphique n'apparaît qu'à partir de deux dates de mesure.
