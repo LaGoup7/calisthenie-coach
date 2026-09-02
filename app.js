@@ -1,4 +1,4 @@
-/* KINETIK v10.136 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.137 · Core runtime, data, storage and foundational UI. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -178,10 +178,16 @@ function equipmentUseNote(name){
 function renderBackpackLoadInput(value=0,id='backpackLoadKg'){
   return `<div class="load-picker"><label class="small muted" for="${id}">Charge du sac</label><div class="load-input-wrap"><input id="${id}" class="load-input" type="number" inputmode="decimal" min="0" step="0.5" value="${Number(value||0)}"><span>kg</span></div><div class="load-presets">${[5,10,15,20].map(v=>`<button type="button" class="load-preset" data-load-target="${id}" data-load-value="${v}">${v} kg</button>`).join('')}</div></div>`;
 }
+function compactBandKg(value){
+  const nums=String(value||'').match(/\d+(?:[,.]\d+)?/g)||[];
+  if(nums.length<2)return String(value||'').replace(/\s+/g,' ').trim();
+  const rounded=nums.slice(0,2).map(x=>Math.round(Number(String(x).replace(',','.'))));
+  return `${rounded[0]}–${rounded[1]} kg`;
+}
 function renderPresetBandPicker(current,name,index){
   const selected=current||lastBandForExercise(name)||defaultBandForExercise(name);
   const items=BAND_INVENTORY.filter(b=>!['none','custom'].includes(b.id));
-  return `<div class="band-picker compact-band-picker quick-band-taps" data-quick-band-index="${index}">${items.map(b=>`<button type="button" class="band-choice ${b.label===selected?'active':''}" data-band-label="${esc(b.label)}" title="${esc(`${b.short} · ${b.kg} (${b.lbs})`)}"><i class="band-swatch" style="--band-color:${b.color}"></i><span><strong>${b.short}</strong><small>${b.kg}</small></span></button>`).join('')}</div>`;
+  return `<div class="band-picker compact-band-picker quick-band-taps" data-quick-band-index="${index}">${items.map(b=>`<button type="button" class="band-choice ${b.label===selected?'active':''}" data-band-label="${esc(b.label)}" title="${esc(`${b.short} · ${b.kg} (${b.lbs})`)}"><i class="band-swatch" style="--band-color:${b.color}"></i><span><strong>${b.short}</strong><small>${esc(compactBandKg(b.kg))}</small></span></button>`).join('')}</div>`;
 }
 
 const TUTORIAL_QUERIES = {
@@ -1338,9 +1344,26 @@ function addQuickLog(name,value,type=null,band=null,loadKg=null){
   state.quickToast=`${quickFamily(name)} +${value} ${quickUnit(resolvedType)}${band?' · '+bandByLabel(band).short:''}${usesBackpack(name)&&Number(loadKg)>0?' · sac '+Number(loadKg)+' kg':''}`;
   render();
 }
-function undoLastQuickLog(){
-  const logs=getQuickLogs(); if(!logs.length)return;
-  logs.shift(); setQuickLogs(logs); state.quickToast='Dernier ajout annulé'; render();
+function deleteQuickLog(id){
+  const logs=getQuickLogs(),next=logs.filter(x=>String(x.id)!==String(id));
+  if(next.length===logs.length)return false;
+  setQuickLogs(next);state.quickToast='Ligne supprimée du journal';render();return true;
+}
+function quickLogJournalValue(log){
+  const unit=quickUnit(log.type),band=log.band?` · ${bandByLabel(log.band).short}`:'',load=Number(log.loadKg||0)>0?` · ${Number(log.loadKg)} kg`:'';
+  return `${Number(log.value||0)} ${unit}${band}${load}`;
+}
+function quickLogJournalDate(log){
+  const d=new Date(log.date);if(Number.isNaN(d.getTime()))return '';
+  const today=localDateKey(),key=localDateKey(d),time=d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  if(key===today)return `Aujourd’hui · ${time}`;
+  const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+  if(key===localDateKey(yesterday))return `Hier · ${time}`;
+  return `${d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} · ${time}`;
+}
+function renderQuickLogJournal(limit=20){
+  const logs=getQuickLogs().slice(0,limit);
+  return `<section class="quick-log-journal"><div class="quick-log-journal-head"><div><span>Journal</span><small>${logs.length?`${logs.length} dernier${logs.length>1?'s':''} enregistrement${logs.length>1?'s':''}`:'Aucune ligne enregistrée'}</small></div><span class="quick-log-journal-count">${getQuickLogs().length}</span></div>${logs.length?`<div class="quick-log-journal-list">${logs.map(log=>`<div class="quick-log-journal-row"><div class="quick-log-journal-main"><strong>${esc(log.exercise||'Exercice')}</strong><small>${esc(quickLogJournalDate(log))}</small></div><div class="quick-log-journal-value"><strong>${esc(quickLogJournalValue(log))}</strong>${log.source==='core_timer'?'<small>Gainage</small>':'<small>Rapide</small>'}</div><button type="button" class="quick-log-delete" data-delete-quick-log="${esc(String(log.id))}" aria-label="Supprimer ${esc(log.exercise||'cette ligne')}" title="Supprimer">${uiIcon('trash','quick-log-trash-icon')}</button></div>`).join('')}</div>`:'<div class="quick-log-journal-empty"><strong>Ton journal est vide</strong><small>Chaque série enregistrée rapidement apparaîtra ici et pourra être supprimée individuellement.</small></div>'}</section>`;
 }
 function quickLogsForRange(days=1){
   const cutoff=new Date(); cutoff.setHours(0,0,0,0); cutoff.setDate(cutoff.getDate()-(days-1));
@@ -1453,7 +1476,7 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.136',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.137',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1905,7 +1928,7 @@ function quickCategoryOrder(category){
 }
 function renderQuickLogModal(){
   if(!state.quickEditor)return '';
-  const quick=getQuickLogs(),last=quick[0],recent=recentQuickActions();
+  const quick=getQuickLogs(),recent=recentQuickActions();
   const options=visibleExerciseLibrary()
     .filter(x=>x.prescription&&(x.prescription.type.startsWith('reps')||x.prescription.type.startsWith('hold')))
     .sort((a,b)=>quickCategoryOrder(a.category)-quickCategoryOrder(b.category)||a.name.localeCompare(b.name,'fr'));
@@ -1924,7 +1947,7 @@ function renderQuickLogModal(){
       </div>
       <div class="quick-selected-exercise" id="quickSelectedExercise">${selected?`${quickExerciseThumb(selected.name)}<div><small>Exercice sélectionné</small><strong>${esc(selected.name)}</strong>${renderExerciseAvailabilityBadge(selected.name)}</div>`:''}</div>
       <label class="field-label">Répétitions ou secondes</label><input class="big-input" id="quickValue" type="number" inputmode="numeric" min="1" step="1" placeholder="ex. 8"><div id="quickBandWrap" hidden><label class="field-label">Bande utilisée</label>${renderBandPicker(defaultBandForExercise(selected?.name||''),selected?.name||'',true)}</div><div id="quickLoadWrap" hidden>${renderBackpackLoadInput(0,'quickLoadKg')}</div><button class="btn btn-primary" id="saveQuickCustom">Ajouter</button></details>
-    ${last?`<button class="btn btn-outline quick-undo" id="undoQuickLog">↶ Annuler · ${quickFamily(last.exercise)} ${last.value} ${quickUnit(last.type)}${last.band?' · '+bandByLabel(last.band).short:''}${last.loadKg?' · '+last.loadKg+' kg':''}</button>`:''}`;
+    ${renderQuickLogJournal()}`;
   return `<div class="quick-overlay"><section class="quick-sheet quick-performance-sheet"><div class="quick-sheet-head"><div><div class="kicker">Quick Log</div><h2>Ajouter une micro-série</h2><p class="muted small">Tes exercices favoris restent immédiatement disponibles. Une série se saisit en quelques secondes.</p></div><button class="icon-btn" id="closeQuickLog">×</button></div>
     ${state.quickToast?`<div class="quick-toast">✓ ${esc(state.quickToast)}</div>`:''}
     ${state.quickFavoritesEditor?renderQuickFavoritesManager():normalContent}
@@ -2623,6 +2646,7 @@ function uiIcon(name, cls="ui-icon") {
     profile:'<circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.8-4 3-6 6.5-6s5.7 2 6.5 6"/>',
     clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
     award:'<path d="M8 4h8v5a4 4 0 01-8 0V4z"/><path d="M6 5H4.5v2A3.5 3.5 0 008 10.5M18 5h1.5v2a3.5 3.5 0 01-3.5 3.5M12 13v4M8.5 20h7"/>',
+    trash:'<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
     spark:'<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M18.5 15.5l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1z"/>'
   };
   return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.spark}</svg>`;
@@ -4173,7 +4197,7 @@ function bindEvents(){
   const quickSearch=document.getElementById('quickExerciseSearch');if(quickSearch)quickSearch.oninput=filterQuickExercisePicker;
   const firstQuickCard=document.querySelector('.quick-exercise-card.selected');if(firstQuickCard)selectQuickExerciseCard(firstQuickCard);
   const saveQuick=document.getElementById('saveQuickCustom');if(saveQuick)saveQuick.onclick=()=>{const name=document.getElementById('quickExercise')?.value,value=Number(document.getElementById('quickValue')?.value||0),info=exerciseInfo(name),type=info?.prescription?.type||'reps';if(value>0)addQuickLog(name,value,type,type==='reps_band'?(state.quickBand||lastBandForExercise(name)||defaultBandForExercise(name)):null,usesBackpack(name)?Number(document.getElementById('quickLoadKg')?.value||0):null);};
-  const undoQuick=document.getElementById('undoQuickLog');if(undoQuick)undoQuick.onclick=undoLastQuickLog;
+  document.querySelectorAll('[data-delete-quick-log]').forEach(b=>b.onclick=()=>{if(confirm('Supprimer cette ligne du journal ?'))deleteQuickLog(b.dataset.deleteQuickLog);});
   document.querySelectorAll('[data-energy]').forEach(b=>b.onclick=()=>{state.readinessEditor.energy=Number(b.dataset.energy);render();});
   document.querySelectorAll('[data-soreness]').forEach(b=>b.onclick=()=>{state.readinessEditor.soreness=Number(b.dataset.soreness);render();});
   document.querySelectorAll('[data-joints]').forEach(b=>b.onclick=()=>{state.readinessEditor.joints=b.dataset.joints;render();});

@@ -396,3 +396,9 @@ Le bouton flottant **Ajouter** devient un centre de saisie rapide : dernière ac
 ## V10.136 · Favoris pour Enregistrement rapide
 
 Le Quick Log devient personnalisable : jusqu'à 8 exercices favoris, ordre manuel, recherche/catégories, suggestions basées sur l'usage réel et valeurs de saisie rapides adaptées à chaque exercice. Les favoris sont locaux, sauvegardables et n'influencent jamais le programme ou les objectifs.
+
+## V10.137 · Journal Enregistrement rapide
+- Affichage compact des bandes dans les favoris : nom + plage arrondie lisible, sans débordement.
+- Remplacement de « Annuler le dernier ajout » par un journal des 20 dernières lignes Quick Log.
+- Chaque ligne affiche exercice, heure/date, valeur, bande/lest et peut être supprimée individuellement.
+- La suppression met à jour les vraies données Quick Log et donc les agrégats calculés à partir de celles-ci.

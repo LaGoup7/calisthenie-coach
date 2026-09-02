@@ -71,7 +71,7 @@
   function sanitizeLabel(value){const text=String(value||'').trim().replace(/\s+/g,' ');return (text||defaultDeviceLabel()).slice(0,48);}
   function deviceMetadata(){
     const state=parseState();
-    return {label:sanitizeLabel(state.deviceLabel),platform:detectPlatform(),standalone:isStandalone(),appVersion:'10.136'};
+    return {label:sanitizeLabel(state.deviceLabel),platform:detectPlatform(),standalone:isStandalone(),appVersion:'10.137'};
   }
   function capability(){
     const local=global.KinetikLocalReminders?.getCapability?.()||{};
@@ -261,7 +261,7 @@
   function supportDiagnostic(){
     const st=status(),cap=capability(),p=prefs(),health=st.serverHealth||{},server=st.serverInfo||{};
     return {
-      schema:'kinetik-support-diagnostic-v1',generatedAt:new Date().toISOString(),appVersion:'10.136',webPushManager:VERSION,
+      schema:'kinetik-support-diagnostic-v1',generatedAt:new Date().toISOString(),appVersion:'10.137',webPushManager:VERSION,
       runtime:{platform:st.devicePlatform||'other',standalone:!!st.deviceStandalone,timezone:st.timezone||timezone(),notificationPermission:st.permission||'default',pushSupported:!!cap.pushSupported,serviceWorkerSupported:!!global.navigator?.serviceWorker},
       webPush:{configured:!!st.configured,enabled:!!st.enabled,active:!!st.active,subscribed:!!st.subscribed,repairReason:st.repairReason||null,serverExists:!!st.serverExists,lastSyncAt:st.lastSyncAt||null,lastHealthAt:st.lastHealthAt||null,manifestDays:Number(st.lastManifestDays||0),installationSuffix:st.installationSuffix||null,subscriptionFingerprint:st.subscriptionEndpointFp||null},
       server:{schedules:server.schedules?{primary:!!server.schedules.primary,followup:!!server.schedules.followup,snooze:!!server.schedules.snooze}:null,manifestDays:Number(server.manifestDays||0),preferredTime:server.preferredTime||null,subscriptionFingerprint:server.subscription?.fingerprint||null,serverNow:server.serverNow||null},

@@ -266,3 +266,9 @@ LOT A terminé en v10.131. Le LOT B est désormais également terminé en v10.13
 - dernière valeur + valeurs rapides + saisie exacte ;
 - bandes conservées pour les mouvements assistés ;
 - stockage `cc_quick_favorites_v1` inclus dans backup/import.
+
+### V10.137 — Journal Quick Log & lisibilité bandes ✅
+- Bandes favorites compactées et adaptées aux cartes étroites.
+- Journal des derniers Quick Logs avec suppression ciblée par ligne.
+- Ancien undo-last retiré de l'interface.
+- Aucun changement du moteur de progression ou de la limite Vercel.

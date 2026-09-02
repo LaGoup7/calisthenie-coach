@@ -51,9 +51,9 @@ ok(bodySource.includes("state.view==='settings'"),'install prompt does not targe
 
 // PWA/version and Vercel Hobby invariant.
 const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),sw=fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),pkg=JSON.parse(fs.readFileSync(path.join(__dirname,'package.json'),'utf8'));
-ok(html.includes('app.js?v=10.136')&&html.includes('account-manager.js?v=10.136'),'v10.136 asset chain missing');
-ok(sw.includes('kinetik-v10-136-quick-favorites')&&sw.includes('app-journey.js?v=10.136'),'v10.136 PWA cache missing');
-ok(pkg.version==='10.136.0','package version is not 10.136.0');
+ok(html.includes('app.js?v=10.137')&&html.includes('account-manager.js?v=10.137'),'v10.137 asset chain missing');
+ok(sw.includes('kinetik-v10-137-quick-log-journal')&&sw.includes('app-journey.js?v=10.137'),'v10.137 PWA cache missing');
+ok(pkg.version==='10.137.0','package version is not 10.137.0');
 ok(fs.readFileSync(path.join(__dirname,'styles.css'),'utf8').includes('v10.132 · Lot B'),'Lot B styles missing');
 const apiFiles=[];function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const full=path.join(dir,e.name);if(e.isDirectory())walk(full);else if(e.isFile()&&e.name.endsWith('.js'))apiFiles.push(full);}}walk(path.join(__dirname,'api'));
 ok(apiFiles.length===12,`Vercel Hobby function count changed: ${apiFiles.length}`);
