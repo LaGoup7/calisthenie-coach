@@ -1011,46 +1011,59 @@ function v10150DataStatus(){
 
 renderMore=function(){
   const p=getAthleteProfile(),cycle=getActiveTrainingCycle(),cs=getCycleState(),status=v10149ProfileStatus(p),rank=getRankState(),goalPath=v10150GoalPath(p.primaryGoal);
-  return shell(`<header class="topbar p88-topbar"><div><div class="brand">Profil</div><div class="daylabel">Tes objectifs, ton rythme et le contexte utilisé par KINETIK</div></div><button class="btn btn-primary compact" data-edit-athlete-profile>Modifier</button></header>
+  const body=getBodyLogs(),latest=body[0],weight=latest?bodyValue(latest,'weight'):p.weight,waist=latest?bodyValue(latest,'waist'):null;
+  const mobility=mobilityProfiles(),mobilityDone=mobility.filter(x=>x.assessed).length,rankPct=rank.next?Math.round(rank.readiness*100):100;
+  const setup=getEquipmentSetup(),equipment=EQUIPMENT_CATALOG.filter(x=>setup[x.id]),days=p.trainingDays||[];
+  const missingEquipment=[];Object.values(cycle.days||{}).forEach(w=>(w.exercises||[]).forEach(e=>{const a=exerciseAdaptation(e.name);if(!a.equipment.available&&exerciseInfo(e.name))missingEquipment.push(e.name);}));
+  const missingEquipmentCount=new Set(missingEquipment).size;
+  const restrictions=typeof getRestrictions==='function'?Object.entries(getRestrictions()).filter(([,v])=>v).map(([id])=>restrictionLabel(id)):[];
+  const account=globalThis.KinetikAccount?.getStatus?.(),strava=state.stravaStatus;
+  const places=(p.locations||[]).map(x=>({home:'Maison',outdoor:'Parc',gym:'Salle',club:'Club'}[x]||x));
+  return shell(`<header class="topbar p152-topbar"><div><div class="brand">Profil</div><div class="daylabel">Mon espace</div></div><button class="p152-edit" data-edit-athlete-profile aria-label="Modifier le profil">Modifier</button></header>
 
-    <section class="p88-identity">
-      <div class="athlete-avatar large">${athleteInitials(p.name)}</div>
-      <div><div class="kicker">Identité sportive</div><h1>${esc(p.name||'Mon profil')}</h1><p>${esc(p.experience)}${p.yearsTraining?` · ${p.yearsTraining} an${p.yearsTraining>1?'s':''} de pratique`:''}</p>${v10149ProfileFacts(p)}</div>
-      <div class="p88-completion"><strong>${status.completion}%</strong><span>personnalisation</span><i><b style="width:${status.completion}%"></b></i></div>
+    <section class="p152-profile-hero rank-${rank.current.id}">
+      <div class="p152-avatar">${athleteInitials(p.name)}</div>
+      <div class="p152-identity"><span>${esc(p.experience)}</span><h1>${esc(p.name||'Mon profil')}</h1><div>${p.age?`${p.age} ans`:''}${p.age&&p.height?' · ':''}${p.height?`${Number(p.height).toFixed(0)} cm`:''}</div></div>
+      <button class="p152-rank" data-view="skills"><span>Rang actuel</span><strong>${esc(rank.displayName)}</strong><i><b style="width:${rankPct}%"></b></i><small>${rank.next?`${rankPct}% vers ${esc(rank.next.name)}`:'Rang maximal'}</small></button>
+      <div class="p152-completion" style="--completion:${status.completion*3.6}deg"><strong>${status.completion}</strong><span>%</span></div>
     </section>
 
-    ${v10149ProfileNext(status)}
+    ${status.gaps.length?`<button class="p152-profile-alert" data-edit-athlete-profile><span>Profil à compléter</span><strong>${status.gaps.length} élément${status.gaps.length>1?'s':''}</strong><b>→</b></button>`:''}
 
-    ${v10150ProfileSummary(p)}
-
-    ${v10150Consistency(p)}
-
-    <section class="p88-goal">
-      <div class="p88-section-head"><div><div class="kicker">Objectifs</div><h2>${esc(p.primaryGoal)}</h2></div><button data-edit-athlete-profile>Modifier →</button></div>
-      ${p.secondaryGoal?`<p><span>Secondaire</span><strong>${esc(p.secondaryGoal)}</strong></p>`:''}
-      <div class="p88-goal-cycle"><div><span>Cycle actuel</span><strong>${esc(cycle.name)} · S${cs.week}/${cs.weekCount}</strong></div>${p.goalHorizon?`<div><span>Horizon</span><strong>${esc(p.goalHorizon)}</strong></div>`:''}</div>
-      <div class="p150-goal-path"><div><span>Axes suivis</span><strong>${esc(goalPath.focus)}</strong></div><div><span>Prochain jalon</span><strong>${esc(goalPath.next)}</strong></div></div>
-      <button class="p88-inline-link" data-view="week">Voir le programme actuel →</button>
+    <section class="p152-goal-grid">
+      <article class="p152-goal-card"><div><span>Objectif principal</span><button data-edit-athlete-profile>Modifier</button></div><h2>${esc(p.primaryGoal)}</h2><p>${esc(goalPath.focus)}</p>${p.secondaryGoal?`<small>+ ${esc(p.secondaryGoal)}</small>`:''}</article>
+      <button class="p152-cycle-card" data-view="week"><span>Cycle actuel</span><strong>${esc(cycle.name)}</strong><div><b>S${cs.week}</b><small>sur ${cs.weekCount}</small></div><i><b style="width:${Math.min(100,cs.week/cs.weekCount*100)}%"></b></i><em>Voir le programme →</em></button>
     </section>
 
-    ${v1088ProfileContext(p)}
-
-    ${v1088EquipmentSection()}
-
-    ${v10150Restrictions()}
-
-    <section class="p88-section"><div class="p88-section-head"><div><div class="kicker">Données personnelles</div><h2>Ce que KINETIK utilise pour te suivre</h2></div></div>
-      ${v1088BodySummary()}
-      <button class="p88-data-row" data-view="skills"><div><span>Capacités & rang</span><strong>${esc(rank.displayName)}</strong><small>Profil de capacités et exigences validées</small></div><b>Voir →</b></button>
-      <button class="p88-data-row" data-view="flexibility"><div><span>Mobilité</span><strong>${mobilityProfiles().filter(x=>x.assessed).length}/${mobilityProfiles().length} zones évaluées</strong><small>Tests et zones à travailler</small></div><b>Voir →</b></button>
+    <section class="p152-snapshots" aria-label="Résumé du profil">
+      <button data-view="measurements"><span class="p152-snapshot-icon">${uiIcon('measurements')}</span><small>Corps</small><strong>${weight?`${Number(weight).toFixed(1)} kg`:'À mesurer'}</strong><em>${waist?`${Number(waist).toFixed(0)} cm taille`:'Mesures →'}</em></button>
+      <button class="rank-${rank.current.id}" data-view="skills"><span class="p152-snapshot-icon">${uiIcon('award')}</span><small>Capacités</small><strong>${esc(rank.displayName)}</strong><em>${rank.nextEval?`${rank.nextEval.completed}/${rank.nextEval.required} critères`:'Tous validés'}</em></button>
+      <button data-view="flexibility"><span class="p152-snapshot-icon">${uiIcon('flex')}</span><small>Mobilité</small><strong>${mobilityDone}/${mobility.length}</strong><em>zones évaluées</em></button>
+      <button data-view="week"><span class="p152-snapshot-icon">${uiIcon('week')}</span><small>Rythme</small><strong>${p.weeklySessions}×</strong><em>${p.preferredDuration} min / séance</em></button>
     </section>
 
-    ${v1088ConnectionSection()}
+    <section class="p152-visual-panel">
+      <div class="p152-panel-head"><div><span>Ma semaine</span><strong>${days.length} jours disponibles</strong></div><button data-edit-athlete-profile>Modifier</button></div>
+      <div class="p152-week">${[1,2,3,4,5,6,0].map(d=>`<div class="${days.includes(d)?'active':''}"><b>${athleteDayLabel(d).slice(0,1)}</b><span>${days.includes(d)?'●':'·'}</span></div>`).join('')}</div>
+      <div class="p152-context-chips">${places.map(x=>`<span>${esc(x)}</span>`).join('')}${(p.sports||[]).slice(0,3).map(x=>`<span>${esc(athleteSportLabel(x))}</span>`).join('')}</div>
+    </section>
 
-    ${v10150DataStatus()}
+    <section class="p152-visual-panel">
+      <div class="p152-panel-head"><div><span>Mon matériel</span><strong>${equipment.length} disponible${equipment.length>1?'s':''}</strong></div><button data-edit-athlete-profile>Modifier</button></div>
+      <div class="p152-equipment">${equipment.slice(0,8).map(x=>`<div>${equipmentVisualIcon(x.label)}<span>${esc(x.label)}</span></div>`).join('')||'<button data-edit-athlete-profile>＋ Ajouter mon matériel</button>'}${equipment.length>8?`<div class="more"><b>+${equipment.length-8}</b><span>autres</span></div>`:''}</div>
+      ${missingEquipmentCount?`<button class="p152-equipment-alert" data-view="week"><strong>${missingEquipmentCount} adaptation${missingEquipmentCount>1?'s':''} nécessaire${missingEquipmentCount>1?'s':''}</strong><span>Voir dans le planning →</span></button>`:'<div class="p152-equipment-ready"><span>✓</span> Cycle compatible</div>'}
+    </section>
 
-    <section class="p88-settings-link">
-      <button data-view="settings"><div><div class="kicker">Application</div><strong>Réglages KINETIK</strong><span>Coach, timers, écran, bibliothèque, sauvegarde et installation</span></div><b>→</b></button>
+    ${restrictions.length?`<section class="p152-restrictions"><span>Zones à ménager</span><div>${restrictions.map(x=>`<b>${esc(x)}</b>`).join('')}</div><button data-edit-athlete-profile>Modifier</button></section>`:''}
+
+    <section class="p152-actions">
+      <div class="p152-actions-head"><span>Application & données</span><small>${body.length} relevé${body.length>1?'s':''} enregistré${body.length>1?'s':''}</small></div>
+      <div class="p152-action-grid">
+        <button data-view="settings"><span>⚙</span><strong>Réglages</strong><small>Timers, écran et sauvegarde</small><b>→</b></button>
+        <button data-view="measurements"><span>⌁</span><strong>Mesures</strong><small>${latest?formatDate(latest.date):'Aucun relevé'}</small><b>→</b></button>
+        <button data-view="settings"><span>${account?.linked?'✓':'◉'}</span><strong>${account?.linked?'Synchronisé':'Cet appareil'}</strong><small>${account?.linked?`${account.memberCount||1} appareil${(account.memberCount||1)>1?'s':''}`:'Sauvegarde locale'}</small><b>→</b></button>
+        ${strava.checked&&!strava.connected?`<a href="/api/strava/auth"><span> S </span><strong>Strava</strong><small>Non connecté</small><b>＋</b></a>`:`<button data-view="settings"><span> S </span><strong>Strava</strong><small>${strava.connected?'Connecté':'Vérification…'}</small><b>→</b></button>`}
+      </div>
     </section>`, 'athlete');
 };
 
