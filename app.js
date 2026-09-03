@@ -1,4 +1,4 @@
-/* KINETIK v10.155 · Timed-set preparation and local athlete portrait. */
+/* KINETIK v10.156 · First-install athlete setup. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -1539,7 +1539,7 @@ async function exportBackup(){
     }
   }
   try{const profilePhoto=await getPhoto(PROFILE_PHOTO_ID);if(profilePhoto)photos[PROFILE_PHOTO_ID]=await blobToDataURL(profilePhoto);}catch(e){console.warn('Photo de profil non exportée',e);}
-  const backup={app:'KINETIK',schema:2,version:'10.155',exportedAt:new Date().toISOString(),data,photos};
+  const backup={app:'KINETIK',schema:2,version:'10.156',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);

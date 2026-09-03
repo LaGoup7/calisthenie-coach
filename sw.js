@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-155-athlete-portrait';
-const ASSETS = ['./','./index.html','./styles.css?v=10.155','./app.js?v=10.155','./app-adaptive.js?v=10.148','./app-planning.js?v=10.148','./app-progress.js?v=10.155','./app-body.js?v=10.148','./app-journey.js?v=10.148','./daily-tasks.js?v=10.148','./local-reminders.js?v=10.148','./web-push-manager.js?v=10.148','./account-manager.js?v=10.148','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-156-first-install-wizard-r2';
+const ASSETS = ['./','./index.html','./styles.css?v=10.156','./app.js?v=10.156','./app-adaptive.js?v=10.148','./app-planning.js?v=10.148','./app-progress.js?v=10.155','./app-body.js?v=10.148','./app-journey.js?v=10.148','./daily-tasks.js?v=10.148','./local-reminders.js?v=10.148','./web-push-manager.js?v=10.148','./account-manager.js?v=10.148','./app-onboarding.js?v=10.156-r2','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {
@@ -8,7 +8,7 @@ self.addEventListener('fetch', e => {
   if (!['http:','https:'].includes(url.protocol)) return;
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
-  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/app-adaptive.js', '/app-planning.js', '/app-progress.js', '/app-body.js', '/app-journey.js', '/daily-tasks.js', '/local-reminders.js', '/web-push-manager.js', '/account-manager.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
+  const isCore = e.request.mode === 'navigate' || ['/', '/index.html', '/app.js', '/app-adaptive.js', '/app-planning.js', '/app-progress.js', '/app-body.js', '/app-journey.js', '/daily-tasks.js', '/local-reminders.js', '/web-push-manager.js', '/account-manager.js', '/app-onboarding.js', '/styles.css', '/manifest.webmanifest'].includes(url.pathname);
   if (isCore) {
     e.respondWith(fetch(e.request).then(resp => {
       const copy = resp.clone(); caches.open(CACHE).then(c=>c.put(e.request, copy)); return resp;

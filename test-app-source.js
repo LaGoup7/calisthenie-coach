@@ -8,6 +8,7 @@ const APP_SOURCE_FILES = [
   'app-progress.js',
   'app-body.js',
   'app-journey.js',
+  'app-onboarding.js',
 ];
 
 function loadAppSource(root = __dirname) {
