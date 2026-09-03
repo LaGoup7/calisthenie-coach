@@ -4838,3 +4838,43 @@ body.onboarding-active #app{min-height:100vh}
   .onb-next{font-size:.78rem}
 }
 @media(prefers-reduced-motion:reduce){.onb-step{animation:none}.onb-progress>span{transition:none}}
+
+/* v10.157 · Today focus: one mission, two useful complements, then disclosure. */
+.today-agenda-focus{display:grid;gap:0;margin-top:2px}
+.today-agenda-tier{min-height:32px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 2px 5px}
+.today-agenda-tier>span{color:var(--text);font-size:.72rem;font-weight:900;letter-spacing:.035em}
+.today-agenda-tier>small{color:var(--muted);font-size:.68rem;font-weight:700}
+.today-agenda-primary{margin-top:2px}
+.today-agenda-primary>.today-agenda-task{margin-top:3px;padding:15px 14px;border:1px solid color-mix(in srgb,var(--primary) 28%,var(--line));border-radius:17px;background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 10%,var(--surface-1)),var(--surface-1))}
+.today-agenda-task.focus-primary{grid-template-columns:46px minmax(0,1fr) auto;gap:13px}
+.today-agenda-task.focus-primary .today-agenda-task-icon{width:46px;height:46px;border-radius:14px;background:color-mix(in srgb,var(--primary) 16%,var(--surface-2));font-size:1.08rem}
+.today-agenda-task.focus-primary .today-agenda-task-copy>strong{font-size:.92rem;line-height:1.3}
+.today-agenda-task.focus-primary .today-agenda-task-copy>small{font-size:.74rem;line-height:1.45}
+.today-agenda-task.focus-primary .today-agenda-task-meta>span{font-size:.68rem}
+.today-agenda-task.focus-primary .today-agenda-action{font-size:.74rem}
+.today-agenda-support{margin-top:7px}
+.today-agenda-support>.today-agenda-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.today-agenda-support .today-agenda-task{min-height:92px;grid-template-columns:38px minmax(0,1fr);align-content:center;padding:12px;border:1px solid var(--line);border-radius:15px;background:var(--surface-1)}
+.today-agenda-support .today-agenda-task-controls{grid-column:2;justify-content:flex-start}
+.today-agenda-support .today-agenda-task-copy>strong{font-size:.82rem}
+.today-agenda-support .today-agenda-task-copy>small{font-size:.68rem}
+.today-agenda-support .today-agenda-task-meta>span{font-size:.64rem}
+.today-agenda-support .today-agenda-action{font-size:.7rem}
+.today-agenda-more{margin-top:10px;border-top:1px solid var(--line)}
+.today-agenda-more>summary{min-height:48px;display:flex;align-items:center;gap:9px;list-style:none;color:var(--text);cursor:pointer;font-size:.76rem;font-weight:850}
+.today-agenda-more>summary::-webkit-details-marker{display:none}
+.today-agenda-more>summary>b{min-width:23px;height:23px;display:grid;place-items:center;border-radius:999px;background:var(--surface-2);color:var(--muted);font-size:.66rem}
+.today-agenda-more>summary>i{margin-left:auto;color:var(--muted);font-style:normal;transition:transform .18s ease}
+.today-agenda-more[open]>summary>i{transform:rotate(180deg)}
+.today-agenda-more>.today-agenda-list{padding-bottom:4px}
+.today-agenda-more .today-agenda-task-copy>strong{font-size:.78rem}
+.today-agenda-more .today-agenda-task-copy>small{font-size:.67rem}
+.today-agenda-more .today-agenda-task-meta>span{font-size:.62rem}
+@media(max-width:620px){
+  .today-agenda-task.focus-primary{grid-template-columns:44px minmax(0,1fr);padding:14px 12px}
+  .today-agenda-task.focus-primary .today-agenda-task-controls{grid-column:2;justify-content:flex-start}
+  .today-agenda-support>.today-agenda-list{grid-template-columns:1fr}
+  .today-agenda-support .today-agenda-task{min-height:82px}
+  .today-agenda-tier>span{font-size:.78rem}.today-agenda-tier>small{font-size:.7rem}
+}
+@media(prefers-reduced-motion:reduce){.today-agenda-more>summary>i{transition:none}}

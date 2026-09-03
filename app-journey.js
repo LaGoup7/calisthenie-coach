@@ -1,4 +1,4 @@
-/* KINETIK v10.148 · Daily journey, reminders, shortcuts and Web Push settings UI. */
+/* KINETIK v10.157 · Daily journey, reminders, shortcuts and Web Push settings UI. */
 /* KINETIK v10.120 · Step 6 · Today Agenda                                   */
 /* One compact surface for the Daily Tasks Engine.                            */
 /* Completed tasks leave the active list and feed the daily progress.         */
@@ -222,6 +222,20 @@ function v10122AdjustedTaskRow(task){
   const status=postponed?`Reporté · ${v10122DecisionDateLabel(task.metadata?.deferTo)}`:'Ignoré aujourd’hui';
   return `<div class="today-agenda-adjusted-row"><span>${meta.icon}</span><div><strong>${esc(task.title)}</strong><small>${esc(status)}</small></div><button type="button" data-daily-task-clear="${esc(task.id)}">Annuler</button></div>`;
 }
+function v10157FocusedAgendaTask(task,role){
+  const html=renderTodayAgendaTask(task).replace('<b>Prioritaire</b>','');
+  return html.replace('class="today-agenda-task',`class="today-agenda-task focus-${role}`);
+}
+function v10157PendingAgenda(pending){
+  if(!pending.length)return '';
+  const primary=pending[0],support=pending.slice(1,3),more=pending.slice(3);
+  const primaryHint=primary.kind==='workout'?'Lance-la juste au-dessus':'Commence ici';
+  return `<div class="today-agenda-focus">
+    <div class="today-agenda-primary"><div class="today-agenda-tier"><span>Mission principale</span><small>${primaryHint}</small></div>${v10157FocusedAgendaTask(primary,'primary')}</div>
+    ${support.length?`<div class="today-agenda-support"><div class="today-agenda-tier"><span>Compléments utiles</span><small>${support.length} action${support.length>1?'s':''}</small></div><div class="today-agenda-list">${support.map(task=>v10157FocusedAgendaTask(task,'support')).join('')}</div></div>`:''}
+    ${more.length?`<details class="today-agenda-more"><summary><span>Voir les autres</span><b>${more.length}</b><i>⌄</i></summary><div class="today-agenda-list">${more.map(task=>v10157FocusedAgendaTask(task,'more')).join('')}</div></details>`:''}
+  </div>`;
+}
 renderTodayAgenda=function(){
   const engine=window.KinetikDailyTasks;
   if(!engine?.getAgendaTasks||!engine?.agendaSummary)return '';
@@ -249,7 +263,7 @@ renderTodayAgenda=function(){
       <div class="today-agenda-score" aria-label="${summary.percent}% terminé"><strong>${summary.percent}%</strong><span>${summary.done}/${summary.total||0}</span></div>
     </div>
     <div class="today-agenda-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${summary.percent}"><i style="width:${summary.percent}%"></i></div>
-    ${pending.length?`<div class="today-agenda-list">${pending.map(renderTodayAgendaTask).join('')}</div>`:summary.complete?`<div class="today-agenda-complete"><span>${onlyAdjusted?'↷':'✓'}</span><div><strong>${onlyAdjusted?'Agenda traité pour aujourd’hui':'Tout est fait pour aujourd’hui'}</strong><small>${onlyAdjusted?'Les occurrences ajustées restent annulables ci-dessous.':'Les tâches terminées sont automatiquement retirées de la liste active.'}</small></div></div>`:'<div class="today-agenda-empty"><span>✓</span><div><strong>Agenda libre</strong><small>Tu peux t’entraîner librement ou simplement récupérer.</small></div></div>'}
+    ${pending.length?v10157PendingAgenda(pending):summary.complete?`<div class="today-agenda-complete"><span>${onlyAdjusted?'↷':'✓'}</span><div><strong>${onlyAdjusted?'Agenda traité pour aujourd’hui':'Tout est fait pour aujourd’hui'}</strong><small>${onlyAdjusted?'Les occurrences ajustées restent annulables ci-dessous.':'Les tâches terminées sont automatiquement retirées de la liste active.'}</small></div></div>`:'<div class="today-agenda-empty"><span>✓</span><div><strong>Agenda libre</strong><small>Tu peux t’entraîner librement ou simplement récupérer.</small></div></div>'}
     ${done.length?`<details class="today-agenda-done"><summary><span>✓ ${done.length} terminée${done.length>1?'s':''} aujourd’hui</span><b>⌄</b></summary><div>${done.map(t=>`<span>${todayAgendaTaskMeta(t).icon} ${esc(t.title.replace(/\s*·\s*fait$/i,''))}${t.metadata?.manualCompletion?' · manuel':''}</span>`).join('')}</div></details>`:''}
     ${adjusted.length?`<details class="today-agenda-adjusted"><summary><span>↷ ${adjusted.length} ajustée${adjusted.length>1?'s':''} aujourd’hui</span><b>⌄</b></summary><div>${adjusted.map(v10122AdjustedTaskRow).join('')}</div></details>`:''}
     ${upcoming.length?`<div class="today-agenda-upcoming"><div><span>Bientôt</span><small>Ne compte pas dans la progression du jour</small></div>${upcoming.slice(0,3).map(t=>`<span><b>${esc(t.title)}</b><small>${esc(t.detail)}</small></span>`).join('')}</div>`:''}
