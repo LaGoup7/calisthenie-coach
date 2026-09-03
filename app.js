@@ -1,4 +1,4 @@
-/* KINETIK v10.151 · Timed-set preparation countdown. */
+/* KINETIK v10.155 · Timed-set preparation and local athlete portrait. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -897,6 +897,9 @@ const state = {
   cycleProgressionDraft: null,
   activityEditor: false,
   athleteProfileEditor: false,
+  profilePhotoUrl: null,
+  profilePhotoLoaded: false,
+  profilePhotoBusy: false,
   assessmentEditor: null,
   assessmentCategory: "all",
 };
@@ -1494,9 +1497,10 @@ function renderRepetitionVolumePanel(){
 }
 
 const PHOTO_DB = "calisthenie-coach-media";
+const PROFILE_PHOTO_ID = "kinetik-profile-photo-v1";
 function openPhotoDB(){
   return new Promise((resolve,reject)=>{
-    if(!("indexedDB" in globalThis)){reject(new Error("IndexedDB indisponible"));return;}
+    if(!globalThis.indexedDB?.open){reject(new Error("IndexedDB indisponible"));return;}
     const req=indexedDB.open(PHOTO_DB,1);
     req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("photos"))req.result.createObjectStore("photos",{keyPath:"id"});};
     req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
@@ -1504,7 +1508,21 @@ function openPhotoDB(){
 }
 async function putPhoto(id,blob){const db=await openPhotoDB();return new Promise((resolve,reject)=>{const tx=db.transaction("photos","readwrite");tx.objectStore("photos").put({id,blob});tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);});}
 async function getPhoto(id){const db=await openPhotoDB();return new Promise((resolve,reject)=>{const tx=db.transaction("photos","readonly"),req=tx.objectStore("photos").get(id);req.onsuccess=()=>{db.close();resolve(req.result?.blob||null);};req.onerror=()=>reject(req.error);});}
-async function clearPhotos(){try{const db=await openPhotoDB();return await new Promise((resolve,reject)=>{const tx=db.transaction("photos","readwrite");tx.objectStore("photos").clear();tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);});}catch{}}
+async function deletePhoto(id){const db=await openPhotoDB();return new Promise((resolve,reject)=>{const tx=db.transaction("photos","readwrite");tx.objectStore("photos").delete(id);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);});}
+function setProfilePhotoUrl(url=null){
+  if(state.profilePhotoUrl?.startsWith?.('blob:'))URL.revokeObjectURL(state.profilePhotoUrl);
+  state.profilePhotoUrl=url;
+  state.profilePhotoLoaded=true;
+}
+async function loadProfilePhoto({rerender=false}={}){
+  try{
+    const blob=await getPhoto(PROFILE_PHOTO_ID);
+    setProfilePhotoUrl(blob?URL.createObjectURL(blob):null);
+  }catch(e){if(globalThis.indexedDB?.open)console.warn('Photo de profil indisponible',e);setProfilePhotoUrl(null);}
+  if(rerender&&(state.view==='athlete'||state.athleteProfileEditor))render();
+  return state.profilePhotoUrl;
+}
+async function clearPhotos(){try{const db=await openPhotoDB();await new Promise((resolve,reject)=>{const tx=db.transaction("photos","readwrite");tx.objectStore("photos").clear();tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);});setProfilePhotoUrl(null);}catch{}}
 
 function blobToDataURL(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(blob);});}
 function dataURLToBlob(dataURL){const [meta,data]=String(dataURL||'').split(',');if(!meta||!data)return null;const mime=(meta.match(/data:([^;]+)/)||[])[1]||'application/octet-stream';const bin=atob(data),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new Blob([bytes],{type:mime});}
@@ -1520,7 +1538,8 @@ async function exportBackup(){
       try{const blob=await getPhoto(photoId);if(blob)photos[photoId]=await blobToDataURL(blob);}catch(e){console.warn('Photo non exportée',photoId,e);}
     }
   }
-  const backup={app:'KINETIK',schema:2,version:'10.150',exportedAt:new Date().toISOString(),data,photos};
+  try{const profilePhoto=await getPhoto(PROFILE_PHOTO_ID);if(profilePhoto)photos[PROFILE_PHOTO_ID]=await blobToDataURL(profilePhoto);}catch(e){console.warn('Photo de profil non exportée',e);}
+  const backup={app:'KINETIK',schema:2,version:'10.155',exportedAt:new Date().toISOString(),data,photos};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`calisthenie-coach-backup-${localDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -1543,6 +1562,7 @@ async function importBackupFile(file){
     if(backup.photos&&typeof backup.photos==='object'){
       for(const [id,dataURL] of Object.entries(backup.photos)){const blob=dataURLToBlob(dataURL);if(blob)await putPhoto(id,blob);}
     }
+    await loadProfilePhoto();
     state.active=null;state.quickEditor=false;state.bodyEditor=false;state.selectedHistoryId=null;state.view='athlete';render();alert('Sauvegarde restaurée avec succès.');
   }catch(e){console.error(e);alert('La restauration a échoué. Les données du fichier n’ont pas pu être entièrement importées.');}
 }
@@ -1553,6 +1573,33 @@ async function compressPhoto(file){
   const canvas=document.createElement("canvas");canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
   const ctx=canvas.getContext("2d");ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();
   return await new Promise(resolve=>canvas.toBlob(resolve,"image/jpeg",.76));
+}
+function profilePhotoMedia(name=''){
+  const hasPhoto=!!state.profilePhotoUrl,alt=`Photo de profil de ${name||'l’athlète'}`;
+  return `<img data-profile-photo-image ${hasPhoto?`src="${esc(state.profilePhotoUrl)}"`:''} alt="${esc(alt)}" ${hasPhoto?'':'hidden'}><span class="p155-photo-fallback" data-profile-photo-fallback ${hasPhoto?'hidden':''} aria-hidden="true"><b>${esc(athleteInitials(name))}</b><small>PHOTO</small></span>`;
+}
+function syncProfilePhotoDom(name=getAthleteProfile().name){
+  const hasPhoto=!!state.profilePhotoUrl;
+  document.querySelectorAll('[data-profile-photo-image]').forEach(img=>{if(hasPhoto)img.src=state.profilePhotoUrl;else img.removeAttribute('src');img.hidden=!hasPhoto;img.alt=`Photo de profil de ${name||'l’athlète'}`;});
+  document.querySelectorAll('[data-profile-photo-fallback]').forEach(el=>el.hidden=hasPhoto);
+  document.querySelectorAll('[data-profile-photo-action]').forEach(el=>el.textContent=hasPhoto?'CHANGER':'AJOUTER');
+  document.querySelectorAll('[data-profile-photo-status]').forEach(el=>el.textContent=hasPhoto?'Portrait actif':'Personnalise ton passeport');
+  document.querySelectorAll('[data-select-profile-photo]').forEach(el=>el.disabled=false);
+  document.querySelectorAll('[data-remove-profile-photo]').forEach(el=>{el.hidden=!hasPhoto;el.disabled=false;});
+}
+async function saveProfilePhotoFile(file){
+  if(!file)return false;
+  if(!String(file.type||'').startsWith('image/')){alert('Choisis un fichier image.');return false;}
+  if(file.size>20*1024*1024){alert('Cette photo est trop volumineuse. Choisis une image de moins de 20 Mo.');return false;}
+  state.profilePhotoBusy=true;
+  try{
+    const blob=await compressPhoto(file);
+    if(!blob)throw new Error('Compression impossible');
+    await putPhoto(PROFILE_PHOTO_ID,blob);
+    await loadProfilePhoto();
+    return true;
+  }catch(e){console.error(e);alert('La photo n’a pas pu être enregistrée sur cet appareil.');return false;}
+  finally{state.profilePhotoBusy=false;}
 }
 function estimateBodyFat(heightCm,waistCm,neckCm){
   const h=Number(heightCm),w=Number(waistCm),n=Number(neckCm);if(!(h>0&&w>n&&n>0))return null;
@@ -2726,7 +2773,9 @@ function renderAthleteProfileEditor(){
   <section class="athlete-profile-editor-full">
     <nav class="profile-editor-nav" aria-label="Sections du profil">${[['identity','Identité'],['goals','Objectifs'],['training','Entraînement'],['context','Sports & lieux'],['equipment','Matériel'],['limits','Contraintes'],['notes','Notes']].map(([id,label],i)=>`<button type="button" data-profile-editor-section="${id}"><span>0${i+1}</span>${label}</button>`).join('')}</nav>
 
-    <section class="profile-editor-block" id="profile-section-identity"><div class="profile-editor-heading"><span>01</span><div><h2>Identité sportive</h2><p>Les informations de base utilisées dans les repères physiques.</p></div></div><div class="profile-form-grid">
+    <section class="profile-editor-block" id="profile-section-identity"><div class="profile-editor-heading"><span>01</span><div><h2>Identité sportive</h2><p>Les informations de base utilisées dans les repères physiques.</p></div></div>
+      <div class="p155-photo-editor"><div class="p155-photo-editor-preview">${profilePhotoMedia(p.name)}</div><div class="p155-photo-editor-copy"><span>PHOTO D’ATHLÈTE</span><strong data-profile-photo-status>${state.profilePhotoUrl?'Portrait actif':'Personnalise ton passeport'}</strong><p>La photo est recadrée automatiquement et reste enregistrée sur cet appareil.</p><div><button type="button" class="btn btn-secondary compact" data-select-profile-photo><span data-profile-photo-action>${state.profilePhotoUrl?'CHANGER':'AJOUTER'}</span> UNE PHOTO</button><button type="button" class="p155-photo-remove" data-remove-profile-photo ${state.profilePhotoUrl?'':'hidden'}>SUPPRIMER</button></div><input type="file" accept="image/*" data-profile-photo-input hidden aria-label="Choisir une photo de profil"></div></div>
+      <div class="profile-form-grid">
       <label><span>Prénom ou pseudo</span><input id="athleteName" value="${esc(p.name)}" placeholder="Ton prénom"></label>
       <label><span>Niveau actuel</span><select id="athleteExperience">${['Débutant','Intermédiaire','Avancé','Expert'].map(x=>`<option ${p.experience===x?'selected':''}>${x}</option>`).join('')}</select></label>
       <label><span>Âge <small>optionnel</small></span><input id="athleteAge" type="number" min="12" max="100" value="${p.age||''}" placeholder="—"></label>

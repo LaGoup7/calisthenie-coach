@@ -4466,3 +4466,165 @@ body.athlete-passport{background:#090b0f;color:#f4f5f7}body.athlete-passport #ap
 @media(max-width:720px){.shell:has(.p153-world){padding-inline:13px}.p153-passport{grid-template-columns:minmax(0,1fr) 64px;min-height:258px}.p153-rank-index{font-size:11rem;right:-4px;top:5px}.p153-person h1{font-size:clamp(2.7rem,13vw,4rem);line-height:.9;max-width:calc(100vw - 115px)}.p153-rank-lockup{grid-column:1/-1}.p153-profile-score{width:62px;height:62px}.p153-mission{grid-template-columns:1fr 34px;padding:20px;gap:16px}.p153-mission-code{display:inline-flex;grid-column:1;grid-row:1;width:max-content;padding:5px 8px;border:1px solid color-mix(in srgb,#080a0d 28%,transparent);font-size:.65rem}.p153-mission>div:nth-child(2){grid-column:1/-1}.p153-mission-next{grid-column:1/-1}.p153-mission>button{grid-column:2;grid-row:1}.p153-telemetry{scroll-snap-type:x mandatory}.p153-telemetry button{scroll-snap-align:start;min-width:145px}.p153-gear>div:last-child{grid-template-columns:repeat(2,minmax(0,1fr))}.p153-vault{padding-bottom:76px}}
 @media(max-width:450px){.p153-person h1{font-size:2.8rem}.p153-rank-index{font-size:9rem}.p153-head button{min-height:40px}.p153-mission h2{font-size:1.5rem}.p153-operation-grid article{padding:20px;min-height:230px}.p153-gear>div:last-child{grid-template-columns:1fr 1fr}.p153-caution button{min-height:40px}.p153-vault>button>b,.p153-vault>a>b{max-width:92px;text-align:right}}
 body.athlete-passport .shell{max-width:900px}
+
+/* v10.155 · Athlete portrait */
+.p153-passport.p155-with-photo{
+  grid-template-columns:124px minmax(0,1fr) minmax(170px,.44fr) 70px;
+  grid-template-rows:1fr;
+  gap:22px;
+  align-items:center;
+  min-height:292px;
+}
+.p153-passport.p155-with-photo .p153-person{min-width:0}
+.p153-passport.p155-with-photo .p153-person h1{overflow-wrap:anywhere}
+.p155-portrait{
+  position:relative;
+  z-index:2;
+  width:124px;
+  aspect-ratio:4/5;
+  padding:0;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--signal) 42%,var(--rule));
+  background:#10141a;
+  clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,13px 100%,0 calc(100% - 13px));
+  box-shadow:0 18px 34px rgba(0,0,0,.3);
+}
+.p155-portrait:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-bottom:3px solid var(--signal);
+  background:linear-gradient(180deg,transparent 58%,rgba(4,6,9,.78));
+  pointer-events:none;
+}
+.p155-portrait img,.p155-photo-editor-preview img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  object-position:50% 34%;
+}
+.p155-portrait img{filter:saturate(.82) contrast(1.05)}
+.p155-photo-fallback{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-content:center;
+  gap:7px;
+  text-align:center;
+  background:linear-gradient(145deg,#171c24,#0b0e13);
+}
+.p155-photo-fallback b{
+  color:var(--signal,var(--primary));
+  font-size:2rem;
+  letter-spacing:-.06em;
+}
+.p155-photo-fallback small{
+  color:#7e8795;
+  font-size:.68rem;
+  font-weight:850;
+  letter-spacing:.16em;
+}
+.p155-portrait-action{
+  position:absolute;
+  z-index:2;
+  left:11px;
+  bottom:10px;
+  color:#f6f7f9;
+  font-size:.65rem;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.p155-portrait:hover{border-color:var(--signal);transform:translateY(-2px)}
+.p155-portrait:focus-visible{outline:2px solid var(--signal);outline-offset:4px}
+.p155-portrait:disabled{opacity:.6;cursor:progress}
+
+.p155-photo-editor{
+  display:grid;
+  grid-template-columns:132px minmax(0,1fr);
+  gap:22px;
+  align-items:center;
+  margin:18px 0 24px;
+  padding:18px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:var(--surface-2);
+}
+.p155-photo-editor-preview{
+  position:relative;
+  width:132px;
+  aspect-ratio:4/5;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--surface);
+}
+.p155-photo-editor-preview .p155-photo-fallback{background:linear-gradient(145deg,var(--surface),var(--surface-2))}
+.p155-photo-editor-preview .p155-photo-fallback b{color:var(--primary)}
+.p155-photo-editor-copy{min-width:0}
+.p155-photo-editor-copy>span{
+  color:var(--muted);
+  font-size:.75rem;
+  font-weight:850;
+  letter-spacing:.11em;
+}
+.p155-photo-editor-copy>strong{
+  display:block;
+  margin:5px 0 7px;
+  font-size:1.15rem;
+}
+.p155-photo-editor-copy>p{
+  max-width:470px;
+  margin:0 0 15px;
+  color:var(--muted);
+  font-size:.88rem;
+  line-height:1.45;
+}
+.p155-photo-editor-copy>div{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.p155-photo-remove{
+  min-height:40px;
+  padding:8px 11px;
+  border:1px solid color-mix(in srgb,var(--danger) 32%,var(--line));
+  border-radius:11px;
+  background:transparent;
+  color:var(--danger);
+  font-size:.72rem;
+  font-weight:850;
+}
+.p155-photo-remove:disabled{opacity:.55;cursor:progress}
+
+@media(max-width:720px){
+  .p153-passport.p155-with-photo{
+    grid-template-columns:96px minmax(0,1fr) 62px;
+    grid-template-rows:auto auto;
+    gap:17px;
+    min-height:272px;
+    padding:27px 0 24px;
+  }
+  .p153-passport.p155-with-photo .p155-portrait{grid-column:1;grid-row:1;width:96px}
+  .p153-passport.p155-with-photo .p153-person{grid-column:2;grid-row:1}
+  .p153-passport.p155-with-photo .p153-person h1{max-width:none;font-size:clamp(2.35rem,10vw,3.35rem)}
+  .p153-passport.p155-with-photo .p153-profile-score{grid-column:3;grid-row:1}
+  .p153-passport.p155-with-photo .p153-rank-lockup{grid-column:1/-1;grid-row:2}
+  .p155-portrait-action{left:8px;bottom:8px;font-size:.58rem}
+}
+@media(max-width:520px){
+  .p155-photo-editor{grid-template-columns:96px minmax(0,1fr);gap:15px;padding:14px}
+  .p155-photo-editor-preview{width:96px}
+  .p155-photo-editor-copy>p{font-size:.82rem}
+}
+@media(max-width:450px){
+  .p153-passport.p155-with-photo{grid-template-columns:82px minmax(0,1fr) 54px;gap:12px}
+  .p153-passport.p155-with-photo .p155-portrait{width:82px}
+  .p153-passport.p155-with-photo .p153-person h1{font-size:clamp(2rem,9.5vw,2.65rem);line-height:.92}
+  .p153-passport.p155-with-photo .p153-person p{font-size:.65rem;letter-spacing:.06em}
+  .p153-passport.p155-with-photo .p153-profile-score{width:54px;height:54px}
+  .p155-portrait-action{font-size:.52rem;letter-spacing:.08em}
+  .p155-photo-editor{grid-template-columns:82px minmax(0,1fr);gap:12px;padding:12px}
+  .p155-photo-editor-preview{width:82px}
+  .p155-photo-editor-copy>strong{font-size:1rem}
+  .p155-photo-editor-copy>p{display:none}
+  .p155-photo-editor-copy>div{gap:7px}
+  .p155-photo-editor-copy .btn{padding:10px 11px;font-size:.72rem}
+}
+.p155-photo-fallback[hidden],[data-profile-photo-image][hidden],[data-remove-profile-photo][hidden]{display:none!important}

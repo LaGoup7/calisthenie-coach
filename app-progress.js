@@ -1,4 +1,4 @@
-/* KINETIK v10.150 · Mobility, progression UX and product-coaching layers. */
+/* KINETIK v10.155 · Mobility, progression UX and Athlete Passport. */
 /* V10.145 · Mobility finalisation                                            */
 /* Today → Mobility balance → Progression → Secondary details                 */
 /* ========================================================================== */
@@ -1076,7 +1076,7 @@ renderMore=function(){
   const account=globalThis.KinetikAccount?.getStatus?.(),rankPct=rank.next?Math.round(rank.readiness*100):100,serial=String(p.name||'KINETIK').replace(/[^a-z0-9]/gi,'').slice(0,3).toUpperCase()+'-'+String(p.age||0).padStart(2,'0')+'-'+String(rank.index+1).padStart(2,'0');
   return shell(`<div class="p153-world rank-${rank.current.id}">
     <header class="p153-head"><div><span>KINETIK / ATHLETE FILE</span><strong>PROFIL</strong></div><button data-edit-athlete-profile>ÉDITER ↗</button></header>
-    <section class="p153-passport"><div class="p153-rank-index" aria-hidden="true">0${rank.index+1}</div><div class="p153-person"><span>ID ${esc(serial)}</span><h1>${esc(p.name||'MON PROFIL')}</h1><p>${esc(p.experience)}${p.height?` / ${Number(p.height).toFixed(0)} CM`:''}${p.age?` / ${p.age} ANS`:''}</p></div><button class="p153-rank-lockup" data-view="skills"><small>NIVEAU KINETIK</small><strong>${esc(rank.displayName)}</strong><div><i style="width:${rankPct}%"></i></div><span>${rank.next?`${rankPct}% → ${esc(rank.next.name)}`:'NIVEAU MAXIMAL'}</span></button><div class="p153-profile-score"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="43"/><circle class="fill" cx="50" cy="50" r="43" style="--dash:${status.completion*2.7}"/></svg><div><strong>${status.completion}</strong><span>PROFIL</span></div></div></section>
+    <section class="p153-passport p155-with-photo"><div class="p153-rank-index" aria-hidden="true">0${rank.index+1}</div><button type="button" class="p155-portrait" data-select-profile-photo aria-label="${state.profilePhotoUrl?'Changer la photo de profil':'Ajouter une photo de profil'}">${profilePhotoMedia(p.name)}<span class="p155-portrait-action" data-profile-photo-action>${state.profilePhotoUrl?'CHANGER':'AJOUTER'}</span></button><input type="file" accept="image/*" data-profile-photo-input hidden aria-label="Choisir une photo de profil"><div class="p153-person"><span>ID ${esc(serial)}</span><h1>${esc(p.name||'MON PROFIL')}</h1><p>${esc(p.experience)}${p.height?` / ${Number(p.height).toFixed(0)} CM`:''}${p.age?` / ${p.age} ANS`:''}</p></div><button class="p153-rank-lockup" data-view="skills"><small>NIVEAU KINETIK</small><strong>${esc(rank.displayName)}</strong><div><i style="width:${rankPct}%"></i></div><span>${rank.next?`${rankPct}% → ${esc(rank.next.name)}`:'NIVEAU MAXIMAL'}</span></button><div class="p153-profile-score"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="43"/><circle class="fill" cx="50" cy="50" r="43" style="--dash:${status.completion*2.7}"/></svg><div><strong>${status.completion}</strong><span>PROFIL</span></div></div></section>
     <section class="p153-mission"><div class="p153-mission-code">MISSION<br>ACTIVE</div><div><span>OBJECTIF PRINCIPAL</span><h2>${esc(p.primaryGoal)}</h2><p>${esc(goal.focus)}</p></div><div class="p153-mission-next"><span>PROCHAIN JALON</span><strong>${esc(goal.next)}</strong>${p.secondaryGoal?`<small>OBJECTIF 02 — ${esc(p.secondaryGoal)}</small>`:''}</div><button data-edit-athlete-profile aria-label="Modifier les objectifs">↗</button></section>
     ${status.gaps.length?`<button class="p153-signal" data-edit-athlete-profile><i></i><span>FICHIER INCOMPLET</span><strong>${status.gaps.length} donnée${status.gaps.length>1?'s':''} à renseigner</strong><b>RÉSOUDRE →</b></button>`:''}
     <section class="p153-telemetry" aria-label="Indicateurs du profil"><button data-view="measurements"><span>MASSE</span><strong>${weight?Number(weight).toFixed(1):'—'}</strong><small>KG</small></button><button data-view="measurements"><span>TOUR DE TAILLE</span><strong>${waist?Number(waist).toFixed(0):'—'}</strong><small>CM</small></button><button data-view="skills"><span>RANG</span><strong>${esc(rank.current.name.toUpperCase())}</strong><small>${rank.nextEval?`${rank.nextEval.completed}/${rank.nextEval.required} VALIDÉS`:'COMPLET'}</small></button><button data-view="flexibility"><span>MOBILITÉ</span><strong>${mobilityDone}/${mobility.length}</strong><small>ZONES</small></button><button data-view="week"><span>RYTHME</span><strong>${p.weeklySessions}×</strong><small>${p.preferredDuration} MIN</small></button></section>
@@ -2229,3 +2229,38 @@ bindEvents=function(){
   document.querySelectorAll('[data-progress-body-metric]').forEach(b=>b.onclick=()=>{state.progressBodyMetric=b.dataset.progressBodyMetric||'weight';render();});
   document.querySelectorAll('[data-progress-history-filter]').forEach(b=>b.onclick=()=>{state.progressHistoryFilter=b.dataset.progressHistoryFilter||'all';state.selectedHistoryId=null;render();});
 };
+
+/* V10.155 · Local athlete portrait */
+const _bindEventsV10155=bindEvents;
+bindEvents=function(){
+  _bindEventsV10155();
+  document.querySelectorAll('[data-select-profile-photo]').forEach(button=>button.onclick=()=>{
+    const root=button.closest('.p153-passport,.p155-photo-editor')||document;
+    root.querySelector('[data-profile-photo-input]')?.click();
+  });
+  document.querySelectorAll('[data-profile-photo-input]').forEach(input=>input.onchange=async()=>{
+    const file=input.files?.[0];if(!file||state.profilePhotoBusy)return;
+    document.querySelectorAll('[data-select-profile-photo]').forEach(button=>button.disabled=true);
+    const saved=await saveProfilePhotoFile(file);input.value='';
+    if(saved){
+      if(state.athleteProfileEditor)syncProfilePhotoDom(document.getElementById('athleteName')?.value||getAthleteProfile().name);
+      else render();
+    }else document.querySelectorAll('[data-select-profile-photo]').forEach(button=>button.disabled=false);
+  });
+  document.querySelectorAll('[data-remove-profile-photo]').forEach(button=>button.onclick=async()=>{
+    if(state.profilePhotoBusy||!confirm('Supprimer la photo de profil de cet appareil ?'))return;
+    state.profilePhotoBusy=true;button.disabled=true;
+    try{
+      await deletePhoto(PROFILE_PHOTO_ID);setProfilePhotoUrl(null);
+      if(state.athleteProfileEditor)syncProfilePhotoDom(document.getElementById('athleteName')?.value||getAthleteProfile().name);
+      else render();
+    }catch(e){console.error(e);button.disabled=false;alert('La photo n’a pas pu être supprimée.');}
+    finally{state.profilePhotoBusy=false;}
+  });
+};
+
+if(typeof document!=='undefined'){
+  const hydrateProfilePhoto=()=>loadProfilePhoto({rerender:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hydrateProfilePhoto,{once:true});
+  else hydrateProfilePhoto();
+}
