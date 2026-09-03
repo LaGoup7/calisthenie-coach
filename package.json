@@ -1,6 +1,6 @@
 {
   "name": "kinetik-pwa",
-  "version": "10.152.0",
+  "version": "10.153.0",
   "private": true,
   "description": "KINETIK PWA with simplified daily UX, local-first multi-device identity, reliable Web Push and modular UI",
   "engines": {
