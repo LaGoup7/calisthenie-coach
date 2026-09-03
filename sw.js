@@ -1,5 +1,5 @@
-const CACHE = 'kinetik-v10-153-athlete-passport';
-const ASSETS = ['./','./index.html','./styles.css?v=10.153','./app.js?v=10.151','./app-adaptive.js?v=10.148','./app-planning.js?v=10.148','./app-progress.js?v=10.153','./app-body.js?v=10.148','./app-journey.js?v=10.148','./daily-tasks.js?v=10.148','./local-reminders.js?v=10.148','./web-push-manager.js?v=10.148','./account-manager.js?v=10.148','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE = 'kinetik-v10-154-athlete-passport-ui';
+const ASSETS = ['./','./index.html','./styles.css?v=10.154','./app.js?v=10.154','./app-adaptive.js?v=10.148','./app-planning.js?v=10.148','./app-progress.js?v=10.154','./app-body.js?v=10.148','./app-journey.js?v=10.148','./daily-tasks.js?v=10.148','./local-reminders.js?v=10.148','./web-push-manager.js?v=10.148','./account-manager.js?v=10.148','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e => {

@@ -2656,6 +2656,8 @@ function renderProgramAudit(){
 
 function render() {
   const app = document.getElementById("app");
+  const athletePassport=state.view==="athlete"&&!state.active&&!state.activityEditor&&!state.athleteProfileEditor&&!state.sessionModeEditor&&!state.readinessEditor&&!state.exerciseLibrary&&!state.assessmentEditor&&!state.bodyEditor&&!state.tutorialManager;
+  document.body.classList.toggle("athlete-passport",athletePassport);
   if (state.active) app.innerHTML = renderCoach();
   else if (state.activityEditor) app.innerHTML = renderActivityEditor();
   else if (state.athleteProfileEditor) app.innerHTML = renderAthleteProfileEditor();
