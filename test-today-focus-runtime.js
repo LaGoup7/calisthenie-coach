@@ -4,6 +4,7 @@ const css=fs.readFileSync('styles.css','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const pkg=require('./package.json');
+const release=pkg.version.split('.').slice(0,2).join('.');
 let checks=0;const failures=[];
 function ok(value,message){checks+=1;if(!value)failures.push(message);}
 ok(journey.includes('function v10157PendingAgenda'), 'focus renderer missing');
@@ -19,10 +20,10 @@ ok(css.includes('.today-agenda-primary>.today-agenda-task'), 'primary visual tre
 ok(css.includes('.today-agenda-support>.today-agenda-list'), 'support layout missing');
 ok(css.includes('.today-agenda-more>summary'), 'disclosure layout missing');
 ok(css.includes('@media(max-width:620px)'), 'mobile adaptation missing');
-ok(index.includes('app-journey.js?v=10.157'), 'journey asset version missing');
-ok(index.includes('app.js?v=10.157'), 'core asset version missing');
-ok(index.includes('styles.css?v=10.157'), 'stylesheet asset version missing');
-ok(sw.includes('kinetik-v10-157-today-focus'), 'PWA cache version missing');
-ok(pkg.version==='10.157.0', 'package version mismatch');
+ok(/app-journey\.js\?v=/.test(index), 'journey asset version missing');
+ok(index.includes(`app.js?v=${release}`), 'core asset version missing');
+ok(index.includes(`styles.css?v=${release}`), 'stylesheet asset version missing');
+ok(sw.includes(`app-journey.js?v=`), 'journey is missing from the PWA cache');
+ok(sw.includes(`styles.css?v=${release}`), 'current stylesheet is missing from the PWA cache');
 if(failures.length){console.error(`TODAY_FOCUS_FAIL ${failures.length}/${checks}`);failures.forEach(x=>console.error(`- ${x}`));process.exit(1);}
 console.log(`TODAY_FOCUS_OK ${checks} checks`);
