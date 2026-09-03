@@ -1066,6 +1066,7 @@ renderProfile=function(){
     ${renderRestrictionSettings()}
 
     <section class="p88-settings-section"><div class="p88-section-head"><div><div class="kicker">Séance</div><h2>Timers & écran</h2></div></div>
+      <label class="p88-selectline"><div><strong>Préparation avant un maintien</strong><div class="small muted">Compte à rebours avant Dead Hang et les autres séries chronométrées des entraînements du jour. Sans effet sur le circuit gainage.</div></div><select id="timedSetPrepPref" aria-label="Secondes de préparation avant une série chronométrée">${[0,3,5,10,15].map(n=>`<option value="${n}" ${Number(p.timedSetPrepSeconds??5)===n?'selected':''}>${n===0?'Aucune':n+' s'}</option>`).join('')}</select></label>
       <div class="switchline"><div><strong>Son du timer</strong><div class="small muted">Signal à la fin d’un chrono.</div></div><input id="soundPref" type="checkbox" ${p.sound?'checked':''}></div>
       <div class="switchline"><div><strong>Garder l’écran actif</strong><div class="small muted">Évite la mise en veille pendant la séance quand le navigateur le permet.</div></div><input id="keepAwakePref" type="checkbox" ${p.keepAwake!==false?'checked':''}></div>
       <div class="switchline"><div><strong>Vibration</strong><div class="small muted">Uniquement sur les navigateurs compatibles.</div></div><input id="vibrationPref" type="checkbox" ${p.vibration?'checked':''}></div>

@@ -1,4 +1,4 @@
-/* KINETIK v10.150 · Core runtime, data, storage and foundational UI. */
+/* KINETIK v10.151 · Timed-set preparation countdown. */
 const DAY_NAMES = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const STORAGE = {
   history: "cc_history",
@@ -908,8 +908,15 @@ function parse(key, fallback) {
 function save(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 function getHistory() { return parse(STORAGE.history, []); }
 function setHistory(v) { save(STORAGE.history, v); }
-function getPrefs() { return parse(STORAGE.prefs, { sound:true, vibration:true, smartProgression:true, keepAwake:true }); }
+function getPrefs() { return parse(STORAGE.prefs, { sound:true, vibration:true, smartProgression:true, keepAwake:true, timedSetPrepSeconds:5 }); }
 function setPrefs(v) { save(STORAGE.prefs, v); }
+function timedSetPrepSeconds(){
+  const value=Number(getPrefs().timedSetPrepSeconds ?? 5);
+  return [0,3,5,10,15].includes(value)?value:5;
+}
+function usesTimedSetPreparation(a=state.active,e=a?.workout?.exercises?.[a.exerciseIndex]){
+  return !!a&&!!e&&(a.kind==='workout'||a.kind==='custom')&&String(e.type||'').startsWith('hold');
+}
 
 /* V10.116 · Canonical anthropometrics
    - height: athlete profile is the single current source of truth
@@ -3195,7 +3202,7 @@ function startWorkout(day=todayDay(), readiness=null) {
   state.readinessEditor=null;state.sessionModeEditor=null;
   state.active = {
     kind:isCustom?"custom":"workout", day:isCustom?"custom":Number(day), customWorkoutId:isCustom?readiness.customWorkoutId:null, trainingCycleId:isCustom?null:(w.trainingCycleId||getActiveTrainingCycleId()), sessionLength:w.sessionLength||readiness?.sessionLength||'full', workout:w, cycle:w.cycle, readiness:readiness||{energy:3,soreness:2,joints:'ok'}, startedAt:Date.now(), exerciseIndex:0, setIndex:0, phase:"work", entries:[],
-    currentValue:w.exercises[0].target, currentBand:w.exercises[0].type==='reps_band'?(lastBandForExercise(w.exercises[0].name)||defaultBandForExercise(w.exercises[0].name)):'Aucune', timerRemaining:null, timerRunning:false,
+    currentValue:w.exercises[0].target, currentBand:w.exercises[0].type==='reps_band'?(lastBandForExercise(w.exercises[0].name)||defaultBandForExercise(w.exercises[0].name)):'Aucune', timerRemaining:null, timerRunning:false, timerStage:null,
     reviewRpe:6, reviewDiscomfort:false, reviewNote:"", sessionPaused:false, pauseStartedAt:null, pausedTotalMs:0, resumeTimerAfterPause:false, currentLoadKg:0
   };
   render();
@@ -3225,8 +3232,9 @@ function renderCoach() {
   let input="";
   if (timed) {
     if (a.timerRemaining==null) a.timerRemaining=e.target;
-    input=`<div class="timer"><div class="timer-time">${fmtTime(a.timerRemaining)}</div><div class="timer-sub">Objectif : ${e.target>=60?fmtTime(e.target):e.target+' sec'}</div></div>
-      <button class="btn btn-secondary" id="toggleWorkTimer">${a.timerRunning?'Pause':(a.timerRemaining===e.target?'Démarrer le chrono':'Reprendre')}</button>`;
+    const preparing=a.timerStage==='prepare';
+    input=`<div class="timer ${preparing?'timer-preparing':''}"><div class="timer-time">${fmtTime(a.timerRemaining)}</div><div class="timer-sub">${preparing?`Prépare-toi · le chrono de ${e.target} s démarre ensuite`:`Objectif : ${e.target>=60?fmtTime(e.target):e.target+' sec'}`}</div></div>
+      <div class="work-timer-actions"><button class="btn btn-secondary" id="toggleWorkTimer">${a.timerRunning?'Pause':(preparing?'Reprendre la préparation':(a.timerRemaining===e.target?'Démarrer le chrono':'Reprendre'))}</button>${preparing?'<button class="btn btn-outline" id="skipWorkPreparation">Commencer maintenant</button>':''}</div>${usesTimedSetPreparation(a,e)&&!preparing&&a.timerStage!=='work'&&timedSetPrepSeconds()>0?`<div class="timer-prep-note">Préparation réglée sur ${timedSetPrepSeconds()} s</div>`:''}`;
   } else {
     input=`<div class="counter"><button id="decValue">−</button><input id="valueInput" inputmode="numeric" type="number" min="0" value="${a.currentValue}"><button id="incValue">+</button></div>`;
     if (e.type==="reps_band") input+=`<div class="band-select-block"><label class="small muted">Bande utilisée</label>${renderBandPicker(a.currentBand,e.name)}</div>`;
@@ -3256,7 +3264,7 @@ function completeSet() {
   let value=a.currentValue;
   if (e.type==="timer"||e.type.startsWith("hold")) {
     const remaining=a.timerRemaining??e.target;
-    value=remaining===e.target?e.target:Math.max(0,e.target-remaining);
+    value=a.timerStage==='prepare'?0:(remaining===e.target?e.target:Math.max(0,e.target-remaining));
   } else {
     const field=document.getElementById("valueInput"); if(field) value=Number(field.value||0);
   }
@@ -3265,6 +3273,7 @@ function completeSet() {
   a.currentLoadKg=loadKg||0;a.currentBand=band||a.currentBand;
   a.entries.push({ exercise:e.name, type:e.type, set:a.setIndex+1, target:e.target, progressionTarget:e.progressionTarget||e.target, baseTarget:e.baseTarget, value, band, loadKg, substitutedFrom:e.substitutedFrom||null });
   a.timerRunning=false; stopTimer();
+  a.timerStage=null;
   if (a.setIndex<e.sets-1) {
     a.setIndex++; a.currentValue=e.target; a.timerRemaining=e.rest; a.phase=e.rest>0?"rest":"work";
     if(a.phase==="rest"){a.timerRunning=true;startTimer();} render(); return;
@@ -3299,6 +3308,7 @@ function advanceToNextExercise(a=state.active){
   a.currentLoadKg=0;
   a.timerRemaining=next.type==="timer"||next.type.startsWith("hold")?next.target:null;
   a.timerRunning=false;
+  a.timerStage=null;
   return true;
 }
 
@@ -3369,10 +3379,14 @@ function releaseTimerWakeLock(){
 
 function finishRunningTimer(){
   const a=state.active;if(!a)return;
+  if(a.phase==='work'&&a.timerStage==='prepare'){
+    const e=a.workout.exercises[a.exerciseIndex];
+    a.timerStage='work';a.timerRemaining=e.target;a.timerRunning=true;stopTimer();signalPreparationEnd();startTimer();render();return;
+  }
   a.timerRunning=false;stopTimer();signalTimer();
   if(a.phase==='rest'){
     a.phase='work';const e=a.workout.exercises[a.exerciseIndex];
-    a.timerRemaining=e.type==='timer'||e.type.startsWith('hold')?e.target:null;render();
+    a.timerRemaining=e.type==='timer'||e.type.startsWith('hold')?e.target:null;a.timerStage=null;render();
   }else if(a.phase==='transition'){
     advanceToNextExercise(a);render();
   }else render();
@@ -3394,6 +3408,17 @@ function startTimer(){
   timerTick();
   state.timer=setInterval(timerTick,250);
 }
+function startWorkTimer(){
+  const a=state.active,e=a?.workout?.exercises?.[a.exerciseIndex];if(!a||!e)return;
+  if(!a.timerRunning&&usesTimedSetPreparation(a,e)&&a.timerStage==null&&a.timerRemaining===e.target&&timedSetPrepSeconds()>0){
+    a.timerStage='prepare';a.timerRemaining=timedSetPrepSeconds();
+  }else if(a.timerStage==null){a.timerStage='work';}
+  a.timerRunning=true;startTimer();render();
+}
+function skipWorkPreparation(){
+  const a=state.active,e=a?.workout?.exercises?.[a.exerciseIndex];if(!a||!e||a.timerStage!=='prepare')return;
+  stopTimer();a.timerStage='work';a.timerRemaining=e.target;a.timerRunning=true;signalPreparationEnd();startTimer();render();
+}
 function stopTimer(){
   if(state.timer){clearInterval(state.timer);state.timer=null;}
   if(state.active)state.active.timerEndAt=null;
@@ -3412,6 +3437,16 @@ function signalTimer(){
       o.frequency.value=i===2?1046:880;g.gain.setValueAtTime(.0001,now+delay);g.gain.exponentialRampToValueAtTime(.16,now+delay+.015);g.gain.exponentialRampToValueAtTime(.0001,now+delay+.18);
       o.start(now+delay);o.stop(now+delay+.20);
     });
+  }catch{}
+}
+function signalPreparationEnd(){
+  const p=getPrefs();
+  if(p.vibration&&navigator.vibrate)navigator.vibrate(120);
+  if(!p.sound)return;
+  try{
+    const ctx=timerAudioContext||(timerAudioContext=new(window.AudioContext||window.webkitAudioContext)());
+    if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+    const o=ctx.createOscillator(),g=ctx.createGain(),now=ctx.currentTime;o.connect(g);g.connect(ctx.destination);o.frequency.value=1046;g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.14,now+.015);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.start(now);o.stop(now+.2);
   }catch{}
 }
 
@@ -4428,9 +4463,10 @@ function bindEvents(){
   const pauseWorkout=document.getElementById('pauseWorkout');if(pauseWorkout)pauseWorkout.onclick=pauseSession;
   const resumeWorkout=document.getElementById('resumeWorkout');if(resumeWorkout)resumeWorkout.onclick=resumeSession;
   const undoGuided=document.getElementById('undoGuidedSet');if(undoGuided)undoGuided.onclick=undoLastGuidedSet;
-  const toggleWork=document.getElementById('toggleWorkTimer');if(toggleWork)toggleWork.onclick=()=>{state.active.timerRunning=!state.active.timerRunning;if(state.active.timerRunning)startTimer();else stopTimer();render();};
+  const toggleWork=document.getElementById('toggleWorkTimer');if(toggleWork)toggleWork.onclick=()=>{if(state.active.timerRunning){state.active.timerRunning=false;stopTimer();render();}else startWorkTimer();};
+  const skipWorkPrep=document.getElementById('skipWorkPreparation');if(skipWorkPrep)skipWorkPrep.onclick=skipWorkPreparation;
   const toggle=document.getElementById('toggleTimer');if(toggle)toggle.onclick=()=>{state.active.timerRunning=!state.active.timerRunning;if(state.active.timerRunning)startTimer();else stopTimer();render();};
-  const skip=document.getElementById('skipRest');if(skip)skip.onclick=()=>{stopTimer();const a=state.active;if(a.phase==='transition'){advanceToNextExercise(a);}else{a.phase='work';a.timerRunning=false;const e=a.workout.exercises[a.exerciseIndex];a.timerRemaining=e.type==='timer'||e.type.startsWith('hold')?e.target:null;}render();};
+  const skip=document.getElementById('skipRest');if(skip)skip.onclick=()=>{stopTimer();const a=state.active;if(a.phase==='transition'){advanceToNextExercise(a);}else{a.phase='work';a.timerRunning=false;a.timerStage=null;const e=a.workout.exercises[a.exerciseIndex];a.timerRemaining=e.type==='timer'||e.type.startsWith('hold')?e.target:null;}render();};
   const p30=document.getElementById('plus30');if(p30)p30.onclick=()=>{state.active.timerRemaining+=30;render();if(state.active.timerRunning)startTimer();};
   const m15=document.getElementById('minus15');if(m15)m15.onclick=()=>{state.active.timerRemaining=Math.max(0,state.active.timerRemaining-15);render();if(state.active.timerRunning)startTimer();};
   document.querySelectorAll('[data-rpe]').forEach(b=>b.onclick=()=>{state.active.reviewRpe=Number(b.dataset.rpe);render();});
@@ -4472,6 +4508,7 @@ function bindEvents(){
   const sound=document.getElementById('soundPref');if(sound)sound.onchange=()=>{const p=getPrefs();p.sound=sound.checked;setPrefs(p);};
   const vib=document.getElementById('vibrationPref');if(vib)vib.onchange=()=>{const p=getPrefs();p.vibration=vib.checked;setPrefs(p);};
   const keepAwake=document.getElementById('keepAwakePref');if(keepAwake)keepAwake.onchange=()=>{const p=getPrefs();p.keepAwake=keepAwake.checked;setPrefs(p);if(!p.keepAwake)releaseTimerWakeLock();else if(state.active?.timerRunning)requestTimerWakeLock();};
+  const timedPrep=document.getElementById('timedSetPrepPref');if(timedPrep)timedPrep.onchange=()=>{const p=getPrefs();p.timedSetPrepSeconds=Number(timedPrep.value);setPrefs(p);};
   const smart=document.getElementById('smartPref');if(smart)smart.onchange=()=>{const p=getPrefs();p.smartProgression=smart.checked;setPrefs(p);};
   const install=document.getElementById('installApp');if(install&&state.deferredInstall)install.onclick=async()=>{state.deferredInstall.prompt();await state.deferredInstall.userChoice;state.deferredInstall=null;render();};
   const exportBtn=document.getElementById('exportData');if(exportBtn)exportBtn.onclick=exportBackup;

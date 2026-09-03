@@ -4444,3 +4444,4 @@ html[data-theme="dark"] .quick-log-journal-empty{background:var(--surface-2)}
   .p148-body-model{min-height:530px;max-width:410px;margin:0 auto;width:100%}
   .p148-body-model .body3d-stage{height:530px;min-height:500px}
 }
+.work-timer-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}.timer-preparing .timer-time{color:var(--accent)}.timer-prep-note{text-align:center;margin-top:10px;color:var(--muted);font-size:.82rem}.p88-selectline{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 0;border-bottom:1px solid var(--border)}.p88-selectline>div{display:grid;gap:4px}.p88-selectline select{min-width:96px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);font:inherit;font-weight:700}@media(max-width:560px){.p88-selectline{align-items:flex-start}.p88-selectline select{min-width:88px}}
